@@ -1,0 +1,17 @@
+**/bin
+**/obj
+**/node_modules
+**/dist
+**/coverage
+.git
+.env*
+.local
+artifacts
+TestResults
+**/test-results
+**/playwright-report
+**/__pycache__
+**/*.tsbuildinfo
+.codebase-memory
+.codex
+.agents

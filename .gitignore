@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+**/coverage/
+artifacts/
+TestResults/
+.env
+.env.test
+.local/
+playwright-report/
+test-results/
+.DS_Store
+**/__pycache__/
+**/*.tsbuildinfo

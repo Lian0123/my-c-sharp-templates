@@ -1,0 +1,11 @@
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { App as AntApp, ConfigProvider } from 'antd';
+import zhTW from 'antd/locale/zh_TW';
+import { BrowserRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider } from './auth';
+import App from './App';
+import './style.css';
+const queries = new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: true, staleTime: 3000 }, mutations: { retry: false } } });
+ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><ConfigProvider locale={zhTW} theme={{ token: { colorPrimary: '#3169e6', colorSuccess: '#39a77a', borderRadius: 10, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', colorText: '#24334b' } }}><AntApp><QueryClientProvider client={queries}><BrowserRouter><AuthProvider><App/></AuthProvider></BrowserRouter></QueryClientProvider></AntApp></ConfigProvider></React.StrictMode>);

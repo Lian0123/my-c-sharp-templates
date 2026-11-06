@@ -1,0 +1,65 @@
+name: build-and-verify
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-dotnet@v6.1.0
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24.22.2
+          cache: npm
+          cache-dependency-path: src/Web/package-lock.json
+      - name: Initialize isolated development credentials
+        run: ./scripts/init.sh
+      - name: Unit, architecture, integration and frontend quality gates
+        run: ./scripts/test.sh
+      - name: Verify C# formatting
+        run: dotnet format MicroserviceStarter.slnx --verify-no-changes --no-restore
+      - name: Check dependency vulnerabilities
+        run: |
+          dotnet list MicroserviceStarter.slnx package --vulnerable --include-transitive --format json > artifacts/dependency-audit.json
+          python3 scripts/check-audit.py
+          cd src/Web
+          npm audit --audit-level=moderate
+      - name: Docker builds and browser acceptance tests
+        run: ./scripts/test-e2e.sh
+      - name: Verify generated API contracts
+        env:
+          BASE_URL: http://localhost:18080
+        run: |
+          node scripts/export-openapi.mjs
+          cd src/Web
+          npm run generate:api
+          npm run build
+          cd ../..
+          git diff --exit-code -- docs/openapi src/Web/src/api/generated src/Web/src/api/models.ts
+      - name: Upload verification artifacts
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: verification-results
+          retention-days: 3
+          path: |
+            artifacts/
+            src/Web/coverage/
+            src/Web/test-results/
+      - name: Remove the isolated test stack
+        if: always()
+        env:
+          COMPOSE_PROJECT_NAME: microservice-starter-tests
+          HTTP_PORT: "18080"
+          MAILPIT_PORT: "18025"
+          RABBITMQ_MGMT_PORT: "25672"
+        run: docker compose -f docker-compose.yml -f docker-compose.test.yml down -v --remove-orphans

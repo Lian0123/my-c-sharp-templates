@@ -1,0 +1,46 @@
+{
+  "name": "microservice-starter-web",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage",
+    "e2e": "playwright test",
+    "lint": "eslint .",
+    "generate:api": "node scripts/generate-api.mjs"
+  },
+  "dependencies": {
+    "@ant-design/icons": "6.3.4",
+    "@microsoft/signalr": "10.0.11",
+    "@tanstack/react-query": "5.106.1",
+    "antd": "6.7.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-router-dom": "7.18.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.8",
+    "@types/node": "26.6.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.2.1",
+    "@vitest/coverage-v8": "5.1.0",
+    "eslint": "10.14.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "jsdom": "31.0.0",
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.72.1",
+    "vite": "8.3.6",
+    "vitest": "5.1.0"
+  },
+  "overrides": {
+    "minimatch": "11.0.4"
+  }
+}

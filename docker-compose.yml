@@ -1,0 +1,290 @@
+name: ${COMPOSE_PROJECT_NAME:-microservice-starter}
+x-app: &app
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: {max-size: "10m", max-file: "5"}
+x-env: &env
+  ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+  Jwt__Issuer: MicroserviceStarter
+  Jwt__PublicKeyPath: /run/keys/public.pem
+  Auth__Url: http://auth:8080
+services:
+  auth-migrate: &auth-image
+    <<: *app
+    image: microservice-starter/auth:local
+    build:
+      context: .
+      args: {PROJECT: src/Services/Auth/Auth.Api/Auth.Api.csproj, DLL: Auth.Api.dll}
+    restart: "no"
+    command: ["--migrate"]
+    healthcheck: {disable: true}
+    environment:
+      <<: *env
+      ConnectionStrings__Postgres: Host=auth-postgres;Database=auth;Username=auth;Password=${AUTH_DB_PASSWORD:?Run scripts/init.sh}
+      ConnectionStrings__Redis: auth-redis:6379,password=${AUTH_REDIS_PASSWORD:?},abortConnect=false
+      ConnectionStrings__RabbitMQ: amqp://starter:${RABBITMQ_PASSWORD:?}@rabbitmq:5672/
+      Internal__AuthKey: ${INTERNAL_AUTH_KEY:?}
+      Jwt__PrivateKeyPath: /run/keys/private.pem
+      DataProtection__Path: /data/keys
+      PublicUrl: ${PUBLIC_URL:-http://localhost:8080}
+      Message__Url: http://message:8080
+      Internal__AccountKey: ${INTERNAL_ACCOUNT_KEY:?}
+      Internal__MessageKey: ${INTERNAL_MESSAGE_KEY:?}
+      Internal__GatewayKey: ${INTERNAL_GATEWAY_KEY:?}
+      Bootstrap__Email: ${BOOTSTRAP_EMAIL:?}
+      Bootstrap__Password: ${BOOTSTRAP_PASSWORD:?}
+      Smtp__Host: mailpit
+      Smtp__Port: "1025"
+    volumes:
+      - ./.local/keys/public.pem:/run/keys/public.pem:ro
+      - ./.local/keys/private.pem:/run/keys/private.pem:ro
+      - auth-keys:/data/keys
+    networks: [app, auth-data]
+    depends_on:
+      auth-postgres: {condition: service_healthy}
+      auth-redis: {condition: service_healthy}
+  auth:
+    <<: *auth-image
+    restart: unless-stopped
+    command: []
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health/ready"]
+      interval: 5s
+      timeout: 4s
+      retries: 30
+      start_period: 30s
+    depends_on:
+      auth-migrate: {condition: service_completed_successfully}
+      rabbitmq: {condition: service_healthy}
+  auth-postgres:
+    <<: *app
+    image: postgres:18.6-trixie
+    environment:
+      POSTGRES_DB: auth
+      POSTGRES_USER: auth
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:?}
+    volumes: [auth-postgres:/var/lib/postgresql]
+    networks: [auth-data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth -d auth"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  auth-redis:
+    <<: *app
+    image: redis:8.8.4-trixie
+    environment: {REDISCLI_AUTH: "${AUTH_REDIS_PASSWORD:?}"}
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${AUTH_REDIS_PASSWORD:?}"]
+    volumes: [auth-redis:/data]
+    networks: [auth-data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  account-migrate: &account-image
+    <<: *app
+    image: microservice-starter/account:local
+    build:
+      context: .
+      args: {PROJECT: src/Services/Account/Account.Api/Account.Api.csproj, DLL: Account.Api.dll}
+    restart: "no"
+    command: ["--migrate"]
+    healthcheck: {disable: true}
+    environment:
+      <<: *env
+      ConnectionStrings__Postgres: Host=account-postgres;Database=account;Username=account;Password=${ACCOUNT_DB_PASSWORD:?Run scripts/init.sh}
+      ConnectionStrings__Redis: account-redis:6379,password=${ACCOUNT_REDIS_PASSWORD:?},abortConnect=false
+      ConnectionStrings__RabbitMQ: amqp://starter:${RABBITMQ_PASSWORD:?}@rabbitmq:5672/
+      Internal__AccountKey: ${INTERNAL_ACCOUNT_KEY:?}
+    volumes:
+      - ./.local/keys/public.pem:/run/keys/public.pem:ro
+    networks: [app, account-data]
+    depends_on:
+      account-postgres: {condition: service_healthy}
+      account-redis: {condition: service_healthy}
+  account:
+    <<: *account-image
+    restart: unless-stopped
+    command: []
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health/ready"]
+      interval: 5s
+      timeout: 4s
+      retries: 30
+      start_period: 30s
+    depends_on:
+      account-migrate: {condition: service_completed_successfully}
+      rabbitmq: {condition: service_healthy}
+      auth: {condition: service_healthy}
+  account-postgres:
+    <<: *app
+    image: postgres:18.6-trixie
+    environment:
+      POSTGRES_DB: account
+      POSTGRES_USER: account
+      POSTGRES_PASSWORD: ${ACCOUNT_DB_PASSWORD:?}
+    volumes: [account-postgres:/var/lib/postgresql]
+    networks: [account-data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U account -d account"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  account-redis:
+    <<: *app
+    image: redis:8.8.4-trixie
+    environment: {REDISCLI_AUTH: "${ACCOUNT_REDIS_PASSWORD:?}"}
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${ACCOUNT_REDIS_PASSWORD:?}"]
+    volumes: [account-redis:/data]
+    networks: [account-data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  message-migrate: &message-image
+    <<: *app
+    image: microservice-starter/message:local
+    build:
+      context: .
+      args: {PROJECT: src/Services/Message/Message.Api/Message.Api.csproj, DLL: Message.Api.dll}
+    restart: "no"
+    command: ["--migrate"]
+    healthcheck: {disable: true}
+    environment:
+      <<: *env
+      ConnectionStrings__Postgres: Host=message-postgres;Database=message;Username=message;Password=${MESSAGE_DB_PASSWORD:?Run scripts/init.sh}
+      ConnectionStrings__Redis: message-redis:6379,password=${MESSAGE_REDIS_PASSWORD:?},abortConnect=false
+      ConnectionStrings__RabbitMQ: amqp://starter:${RABBITMQ_PASSWORD:?}@rabbitmq:5672/
+      Internal__MessageKey: ${INTERNAL_MESSAGE_KEY:?}
+      Internal__AuthKey: ${INTERNAL_AUTH_KEY:?}
+      S3__Endpoint: http://garage:3900
+      S3__Bucket: attachments
+      S3__AccessKey: ${GARAGE_ACCESS_KEY:?}
+      S3__SecretKey: ${GARAGE_SECRET_KEY:?}
+    volumes:
+      - ./.local/keys/public.pem:/run/keys/public.pem:ro
+    networks: [app, message-data]
+    depends_on:
+      message-postgres: {condition: service_healthy}
+      message-redis: {condition: service_healthy}
+  message:
+    <<: *message-image
+    restart: unless-stopped
+    command: []
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health/ready"]
+      interval: 5s
+      timeout: 4s
+      retries: 30
+      start_period: 30s
+    depends_on:
+      message-migrate: {condition: service_completed_successfully}
+      rabbitmq: {condition: service_healthy}
+      auth: {condition: service_healthy}
+      garage: {condition: service_healthy}
+  message-postgres:
+    <<: *app
+    image: postgres:18.6-trixie
+    environment:
+      POSTGRES_DB: message
+      POSTGRES_USER: message
+      POSTGRES_PASSWORD: ${MESSAGE_DB_PASSWORD:?}
+    volumes: [message-postgres:/var/lib/postgresql]
+    networks: [message-data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U message -d message"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  message-redis:
+    <<: *app
+    image: redis:8.8.4-trixie
+    environment: {REDISCLI_AUTH: "${MESSAGE_REDIS_PASSWORD:?}"}
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${MESSAGE_REDIS_PASSWORD:?}"]
+    volumes: [message-redis:/data]
+    networks: [message-data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  rabbitmq:
+    <<: *app
+    image: rabbitmq:4.2.9-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: starter
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?}
+    volumes: [rabbitmq:/var/lib/rabbitmq]
+    networks: [app]
+    ports: ["127.0.0.1:${RABBITMQ_MGMT_PORT:-15672}:15672"]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  garage:
+    <<: *app
+    image: dxflrs/garage:v2.5.0
+    entrypoint: ["/garage"]
+    command: ["server", "--single-node", "--default-bucket"]
+    environment:
+      GARAGE_DEFAULT_ACCESS_KEY: ${GARAGE_ACCESS_KEY:?}
+      GARAGE_DEFAULT_SECRET_KEY: ${GARAGE_SECRET_KEY:?}
+      GARAGE_DEFAULT_BUCKET: attachments
+    volumes:
+      - ./.local/garage.toml:/etc/garage.toml:ro
+      - garage:/data
+    networks: [app]
+    healthcheck:
+      test: ["CMD", "/garage", "status"]
+      interval: 5s
+      timeout: 4s
+      retries: 30
+  mailpit:
+    <<: *app
+    image: axllent/mailpit:v1.33.0
+    environment: {MP_DATABASE: /data/mailpit.db}
+    volumes: [mailpit:/data]
+    networks: [app]
+    ports: ["127.0.0.1:${MAILPIT_PORT:-8025}:8025"]
+  web:
+    <<: *app
+    image: microservice-starter/web:local
+    build: {context: src/Web}
+    networks: [app]
+  gateway:
+    <<: *app
+    image: microservice-starter/gateway:local
+    build:
+      context: .
+      args: {PROJECT: src/Gateway/Gateway.csproj, DLL: Gateway.dll}
+    environment:
+      <<: *env
+      Internal__GatewayKey: ${INTERNAL_GATEWAY_KEY:?}
+    volumes: ["./.local/keys/public.pem:/run/keys/public.pem:ro"]
+    networks: [app]
+    ports: ["127.0.0.1:${HTTP_PORT:-8080}:8080"]
+    depends_on:
+      auth: {condition: service_healthy}
+      account: {condition: service_healthy}
+      message: {condition: service_healthy}
+      web: {condition: service_started}
+networks:
+  app: {}
+  auth-data: {internal: true}
+  account-data: {internal: true}
+  message-data: {internal: true}
+volumes:
+  auth-postgres: {}
+  account-postgres: {}
+  message-postgres: {}
+  auth-redis: {}
+  account-redis: {}
+  message-redis: {}
+  auth-keys: {}
+  rabbitmq: {}
+  garage: {}
+  mailpit: {}

@@ -1,0 +1,5139 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "Account API",
+    "version": "v1"
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "paths": {
+    "/api/v1/accounts/me": {
+      "get": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "讀取個人資料；初始化中回傳 202",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileView"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Accepted"
+          },
+          "400": {
+            "description": "4000001 輸入資料不正確；4001001 驗證連結無效或已過期；4003001 已讀位置超出訊息範圍",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "輸入資料不正確",
+                  "status": 400,
+                  "detail": "輸入資料不正確",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4000001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "4010001 請重新登入；4011001 帳號或密碼不正確",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "請重新登入",
+                  "status": 401,
+                  "detail": "請重新登入",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4010001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "4030001 沒有執行此操作的權限；4031001 請先驗證 Email",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "沒有執行此操作的權限",
+                  "status": 403,
+                  "detail": "沒有執行此操作的權限",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4030001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "4040001 找不到資源；4042001 找不到會員資料；4043001 找不到聊天室",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "找不到資源",
+                  "status": 404,
+                  "detail": "找不到資源",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4040001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "4050001 不支援此 HTTP 方法",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "不支援此 HTTP 方法",
+                  "status": 405,
+                  "detail": "不支援此 HTTP 方法",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4050001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "4090001 資料已變更或發生衝突；4091001 此 Email 已註冊；4091002 至少必須保留一位有效管理員；4093001 附件無法使用或已綁定其他訊息；4093002 請先移轉群組擁有權",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "資料已變更或發生衝突",
+                  "status": 409,
+                  "detail": "資料已變更或發生衝突",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4090001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "4130001 檔案超過大小限制",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "檔案超過大小限制",
+                  "status": 413,
+                  "detail": "檔案超過大小限制",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4130001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "4150001 不支援此檔案或媒體格式",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "不支援此檔案或媒體格式",
+                  "status": 415,
+                  "detail": "不支援此檔案或媒體格式",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4150001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "4290001 操作過於頻繁，請稍後重試",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "操作過於頻繁，請稍後重試",
+                  "status": 429,
+                  "detail": "操作過於頻繁，請稍後重試",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4290001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "5000001 系統發生未預期錯誤",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "系統發生未預期錯誤",
+                  "status": 500,
+                  "detail": "系統發生未預期錯誤",
+                  "instance": "/api/v1/example",
+                  "errorCode": "5000001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "5024001 上游服務連線失敗",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "上游服務連線失敗",
+                  "status": 502,
+                  "detail": "上游服務連線失敗",
+                  "instance": "/api/v1/example",
+                  "errorCode": "5024001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "5030001 相依服務暫時無法使用",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "相依服務暫時無法使用",
+                  "status": 503,
+                  "detail": "相依服務暫時無法使用",
+                  "instance": "/api/v1/example",
+                  "errorCode": "5030001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "5044001 上游服務回應逾時",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "上游服務回應逾時",
+                  "status": 504,
+                  "detail": "上游服務回應逾時",
+                  "instance": "/api/v1/example",
+                  "errorCode": "5044001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "編輯個人資料",
+        "parameters": [
+          {
+            "name": "reason",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "4000001 輸入資料不正確；4001001 驗證連結無效或已過期；4003001 已讀位置超出訊息範圍",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "輸入資料不正確",
+                  "status": 400,
+                  "detail": "輸入資料不正確",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4000001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "4010001 請重新登入；4011001 帳號或密碼不正確",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "請重新登入",
+                  "status": 401,
+                  "detail": "請重新登入",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4010001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "4030001 沒有執行此操作的權限；4031001 請先驗證 Email",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "沒有執行此操作的權限",
+                  "status": 403,
+                  "detail": "沒有執行此操作的權限",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4030001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "4040001 找不到資源；4042001 找不到會員資料；4043001 找不到聊天室",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "找不到資源",
+                  "status": 404,
+                  "detail": "找不到資源",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4040001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "4050001 不支援此 HTTP 方法",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "不支援此 HTTP 方法",
+                  "status": 405,
+                  "detail": "不支援此 HTTP 方法",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4050001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "4090001 資料已變更或發生衝突；4091001 此 Email 已註冊；4091002 至少必須保留一位有效管理員；4093001 附件無法使用或已綁定其他訊息；4093002 請先移轉群組擁有權",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "資料已變更或發生衝突",
+                  "status": 409,
+                  "detail": "資料已變更或發生衝突",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4090001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "4130001 檔案超過大小限制",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "檔案超過大小限制",
+                  "status": 413,
+                  "detail": "檔案超過大小限制",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4130001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "4150001 不支援此檔案或媒體格式",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "不支援此檔案或媒體格式",
+                  "status": 415,
+                  "detail": "不支援此檔案或媒體格式",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4150001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "4290001 操作過於頻繁，請稍後重試",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "操作過於頻繁，請稍後重試",
+                  "status": 429,
+                  "detail": "操作過於頻繁，請稍後重試",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4290001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "5000001 系統發生未預期錯誤",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "系統發生未預期錯誤",
+                  "status": 500,
+                  "detail": "系統發生未預期錯誤",
+                  "instance": "/api/v1/example",
+                  "errorCode": "5000001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "5024001 上游服務連線失敗",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "上游服務連線失敗",
+                  "status": 502,
+                  "detail": "上游服務連線失敗",
+                  "instance": "/api/v1/example",
+                  "errorCode": "5024001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "5030001 相依服務暫時無法使用",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "相依服務暫時無法使用",
+                  "status": 503,
+                  "detail": "相依服務暫時無法使用",
+                  "instance": "/api/v1/example",
+                  "errorCode": "5030001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "5044001 上游服務回應逾時",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "上游服務回應逾時",
+                  "status": 504,
+                  "detail": "上游服務回應逾時",
+                  "instance": "/api/v1/example",
+                  "errorCode": "5044001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/accounts": {
+      "get": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "搜尋會員公開資料",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProfileView"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "4000001 輸入資料不正確；4001001 驗證連結無效或已過期；4003001 已讀位置超出訊息範圍",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "輸入資料不正確",
+                  "status": 400,
+                  "detail": "輸入資料不正確",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4000001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "4010001 請重新登入；4011001 帳號或密碼不正確",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "請重新登入",
+                  "status": 401,
+                  "detail": "請重新登入",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4010001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "4030001 沒有執行此操作的權限；4031001 請先驗證 Email",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "沒有執行此操作的權限",
+                  "status": 403,
+                  "detail": "沒有執行此操作的權限",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4030001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "4040001 找不到資源；4042001 找不到會員資料；4043001 找不到聊天室",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "找不到資源",
+                  "status": 404,
+                  "detail": "找不到資源",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4040001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "4050001 不支援此 HTTP 方法",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "不支援此 HTTP 方法",
+                  "status": 405,
+                  "detail": "不支援此 HTTP 方法",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4050001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "4090001 資料已變更或發生衝突；4091001 此 Email 已註冊；4091002 至少必須保留一位有效管理員；4093001 附件無法使用或已綁定其他訊息；4093002 請先移轉群組擁有權",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "資料已變更或發生衝突",
+                  "status": 409,
+                  "detail": "資料已變更或發生衝突",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4090001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "4130001 檔案超過大小限制",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "檔案超過大小限制",
+                  "status": 413,
+                  "detail": "檔案超過大小限制",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4130001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "4150001 不支援此檔案或媒體格式",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "不支援此檔案或媒體格式",
+                  "status": 415,
+                  "detail": "不支援此檔案或媒體格式",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4150001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "4290001 操作過於頻繁，請稍後重試",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "操作過於頻繁，請稍後重試",
+                  "status": 429,
+                  "detail": "操作過於頻繁，請稍後重試",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4290001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "5000001 系統發生未預期錯誤",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "系統發生未預期錯誤",
+                  "status": 500,
+                  "detail": "系統發生未預期錯誤",
+                  "instance": "/api/v1/example",
+                  "errorCode": "5000001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "5024001 上游服務連線失敗",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "上游服務連線失敗",
+                  "status": 502,
+                  "detail": "上游服務連線失敗",
+                  "instance": "/api/v1/example",
+                  "errorCode": "5024001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "5030001 相依服務暫時無法使用",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "相依服務暫時無法使用",
+                  "status": 503,
+                  "detail": "相依服務暫時無法使用",
+                  "instance": "/api/v1/example",
+                  "errorCode": "5030001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "5044001 上游服務回應逾時",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "上游服務回應逾時",
+                  "status": 504,
+                  "detail": "上游服務回應逾時",
+                  "instance": "/api/v1/example",
+                  "errorCode": "5044001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/accounts/admin/{id}": {
+      "put": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "管理員編輯會員資料",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "reason",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "4000001 輸入資料不正確；4001001 驗證連結無效或已過期；4003001 已讀位置超出訊息範圍",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "輸入資料不正確",
+                  "status": 400,
+                  "detail": "輸入資料不正確",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4000001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "4010001 請重新登入；4011001 帳號或密碼不正確",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "請重新登入",
+                  "status": 401,
+                  "detail": "請重新登入",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4010001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "4030001 沒有執行此操作的權限；4031001 請先驗證 Email",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "沒有執行此操作的權限",
+                  "status": 403,
+                  "detail": "沒有執行此操作的權限",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4030001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "4040001 找不到資源；4042001 找不到會員資料；4043001 找不到聊天室",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "找不到資源",
+                  "status": 404,
+                  "detail": "找不到資源",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4040001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "4050001 不支援此 HTTP 方法",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "不支援此 HTTP 方法",
+                  "status": 405,
+                  "detail": "不支援此 HTTP 方法",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4050001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "4090001 資料已變更或發生衝突；4091001 此 Email 已註冊；4091002 至少必須保留一位有效管理員；4093001 附件無法使用或已綁定其他訊息；4093002 請先移轉群組擁有權",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "資料已變更或發生衝突",
+                  "status": 409,
+                  "detail": "資料已變更或發生衝突",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4090001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "4130001 檔案超過大小限制",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "檔案超過大小限制",
+                  "status": 413,
+                  "detail": "檔案超過大小限制",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4130001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "4150001 不支援此檔案或媒體格式",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "不支援此檔案或媒體格式",
+                  "status": 415,
+                  "detail": "不支援此檔案或媒體格式",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4150001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "4290001 操作過於頻繁，請稍後重試",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "操作過於頻繁，請稍後重試",
+                  "status": 429,
+                  "detail": "操作過於頻繁，請稍後重試",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4290001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "5000001 系統發生未預期錯誤",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "系統發生未預期錯誤",
+                  "status": 500,
+                  "detail": "系統發生未預期錯誤",
+                  "instance": "/api/v1/example",
+                  "errorCode": "5000001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "5024001 上游服務連線失敗",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "上游服務連線失敗",
+                  "status": 502,
+                  "detail": "上游服務連線失敗",
+                  "instance": "/api/v1/example",
+                  "errorCode": "5024001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "5030001 相依服務暫時無法使用",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "相依服務暫時無法使用",
+                  "status": 503,
+                  "detail": "相依服務暫時無法使用",
+                  "instance": "/api/v1/example",
+                  "errorCode": "5030001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "5044001 上游服務回應逾時",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "上游服務回應逾時",
+                  "status": 504,
+                  "detail": "上游服務回應逾時",
+                  "instance": "/api/v1/example",
+                  "errorCode": "5044001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/accounts/admin/audit": {
+      "get": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "查詢帳號服務稽核紀錄",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditView"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "4000001 輸入資料不正確；4001001 驗證連結無效或已過期；4003001 已讀位置超出訊息範圍",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "輸入資料不正確",
+                  "status": 400,
+                  "detail": "輸入資料不正確",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4000001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "4010001 請重新登入；4011001 帳號或密碼不正確",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "請重新登入",
+                  "status": 401,
+                  "detail": "請重新登入",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4010001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "4030001 沒有執行此操作的權限；4031001 請先驗證 Email",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "沒有執行此操作的權限",
+                  "status": 403,
+                  "detail": "沒有執行此操作的權限",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4030001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "4040001 找不到資源；4042001 找不到會員資料；4043001 找不到聊天室",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "找不到資源",
+                  "status": 404,
+                  "detail": "找不到資源",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4040001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "4050001 不支援此 HTTP 方法",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "不支援此 HTTP 方法",
+                  "status": 405,
+                  "detail": "不支援此 HTTP 方法",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4050001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "4090001 資料已變更或發生衝突；4091001 此 Email 已註冊；4091002 至少必須保留一位有效管理員；4093001 附件無法使用或已綁定其他訊息；4093002 請先移轉群組擁有權",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "資料已變更或發生衝突",
+                  "status": 409,
+                  "detail": "資料已變更或發生衝突",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4090001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "4130001 檔案超過大小限制",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "檔案超過大小限制",
+                  "status": 413,
+                  "detail": "檔案超過大小限制",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4130001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "4150001 不支援此檔案或媒體格式",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "不支援此檔案或媒體格式",
+                  "status": 415,
+                  "detail": "不支援此檔案或媒體格式",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4150001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "4290001 操作過於頻繁，請稍後重試",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "操作過於頻繁，請稍後重試",
+                  "status": 429,
+                  "detail": "操作過於頻繁，請稍後重試",
+                  "instance": "/api/v1/example",
+                  "errorCode": "4290001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "5000001 系統發生未預期錯誤",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "系統發生未預期錯誤",
+                  "status": 500,
+                  "detail": "系統發生未預期錯誤",
+                  "instance": "/api/v1/example",
+                  "errorCode": "5000001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "5024001 上游服務連線失敗",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "上游服務連線失敗",
+                  "status": 502,
+                  "detail": "上游服務連線失敗",
+                  "instance": "/api/v1/example",
+                  "errorCode": "5024001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "5030001 相依服務暫時無法使用",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "相依服務暫時無法使用",
+                  "status": 503,
+                  "detail": "相依服務暫時無法使用",
+                  "instance": "/api/v1/example",
+                  "errorCode": "5030001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "5044001 上游服務回應逾時",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "instance",
+                    "errorCode",
+                    "traceId",
+                    "source"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "format": "int32"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "errorCode": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "所有公開 API 的錯誤格式；errorCode 為 HTTP 狀態碼加四位錯誤編號。"
+                },
+                "example": {
+                  "type": "about:blank",
+                  "title": "上游服務回應逾時",
+                  "status": 504,
+                  "detail": "上游服務回應逾時",
+                  "instance": "/api/v1/example",
+                  "errorCode": "5044001",
+                  "traceId": "0123456789abcdef0123456789abcdef",
+                  "source": "Account"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AuditView": {
+        "required": [
+          "id",
+          "actorId",
+          "action",
+          "target",
+          "reason",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "action": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ProfileRequest": {
+        "required": [
+          "displayName",
+          "bio"
+        ],
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "bio": {
+            "maxLength": 500,
+            "type": "string"
+          }
+        }
+      },
+      "ProfileView": {
+        "required": [
+          "id",
+          "displayName",
+          "bio",
+          "active",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "bio": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "Bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Account"
+    }
+  ]
+}

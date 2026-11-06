@@ -1,0 +1,31 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Gateway/Gateway.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/" />
+  <Folder Name="/src/Services/Account/">
+    <Project Path="src/Services/Account/Account.Api/Account.Api.csproj" />
+    <Project Path="src/Services/Account/Account.Application/Account.Application.csproj" />
+    <Project Path="src/Services/Account/Account.Domain/Account.Domain.csproj" />
+    <Project Path="src/Services/Account/Account.Infrastructure/Account.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/Auth/">
+    <Project Path="src/Services/Auth/Auth.Api/Auth.Api.csproj" />
+    <Project Path="src/Services/Auth/Auth.Application/Auth.Application.csproj" />
+    <Project Path="src/Services/Auth/Auth.Domain/Auth.Domain.csproj" />
+    <Project Path="src/Services/Auth/Auth.Infrastructure/Auth.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/Message/">
+    <Project Path="src/Services/Message/Message.Api/Message.Api.csproj" />
+    <Project Path="src/Services/Message/Message.Application/Message.Application.csproj" />
+    <Project Path="src/Services/Message/Message.Domain/Message.Domain.csproj" />
+    <Project Path="src/Services/Message/Message.Infrastructure/Message.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Shared/">
+    <Project Path="src/Shared/BuildingBlocks/BuildingBlocks.csproj" />
+    <Project Path="src/Shared/Contracts/Contracts.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MicroserviceStarter.Tests/MicroserviceStarter.Tests.csproj" />
+  </Folder>
+</Solution>

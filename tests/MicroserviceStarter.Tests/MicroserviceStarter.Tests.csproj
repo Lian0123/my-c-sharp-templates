@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><IsTestProject>true</IsTestProject><IsPackable>false</IsPackable></PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
+    <PackageReference Include="coverlet.collector" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
+    <ProjectReference Include="../../src/Services/Auth/Auth.Api/Auth.Api.csproj" Aliases="AuthApi" />
+    <ProjectReference Include="../../src/Services/Account/Account.Api/Account.Api.csproj" Aliases="AccountApi" />
+    <ProjectReference Include="../../src/Services/Message/Message.Api/Message.Api.csproj" Aliases="MessageApi" />
+    <ProjectReference Include="../../src/Gateway/Gateway.csproj" Aliases="GatewayApi" />
+    <ProjectReference Include="../../src/Services/Auth/Auth.Infrastructure/Auth.Infrastructure.csproj" />
+    <ProjectReference Include="../../src/Services/Account/Account.Infrastructure/Account.Infrastructure.csproj" />
+    <ProjectReference Include="../../src/Services/Message/Message.Infrastructure/Message.Infrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup><Using Include="Xunit" /></ItemGroup>
+</Project>

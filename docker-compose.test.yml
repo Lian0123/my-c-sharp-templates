@@ -1,0 +1,24 @@
+# Extra loopback ports are for local SDK integration tests only.
+services:
+  auth-postgres:
+    ports: ["127.0.0.1:15431:5432"]
+  account-postgres:
+    ports: ["127.0.0.1:15432:5432"]
+  message-postgres:
+    ports: ["127.0.0.1:15433:5432"]
+  auth-redis:
+    ports: ["127.0.0.1:16379:6379"]
+  account-redis:
+    ports: ["127.0.0.1:16380:6379"]
+  message-redis:
+    ports: ["127.0.0.1:16381:6379"]
+  rabbitmq:
+    ports: ["127.0.0.1:15673:5672"]
+  garage:
+    ports: ["127.0.0.1:13900:3900"]
+  mailpit:
+    ports: ["127.0.0.1:11025:1025"]
+networks:
+  auth-data: {internal: false}
+  account-data: {internal: false}
+  message-data: {internal: false}
