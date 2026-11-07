@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Fail closed when either application coverage report is missing or below the agreed gate."""
 from pathlib import Path
-import json, sys, xml.etree.ElementTree as ET
+import hashlib, json, sys, xml.etree.ElementTree as ET
 
-backend=list(Path('artifacts/backend').rglob('coverage.cobertura.xml'))
+# VSTest may copy the same collector attachment into the TRX deployment folder.
+# Accept byte-identical copies; distinct reports still fail instead of masking stale runs.
+backend=list({hashlib.sha256(path.read_bytes()).digest():path
+              for path in Path('artifacts/backend').rglob('coverage.cobertura.xml')}.values())
 frontend=Path('src/Web/coverage/coverage-summary.json')
 if len(backend)!=1 or not frontend.exists():
     sys.exit('Expected exactly one merged backend report and one frontend report; run scripts/test.sh.')

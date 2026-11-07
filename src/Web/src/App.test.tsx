@@ -29,3 +29,23 @@ it('requires an admin reason and supports dropdown profile and logout actions', 
   fireEvent.mouseEnter(screen.getByRole('button', { name: '帳號選單' })); fireEvent.click(await screen.findByText('登出')); await waitFor(() => expect(logout).toHaveBeenCalled());
 });
 it('keeps the session visible when server logout fails', async () => { vi.mocked(logout).mockRejectedValue(new Error('登出服務暫停')); page(); fireEvent.mouseEnter(screen.getByRole('button', { name: '帳號選單' })); fireEvent.click(await screen.findByText('登出')); await screen.findByText('登出服務暫停'); });
+it('waits for the initial profile before editing so late data cannot overwrite input', async () => {
+  let finish!: (value: unknown) => void;
+  vi.mocked(api).mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  page(); fireEvent.click(document.querySelector('.rail-avatar')!);
+  expect(screen.queryByLabelText('顯示名稱')).not.toBeInTheDocument(); expect(document.querySelector('.ant-spin')).toBeInTheDocument();
+  finish({ id: 'me', displayName: '載入完成', bio: '介紹', active: true, version: 2 });
+  const input = await screen.findByLabelText('顯示名稱'); expect(input).toHaveValue('載入完成');
+  fireEvent.change(input, { target: { value: '保留我的輸入' } });
+  vi.mocked(api).mockResolvedValue({ id: 'me', displayName: '保留我的輸入', bio: '介紹', active: true, version: 3 });
+  fireEvent.click(screen.getByRole('button', { name: '儲存變更' }));
+  await waitFor(() => expect(api).toHaveBeenCalledWith('/api/v1/accounts/me', expect.objectContaining({ body: expect.stringContaining('保留我的輸入') })));
+  await screen.findByText('您好，保留我的輸入');
+});
+it('offers retry inside the profile dialog when initial data cannot load', async () => {
+  vi.mocked(api).mockRejectedValueOnce(new Error('初始資料暫時無法取得'));
+  page(); await screen.findByText('初始資料暫時無法取得'); fireEvent.click(document.querySelector('.rail-avatar')!);
+  expect(screen.queryByLabelText('顯示名稱')).not.toBeInTheDocument();
+  const retries = screen.getAllByRole('button', { name: /重\s*試/ }); fireEvent.click(retries.at(-1)!);
+  await screen.findByLabelText('顯示名稱');
+});

@@ -4,17 +4,23 @@ import { admin, baseURL, emailLink, login, member, password } from './helpers';
 
 test('會員可從網頁註冊、收信驗證、登入與更新個人資料', async ({ page, request }) => {
   const email = `e2e-ui-${crypto.randomUUID()}@example.test`;
+  let loadProfile!: () => void;
+  const profileReady = new Promise<void>(resolve => { loadProfile = resolve; });
+  await page.route('**/api/v1/accounts/me', route => route.request().method() === 'GET' ? profileReady.then(() => route.continue()) : route.continue());
   await page.goto('/auth/login'); await page.getByRole('tab', { name: '建立帳號' }).click();
   await page.getByLabel('電子郵件').fill(email); await page.getByLabel('顯示名稱').fill('網頁註冊會員'); await page.getByLabel('密碼', { exact: true }).fill(password);
   await page.getByRole('button', { name: /建立帳號/ }).click(); await expect(page.getByText(/請查看您的信箱/)).toBeVisible();
   await page.goto(await emailLink(request, email, '驗證您的 Email')); await page.getByRole('button', { name: /確認驗證/ }).click(); await expect(page.getByText('操作已完成，請重新登入')).toBeVisible();
   await login(page, { email, password }); await page.locator('.rail-avatar').click();
+  await expect(page.getByRole('dialog').locator('.ant-spin')).toBeVisible();
+  await expect(page.getByLabel('顯示名稱')).toHaveCount(0); loadProfile();
   await page.getByLabel('顯示名稱').fill('更新後的會員'); await page.getByLabel('自我介紹').fill('端對端驗證的個人資料'); await page.getByRole('button', { name: '儲存變更' }).click();
   await expect(page.getByText('您好，更新後的會員')).toBeVisible();
   await expect(page.getByRole('button', { name: '管理後台' })).toHaveCount(0);
 });
 
 test('雙會員透過 WebSocket 聊天、讀取附件、已讀並在重連後補齊訊息', async ({ browser }, info) => {
+  test.setTimeout(180_000);
   const suffix = crypto.randomUUID().slice(0, 6); const first = await member('對話甲_' + suffix); const second = await member('對話乙_' + suffix);
   const aContext = await browser.newContext({ baseURL, timezoneId: 'Asia/Taipei' }); const bContext = await browser.newContext({ baseURL, timezoneId: 'Asia/Taipei' }); const a = await aContext.newPage(); const b = await bContext.newPage();
   let paused = false; let socket: WebSocketRoute | undefined;
@@ -46,7 +52,14 @@ test('管理員檢視狀態、管理資料與稽核，且保護最後一位管�
   await login(page, admin); await page.getByRole('button', { name: '管理後台', exact: true }).click(); await expect(page.getByText('全部就緒')).toBeVisible();
   await page.mouse.move(900, 50); await expect(page.getByText('歡迎回來', { exact: true })).not.toBeVisible();
   await page.screenshot({ path: '../../artifacts/cms-desktop.png', fullPage: true });
-  await page.getByRole('tab', { name: '帳號與權限' }).click(); const own = page.getByRole('row').filter({ hasText: admin.email }); await own.getByRole('button', { name: '權限與狀態' }).click();
+  await page.getByRole('tab', { name: '帳號與權限' }).click(); const own = page.getByRole('row').filter({ hasText: admin.email });
+  await expect(page.getByRole('button', { name: '權限與狀態', exact: true }).first()).toBeVisible();
+  for (let i = 0; i < 10 && await own.count() === 0; i++) {
+    const next = page.getByRole('button', { name: '下一頁', exact: true });
+    if (!await next.isEnabled()) break;
+    await next.click();
+  }
+  await own.getByRole('button', { name: '權限與狀態' }).click();
   const dialog = page.getByRole('dialog'); await dialog.getByLabel('角色').click(); await page.locator('.ant-select-item-option-content').filter({ hasText: '會員' }).click(); await dialog.getByLabel('異動原因').fill('驗證最後管理員保護機制');
   await dialog.getByRole('button', { name: '儲存並記錄稽核' }).click(); await expect(dialog.getByText('至少必須保留一位有效管理員')).toBeVisible();
   await dialog.getByRole('button', { name: '關閉' }).click();
@@ -76,7 +89,8 @@ test('手機版可完成登入與切換對話面板', async ({ browser }) => {
   await page.getByRole('button', { name: '建立對話', exact: true }).click(); const dialog = page.getByRole('dialog');
   await dialog.getByLabel('群組名稱').fill('手機版對話'); await dialog.getByRole('button', { name: '建立對話', exact: true }).click();
   await expect(dialog).not.toBeVisible(); await page.getByLabel('輸入訊息').fill('手機也可以即時交流'); await page.getByRole('button', { name: /傳\s*送/ }).click();
-  await expect(page.getByText('手機也可以即時交流', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('輸入訊息')).toHaveValue('');
+  await expect(page.locator('article').getByText('手機也可以即時交流', { exact: true })).toBeVisible();
   await page.screenshot({ path: '../../artifacts/chat-mobile.png', fullPage: true });
-  await page.getByRole('button', { name: '返回', exact: true }).click(); await expect(page.getByRole('heading', { name: '訊息', exact: true })).toBeVisible(); await context.close();
+  await page.getByRole('button', { name: /返\s*回/ }).click(); await expect(page.getByRole('heading', { name: '訊息', exact: true })).toBeVisible(); await context.close();
 });

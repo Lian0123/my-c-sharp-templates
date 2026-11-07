@@ -19,4 +19,5 @@ else
   (cd src/Web && npm ci && npm run lint && npm run build && npm run coverage)
   node --test tools/Operations/deadletter.test.mjs
 fi
+python3 -m unittest discover -s tests/Tooling -p 'test_*.py'
 python3 scripts/check-coverage.py
