@@ -4,11 +4,16 @@ import { admin, baseURL, emailLink, login, member, password } from './helpers';
 
 test('會員可從網頁註冊、收信驗證、登入與更新個人資料', async ({ page, request }) => {
   const email = `e2e-ui-${crypto.randomUUID()}@example.test`;
+  let loadProfile!: () => void;
+  const profileReady = new Promise<void>(resolve => { loadProfile = resolve; });
+  await page.route('**/api/v1/accounts/me', route => route.request().method() === 'GET' ? profileReady.then(() => route.continue()) : route.continue());
   await page.goto('/auth/login'); await page.getByRole('tab', { name: '建立帳號' }).click();
   await page.getByLabel('電子郵件').fill(email); await page.getByLabel('顯示名稱').fill('網頁註冊會員'); await page.getByLabel('密碼', { exact: true }).fill(password);
   await page.getByRole('button', { name: /建立帳號/ }).click(); await expect(page.getByText(/請查看您的信箱/)).toBeVisible();
   await page.goto(await emailLink(request, email, '驗證您的 Email')); await page.getByRole('button', { name: /確認驗證/ }).click(); await expect(page.getByText('操作已完成，請重新登入')).toBeVisible();
   await login(page, { email, password }); await page.locator('.rail-avatar').click();
+  await expect(page.getByRole('dialog').locator('.ant-spin')).toBeVisible();
+  await expect(page.getByLabel('顯示名稱')).toHaveCount(0); loadProfile();
   await page.getByLabel('顯示名稱').fill('更新後的會員'); await page.getByLabel('自我介紹').fill('端對端驗證的個人資料'); await page.getByRole('button', { name: '儲存變更' }).click();
   await expect(page.getByText('您好，更新後的會員')).toBeVisible();
   await expect(page.getByRole('button', { name: '管理後台' })).toHaveCount(0);
