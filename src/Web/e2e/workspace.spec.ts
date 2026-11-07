@@ -48,6 +48,7 @@ test('管理員檢視狀態、管理資料與稽核，且保護最後一位管�
   await page.mouse.move(900, 50); await expect(page.getByText('歡迎回來', { exact: true })).not.toBeVisible();
   await page.screenshot({ path: '../../artifacts/cms-desktop.png', fullPage: true });
   await page.getByRole('tab', { name: '帳號與權限' }).click(); const own = page.getByRole('row').filter({ hasText: admin.email });
+  await expect(page.getByRole('button', { name: '權限與狀態', exact: true }).first()).toBeVisible();
   for (let i = 0; i < 10 && await own.count() === 0; i++) {
     const next = page.getByRole('button', { name: '下一頁', exact: true });
     if (!await next.isEnabled()) break;
