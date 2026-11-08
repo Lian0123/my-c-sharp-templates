@@ -1,0 +1,918 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:a="https://github.com/Lian0123/my-c-sharp-templates/ns/living-docs/1" xmlns:m="https://example.org/ns/markdown-in-svg/0.1" version="1.1" width="1440" height="3305" viewBox="0 0 1440 3305">
+  <title>UML 分層與主要類別依賴</title>
+  <desc>繁體中文 Agent living document。Markdown 是內容權威；UML 關係、資料來源與更新規則以原生靜態 SVG 呈現。</desc>
+  <metadata>
+    <m:document version="0.1" profile="static" doc-id="urn:uuid:2063314f-f89a-488c-94be-bcad7563dd3b" revision="4">
+      <m:source media-type="text/markdown" dialect="commonmark-0.31.2" xml:space="preserve"># UML 分層與主要類別依賴
+
+視圖：cards
+範圍：Auth、Account、Message 都採 API／Application／Domain／Infrastructure 四層。
+讀圖：dependency 為虛線開放箭頭；realization 為虛線空心三角；inheritance 為實線空心三角。
+
+## 節點
+
+### api | «component» Service API
+
+- Program.cs：DI、路由、驗證、OpenAPI
+- Auth／Account／Message 分別有獨立 API 專案
+- Message API 另實作 ChatHub、ChatNotifier、ConnectionRegistry
+
+### interfaces | «interface» Application 合約
+
+- IAuthService／IAccountService／IChatService
+- DTO、驗證屬性與 IChatNotifier
+- 應用層不依賴其他服務的 Entity 或 DbContext
+
+### services | «class» Infrastructure 實作
+
+- AuthService／AccountService／ChatService
+- 交易、EF Core、Redis、S3 與業務流程協調
+- 分別實作對應的 Application 介面
+
+### domain | «entity / rules» Domain
+
+- Auth：User、LoginSession、IdentityRules
+- Account：Profile.Update
+- Message：Room、Membership、ChatMessage、Attachment、ChatRules
+
+### contexts | «class» 服務 DbContext
+
+- AuthDbContext／AccountDbContext／MessageDbContext
+- 各自 DbSet、唯一索引、ConcurrencyToken 與 FK
+- 同一型別名稱不表示跨服務共用資料庫
+
+### base | «abstract class» PlatformDbContext
+
+- Outbox、Inbox、Audit：僅共用技術模型
+- Enqueue(type, aggregateId, version, payload)
+- Record(actor, action, target, reason)
+
+### workers | «infrastructure» 背景工作
+
+- OutboxPublisher／EventConsumer
+- MailWorker 僅 Auth；AttachmentCleanup 僅 Message
+- 每次工作使用自己的服務範圍與 DbContext
+
+### contracts | «package» Shared.Contracts
+
+- IntegrationEvent、IdentityChanged、ProfileChanged
+- ChatChanged、Actor、SessionProbe／SessionState
+- Errors／Guard／AppException：統一錯誤合約
+
+## 關係
+
+- dependency | api | services | 編譯／組合根：API 專案參考 Infrastructure，於 Program 註冊實作；路由仍使用介面
+- dependency | interfaces | domain | 編譯參考：Application.csproj 直接參考自己的 Domain.csproj
+- dependency | domain | contracts | 編譯參考：Domain.csproj 參考 Shared.Contracts，使用 Guard 與錯誤合約
+- dependency | api | interfaces | 路由透過應用介面呼叫服務；不透過其他服務 DbContext
+- realization | services | interfaces | AuthService／AccountService／ChatService 實作各自介面
+- dependency | services | domain | 以 Entity 與純規則維護業務不變條件
+- dependency | services | contexts | 使用服務自己的 EF Core Unit of Work 與交易
+- inheritance | contexts | base | 三個 DbContext 繼承共用技術基底，不共用同一實例或資料庫
+- dependency | workers | base | Publisher／Consumer 使用技術 Outbox／Inbox／Audit
+- dependency | interfaces | contracts | DTO 與 Actor／事件合約共享；不共享業務 Entity
+
+## 準則
+
+- 實作類別位於 Infrastructure；Application 定義介面與請求／回應，不等同已實作完整 DDD use-case 分層。
+- 新增服務須配置自己的 PostgreSQL／Redis；新增業務 Entity 不得放進 Shared。
+- C# 架構測試與 .csproj 依賴為驗證依據；知識圖譜的自動分群只作探索線索。
+
+## 來源
+
+- src/Services/Auth/Auth.Application/Contracts.cs
+- src/Services/Auth/Auth.Infrastructure/AuthService.cs
+- src/Services/Account/Account.Application/Contracts.cs
+- src/Services/Account/Account.Infrastructure/AccountService.cs
+- src/Services/Message/Message.Application/Contracts.cs
+- src/Services/Message/Message.Infrastructure/ChatService.cs
+- src/Shared/BuildingBlocks/Persistence.cs
+- tests/MicroserviceStarter.Tests/ArchitectureTests.cs
+- src/Services/Auth/Auth.Api/Auth.Api.csproj
+- src/Services/Auth/Auth.Application/Auth.Application.csproj
+- src/Services/Auth/Auth.Domain/Auth.Domain.csproj
+- src/Services/Auth/Auth.Infrastructure/Auth.Infrastructure.csproj
+</m:source>
+      <m:presentation root-ref="view" source-digest="sha256:016932e257eca24e0350e1c6efdcd409a9de998e7649b6d7e0308f48255d0c1c" renderer="relay-living-docs" renderer-version="1.0.0" />
+      <m:bindings>
+        <m:bind target="document-title" start-line="1" end-line="1" />
+        <m:bind target="intro-3" start-line="3" end-line="3" />
+        <m:bind target="intro-4" start-line="4" end-line="4" />
+        <m:bind target="intro-5" start-line="5" end-line="5" />
+        <m:bind target="nodes-heading" start-line="7" end-line="7" />
+        <m:bind target="node-api" start-line="9" end-line="13" />
+        <m:bind target="node-interfaces" start-line="15" end-line="19" />
+        <m:bind target="node-services" start-line="21" end-line="25" />
+        <m:bind target="node-domain" start-line="27" end-line="31" />
+        <m:bind target="node-contexts" start-line="33" end-line="37" />
+        <m:bind target="node-base" start-line="39" end-line="43" />
+        <m:bind target="node-workers" start-line="45" end-line="49" />
+        <m:bind target="node-contracts" start-line="51" end-line="55" />
+        <m:bind target="edges-heading" start-line="57" end-line="57" />
+        <m:bind target="edge-1" start-line="59" end-line="59" />
+        <m:bind target="edge-2" start-line="60" end-line="60" />
+        <m:bind target="edge-3" start-line="61" end-line="61" />
+        <m:bind target="edge-4" start-line="62" end-line="62" />
+        <m:bind target="edge-5" start-line="63" end-line="63" />
+        <m:bind target="edge-6" start-line="64" end-line="64" />
+        <m:bind target="edge-7" start-line="65" end-line="65" />
+        <m:bind target="edge-8" start-line="66" end-line="66" />
+        <m:bind target="edge-9" start-line="67" end-line="67" />
+        <m:bind target="edge-10" start-line="68" end-line="68" />
+        <m:bind target="section-70" start-line="70" end-line="70" />
+        <m:bind target="line-72" start-line="72" end-line="72" />
+        <m:bind target="line-73" start-line="73" end-line="73" />
+        <m:bind target="line-74" start-line="74" end-line="74" />
+        <m:bind target="section-76" start-line="76" end-line="76" />
+        <m:bind target="line-78" start-line="78" end-line="78" />
+        <m:bind target="line-79" start-line="79" end-line="79" />
+        <m:bind target="line-80" start-line="80" end-line="80" />
+        <m:bind target="line-81" start-line="81" end-line="81" />
+        <m:bind target="line-82" start-line="82" end-line="82" />
+        <m:bind target="line-83" start-line="83" end-line="83" />
+        <m:bind target="line-84" start-line="84" end-line="84" />
+        <m:bind target="line-85" start-line="85" end-line="85" />
+        <m:bind target="line-86" start-line="86" end-line="86" />
+        <m:bind target="line-87" start-line="87" end-line="87" />
+        <m:bind target="line-88" start-line="88" end-line="88" />
+        <m:bind target="line-89" start-line="89" end-line="89" />
+      </m:bindings>
+      <m:extensions>
+        <a:provenance version="1" spec-commit="c7c0d96aa398d650c6bea5588e5d060bc6d60da5">
+          <a:file path="src/Services/Auth/Auth.Application/Contracts.cs" sha256="a6f2a7db1b330dbed7f0f3b324b65e4c7670818756e103ed85b3f283deda8499" />
+          <a:file path="src/Services/Auth/Auth.Infrastructure/AuthService.cs" sha256="f16a1fa42782d5166363d6d8e5126e3d8a7c24fc8ffcb91919798a2b206bbb3d" />
+          <a:file path="src/Services/Account/Account.Application/Contracts.cs" sha256="097ddf13cc1623eff6bc17b4d42ff7173aa355ceba653430d588eca00a2731e1" />
+          <a:file path="src/Services/Account/Account.Infrastructure/AccountService.cs" sha256="70f0901f1497d1d97d749640daaec7e4a0635e97a154030b68be203dc12ec28a" />
+          <a:file path="src/Services/Message/Message.Application/Contracts.cs" sha256="0f630734e2c57f13b399b437a5b309f5bb734f7183f442ab8555dce7324ed71c" />
+          <a:file path="src/Services/Message/Message.Infrastructure/ChatService.cs" sha256="4d75f819d654b076e0e3d68af28839996c4ab9a8d598610eca81ad2d793fd633" />
+          <a:file path="src/Shared/BuildingBlocks/Persistence.cs" sha256="7c9ce71824ac063b130e2644a0a0cc53747a854bd4506a2bae91bd39acb7ff49" />
+          <a:file path="tests/MicroserviceStarter.Tests/ArchitectureTests.cs" sha256="3fcd0ef7091b181d3f56436a7c5a60900f3bd89dbe624f2586b3a7a76f4422ec" />
+          <a:file path="src/Services/Auth/Auth.Api/Auth.Api.csproj" sha256="34377fdde16dbb4e08f8287ed66779368238c6b6184c319c96173d49c83bf88f" />
+          <a:file path="src/Services/Auth/Auth.Application/Auth.Application.csproj" sha256="5d90bf6b9dcbe897a88fac158b30066010de4bf5a1a794033e43090d83f2e842" />
+          <a:file path="src/Services/Auth/Auth.Domain/Auth.Domain.csproj" sha256="67472b2d08b7a9fed27b2c0fb53db42367fb919154136295eedd8928f9625ab6" />
+          <a:file path="src/Services/Auth/Auth.Infrastructure/Auth.Infrastructure.csproj" sha256="f422be0d866fb71551a39ccc658cd627181774f7a10115366484433b5def6038" />
+        </a:provenance>
+      </m:extensions>
+    </m:document>
+  </metadata>
+  <g id="view" font-family="PingFang TC, Noto Sans CJK TC, Microsoft JhengHei, sans-serif" fill="#183048">
+    <rect x="0" y="0" width="1440" height="3305" fill="#FFFFFF" />
+    <rect x="0" y="0" width="1440" height="180" fill="#183048" />
+    <text x="56" y="45" font-size="16" fill="#9EBFE8"><tspan x="56" y="45">RELAY / AGENT LIVING DOCUMENT</tspan></text>
+    <text x="56" y="105" font-size="34" fill="#FFFFFF" font-weight="bold" id="document-title"><tspan x="56" y="105">UML 分層與主要類別依賴</tspan></text>
+    <g id="intro-3">
+      <text x="56" y="215" font-size="19" fill="#52677C"><tspan x="56" y="215">視圖：cards</tspan></text>
+    </g>
+    <g id="intro-4">
+      <text x="56" y="250" font-size="19" fill="#52677C"><tspan x="56" y="250">範圍：Auth、Account、Message 都採 API／Application／Domain／Infrastructure 四層。</tspan></text>
+    </g>
+    <g id="intro-5">
+      <text x="56" y="285" font-size="19" fill="#52677C"><tspan x="56" y="285">讀圖：dependency 為虛線開放箭頭；realization 為虛線空心三角；inheritance 為實線空心三角。</tspan></text>
+    </g>
+    <g id="nodes-heading">
+      <text x="56" y="338" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="338">節點</tspan></text>
+    </g>
+    <g id="node-api">
+      <rect x="56" y="372" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="398" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="398">api</tspan></text>
+      <text x="78" y="429" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="429">«component» Service API</tspan></text>
+      <line x1="74" y1="451" x2="684" y2="451" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="475" font-size="18" fill="#52677C"><tspan x="78" y="475">Program.cs：DI、路由、驗證、OpenAPI</tspan></text>
+      <text x="78" y="507" font-size="18" fill="#52677C"><tspan x="78" y="507">Auth／Account／Message 分別有獨立 API 專案</tspan></text>
+      <text x="78" y="539" font-size="18" fill="#52677C"><tspan x="78" y="539">Message API 另實作 ChatHub、ChatNotifier、ConnectionRegistry</tspan></text>
+    </g>
+    <g id="node-interfaces">
+      <rect x="734" y="372" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="398" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="398">interfaces</tspan></text>
+      <text x="756" y="429" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="429">«interface» Application 合約</tspan></text>
+      <line x1="752" y1="451" x2="1362" y2="451" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="475" font-size="18" fill="#52677C"><tspan x="756" y="475">IAuthService／IAccountService／IChatService</tspan></text>
+      <text x="756" y="507" font-size="18" fill="#52677C"><tspan x="756" y="507">DTO、驗證屬性與 IChatNotifier</tspan></text>
+      <text x="756" y="539" font-size="18" fill="#52677C"><tspan x="756" y="539">應用層不依賴其他服務的 Entity 或 DbContext</tspan></text>
+    </g>
+    <g id="node-services">
+      <rect x="56" y="597" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="623" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="623">services</tspan></text>
+      <text x="78" y="654" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="654">«class» Infrastructure 實作</tspan></text>
+      <line x1="74" y1="676" x2="684" y2="676" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="700" font-size="18" fill="#52677C"><tspan x="78" y="700">AuthService／AccountService／ChatService</tspan></text>
+      <text x="78" y="732" font-size="18" fill="#52677C"><tspan x="78" y="732">交易、EF Core、Redis、S3 與業務流程協調</tspan></text>
+      <text x="78" y="764" font-size="18" fill="#52677C"><tspan x="78" y="764">分別實作對應的 Application 介面</tspan></text>
+    </g>
+    <g id="node-domain">
+      <rect x="734" y="597" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="623" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="623">domain</tspan></text>
+      <text x="756" y="654" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="654">«entity / rules» Domain</tspan></text>
+      <line x1="752" y1="676" x2="1362" y2="676" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="700" font-size="18" fill="#52677C"><tspan x="756" y="700">Auth：User、LoginSession、IdentityRules</tspan></text>
+      <text x="756" y="732" font-size="18" fill="#52677C"><tspan x="756" y="732">Account：Profile.Update</tspan></text>
+      <text x="756" y="764" font-size="18" fill="#52677C"><tspan x="756" y="764">Message：Room、Membership、ChatMessage、Attachment、ChatRules</tspan></text>
+    </g>
+    <g id="node-contexts">
+      <rect x="56" y="822" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="848" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="848">contexts</tspan></text>
+      <text x="78" y="879" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="879">«class» 服務 DbContext</tspan></text>
+      <line x1="74" y1="901" x2="684" y2="901" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="925" font-size="18" fill="#52677C"><tspan x="78" y="925">AuthDbContext／AccountDbContext／MessageDbContext</tspan></text>
+      <text x="78" y="957" font-size="18" fill="#52677C"><tspan x="78" y="957">各自 DbSet、唯一索引、ConcurrencyToken 與 FK</tspan></text>
+      <text x="78" y="989" font-size="18" fill="#52677C"><tspan x="78" y="989">同一型別名稱不表示跨服務共用資料庫</tspan></text>
+    </g>
+    <g id="node-base">
+      <rect x="734" y="822" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="848" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="848">base</tspan></text>
+      <text x="756" y="879" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="879">«abstract class» PlatformDbContext</tspan></text>
+      <line x1="752" y1="901" x2="1362" y2="901" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="925" font-size="18" fill="#52677C"><tspan x="756" y="925">Outbox、Inbox、Audit：僅共用技術模型</tspan></text>
+      <text x="756" y="957" font-size="18" fill="#52677C"><tspan x="756" y="957">Enqueue(type, aggregateId, version, payload)</tspan></text>
+      <text x="756" y="989" font-size="18" fill="#52677C"><tspan x="756" y="989">Record(actor, action, target, reason)</tspan></text>
+    </g>
+    <g id="node-workers">
+      <rect x="56" y="1047" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="1073" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="1073">workers</tspan></text>
+      <text x="78" y="1104" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="1104">«infrastructure» 背景工作</tspan></text>
+      <line x1="74" y1="1126" x2="684" y2="1126" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="1150" font-size="18" fill="#52677C"><tspan x="78" y="1150">OutboxPublisher／EventConsumer</tspan></text>
+      <text x="78" y="1182" font-size="18" fill="#52677C"><tspan x="78" y="1182">MailWorker 僅 Auth；AttachmentCleanup 僅 Message</tspan></text>
+      <text x="78" y="1214" font-size="18" fill="#52677C"><tspan x="78" y="1214">每次工作使用自己的服務範圍與 DbContext</tspan></text>
+    </g>
+    <g id="node-contracts">
+      <rect x="734" y="1047" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="1073" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="1073">contracts</tspan></text>
+      <text x="756" y="1104" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="1104">«package» Shared.Contracts</tspan></text>
+      <line x1="752" y1="1126" x2="1362" y2="1126" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="1150" font-size="18" fill="#52677C"><tspan x="756" y="1150">IntegrationEvent、IdentityChanged、ProfileChanged</tspan></text>
+      <text x="756" y="1182" font-size="18" fill="#52677C"><tspan x="756" y="1182">ChatChanged、Actor、SessionProbe／SessionState</tspan></text>
+      <text x="756" y="1214" font-size="18" fill="#52677C"><tspan x="756" y="1214">Errors／Guard／AppException：統一錯誤合約</tspan></text>
+    </g>
+    <g id="edges-heading">
+      <text x="56" y="1287" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="1287">關係</tspan></text>
+    </g>
+    <g id="edge-1">
+      <rect x="56" y="1322" width="1324" height="109" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1349" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1349">api</tspan></text>
+      <text x="76" y="1379" font-size="17" fill="#183048"><tspan x="76" y="1379">Service API</tspan></text>
+      <text x="1155" y="1349" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1349">services</tspan></text>
+      <text x="1155" y="1379" font-size="17" fill="#183048"><tspan x="1155" y="1379">Infrastructure 實作</tspan></text>
+      <text x="325" y="1349" font-size="17" fill="#183048"><tspan x="325" y="1349">01 dependency | 編譯／組合根：API 專案參考 Infrastructure，於 Program 註冊實作；路由仍</tspan><tspan x="325" y="1375">使用介面</tspan></text>
+      <line x1="325.0" y1="1411.0" x2="332.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="1411.0" x2="346.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="1411.0" x2="360.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="1411.0" x2="374.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="1411.0" x2="388.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="1411.0" x2="402.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="1411.0" x2="416.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="1411.0" x2="430.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="1411.0" x2="444.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="1411.0" x2="458.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="1411.0" x2="472.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="1411.0" x2="486.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="1411.0" x2="500.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="1411.0" x2="514.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="1411.0" x2="528.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="1411.0" x2="542.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="1411.0" x2="556.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="1411.0" x2="570.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="1411.0" x2="584.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="1411.0" x2="598.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="1411.0" x2="612.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="1411.0" x2="626.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="1411.0" x2="640.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="1411.0" x2="654.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="1411.0" x2="668.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="1411.0" x2="682.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="1411.0" x2="696.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="1411.0" x2="710.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="1411.0" x2="724.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="1411.0" x2="738.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="1411.0" x2="752.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="1411.0" x2="766.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="1411.0" x2="780.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="1411.0" x2="794.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="1411.0" x2="808.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="1411.0" x2="822.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="1411.0" x2="836.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="1411.0" x2="850.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="1411.0" x2="864.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="1411.0" x2="878.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="1411.0" x2="892.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="1411.0" x2="906.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="1411.0" x2="920.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="1411.0" x2="934.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="1411.0" x2="948.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="1411.0" x2="962.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="1411.0" x2="976.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="1411.0" x2="990.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="1411.0" x2="1004.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="1411.0" x2="1018.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="1411.0" x2="1032.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="1411.0" x2="1046.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="1411.0" x2="1060.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="1411.0" x2="1074.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="1411.0" x2="1088.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="1411.0" x2="1102.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="1411.0" x2="1116.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="1411.0" x2="1125.0" y2="1411.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,1404 1125,1411 1113,1418" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-2">
+      <rect x="56" y="1443" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1470" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1470">interfaces</tspan></text>
+      <text x="76" y="1500" font-size="17" fill="#183048"><tspan x="76" y="1500">Application 合約</tspan></text>
+      <text x="1155" y="1470" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1470">domain</tspan></text>
+      <text x="1155" y="1500" font-size="17" fill="#183048"><tspan x="1155" y="1500">Domain</tspan></text>
+      <text x="325" y="1470" font-size="17" fill="#183048"><tspan x="325" y="1470">02 dependency | 編譯參考：Application.csproj 直接參考自己的 Domain.csproj</tspan></text>
+      <line x1="325.0" y1="1527.0" x2="332.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="1527.0" x2="346.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="1527.0" x2="360.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="1527.0" x2="374.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="1527.0" x2="388.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="1527.0" x2="402.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="1527.0" x2="416.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="1527.0" x2="430.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="1527.0" x2="444.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="1527.0" x2="458.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="1527.0" x2="472.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="1527.0" x2="486.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="1527.0" x2="500.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="1527.0" x2="514.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="1527.0" x2="528.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="1527.0" x2="542.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="1527.0" x2="556.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="1527.0" x2="570.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="1527.0" x2="584.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="1527.0" x2="598.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="1527.0" x2="612.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="1527.0" x2="626.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="1527.0" x2="640.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="1527.0" x2="654.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="1527.0" x2="668.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="1527.0" x2="682.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="1527.0" x2="696.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="1527.0" x2="710.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="1527.0" x2="724.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="1527.0" x2="738.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="1527.0" x2="752.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="1527.0" x2="766.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="1527.0" x2="780.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="1527.0" x2="794.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="1527.0" x2="808.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="1527.0" x2="822.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="1527.0" x2="836.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="1527.0" x2="850.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="1527.0" x2="864.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="1527.0" x2="878.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="1527.0" x2="892.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="1527.0" x2="906.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="1527.0" x2="920.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="1527.0" x2="934.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="1527.0" x2="948.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="1527.0" x2="962.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="1527.0" x2="976.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="1527.0" x2="990.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="1527.0" x2="1004.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="1527.0" x2="1018.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="1527.0" x2="1032.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="1527.0" x2="1046.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="1527.0" x2="1060.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="1527.0" x2="1074.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="1527.0" x2="1088.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="1527.0" x2="1102.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="1527.0" x2="1116.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="1527.0" x2="1125.0" y2="1527.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,1520 1125,1527 1113,1534" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-3">
+      <rect x="56" y="1559" width="1324" height="109" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1586" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1586">domain</tspan></text>
+      <text x="76" y="1616" font-size="17" fill="#183048"><tspan x="76" y="1616">Domain</tspan></text>
+      <text x="1155" y="1586" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1586">contracts</tspan></text>
+      <text x="1155" y="1616" font-size="17" fill="#183048"><tspan x="1155" y="1616">Shared.Contracts</tspan></text>
+      <text x="325" y="1586" font-size="17" fill="#183048"><tspan x="325" y="1586">03 dependency | 編譯參考：Domain.csproj 參考 Shared.Contracts，使用 Guard 與錯誤合約</tspan></text>
+      <line x1="325.0" y1="1648.0" x2="332.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="1648.0" x2="346.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="1648.0" x2="360.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="1648.0" x2="374.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="1648.0" x2="388.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="1648.0" x2="402.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="1648.0" x2="416.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="1648.0" x2="430.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="1648.0" x2="444.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="1648.0" x2="458.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="1648.0" x2="472.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="1648.0" x2="486.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="1648.0" x2="500.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="1648.0" x2="514.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="1648.0" x2="528.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="1648.0" x2="542.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="1648.0" x2="556.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="1648.0" x2="570.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="1648.0" x2="584.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="1648.0" x2="598.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="1648.0" x2="612.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="1648.0" x2="626.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="1648.0" x2="640.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="1648.0" x2="654.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="1648.0" x2="668.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="1648.0" x2="682.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="1648.0" x2="696.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="1648.0" x2="710.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="1648.0" x2="724.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="1648.0" x2="738.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="1648.0" x2="752.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="1648.0" x2="766.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="1648.0" x2="780.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="1648.0" x2="794.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="1648.0" x2="808.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="1648.0" x2="822.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="1648.0" x2="836.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="1648.0" x2="850.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="1648.0" x2="864.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="1648.0" x2="878.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="1648.0" x2="892.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="1648.0" x2="906.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="1648.0" x2="920.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="1648.0" x2="934.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="1648.0" x2="948.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="1648.0" x2="962.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="1648.0" x2="976.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="1648.0" x2="990.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="1648.0" x2="1004.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="1648.0" x2="1018.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="1648.0" x2="1032.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="1648.0" x2="1046.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="1648.0" x2="1060.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="1648.0" x2="1074.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="1648.0" x2="1088.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="1648.0" x2="1102.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="1648.0" x2="1116.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="1648.0" x2="1125.0" y2="1648.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,1641 1125,1648 1113,1655" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-4">
+      <rect x="56" y="1680" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1707" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1707">api</tspan></text>
+      <text x="76" y="1737" font-size="17" fill="#183048"><tspan x="76" y="1737">Service API</tspan></text>
+      <text x="1155" y="1707" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1707">interfaces</tspan></text>
+      <text x="1155" y="1737" font-size="17" fill="#183048"><tspan x="1155" y="1737">Application 合約</tspan></text>
+      <text x="325" y="1707" font-size="17" fill="#183048"><tspan x="325" y="1707">04 dependency | 路由透過應用介面呼叫服務；不透過其他服務 DbContext</tspan></text>
+      <line x1="325.0" y1="1764.0" x2="332.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="1764.0" x2="346.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="1764.0" x2="360.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="1764.0" x2="374.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="1764.0" x2="388.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="1764.0" x2="402.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="1764.0" x2="416.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="1764.0" x2="430.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="1764.0" x2="444.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="1764.0" x2="458.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="1764.0" x2="472.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="1764.0" x2="486.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="1764.0" x2="500.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="1764.0" x2="514.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="1764.0" x2="528.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="1764.0" x2="542.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="1764.0" x2="556.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="1764.0" x2="570.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="1764.0" x2="584.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="1764.0" x2="598.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="1764.0" x2="612.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="1764.0" x2="626.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="1764.0" x2="640.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="1764.0" x2="654.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="1764.0" x2="668.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="1764.0" x2="682.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="1764.0" x2="696.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="1764.0" x2="710.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="1764.0" x2="724.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="1764.0" x2="738.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="1764.0" x2="752.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="1764.0" x2="766.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="1764.0" x2="780.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="1764.0" x2="794.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="1764.0" x2="808.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="1764.0" x2="822.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="1764.0" x2="836.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="1764.0" x2="850.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="1764.0" x2="864.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="1764.0" x2="878.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="1764.0" x2="892.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="1764.0" x2="906.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="1764.0" x2="920.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="1764.0" x2="934.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="1764.0" x2="948.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="1764.0" x2="962.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="1764.0" x2="976.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="1764.0" x2="990.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="1764.0" x2="1004.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="1764.0" x2="1018.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="1764.0" x2="1032.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="1764.0" x2="1046.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="1764.0" x2="1060.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="1764.0" x2="1074.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="1764.0" x2="1088.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="1764.0" x2="1102.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="1764.0" x2="1116.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="1764.0" x2="1125.0" y2="1764.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,1757 1125,1764 1113,1771" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-5">
+      <rect x="56" y="1796" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1823" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1823">services</tspan></text>
+      <text x="76" y="1853" font-size="17" fill="#183048"><tspan x="76" y="1853">Infrastructure 實作</tspan></text>
+      <text x="1155" y="1823" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1823">interfaces</tspan></text>
+      <text x="1155" y="1853" font-size="17" fill="#183048"><tspan x="1155" y="1853">Application 合約</tspan></text>
+      <text x="325" y="1823" font-size="17" fill="#183048"><tspan x="325" y="1823">05 realization | AuthService／AccountService／ChatService 實作各自介面</tspan></text>
+      <line x1="325.0" y1="1880.0" x2="332.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="1880.0" x2="346.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="1880.0" x2="360.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="1880.0" x2="374.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="1880.0" x2="388.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="1880.0" x2="402.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="1880.0" x2="416.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="1880.0" x2="430.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="1880.0" x2="444.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="1880.0" x2="458.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="1880.0" x2="472.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="1880.0" x2="486.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="1880.0" x2="500.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="1880.0" x2="514.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="1880.0" x2="528.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="1880.0" x2="542.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="1880.0" x2="556.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="1880.0" x2="570.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="1880.0" x2="584.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="1880.0" x2="598.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="1880.0" x2="612.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="1880.0" x2="626.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="1880.0" x2="640.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="1880.0" x2="654.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="1880.0" x2="668.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="1880.0" x2="682.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="1880.0" x2="696.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="1880.0" x2="710.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="1880.0" x2="724.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="1880.0" x2="738.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="1880.0" x2="752.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="1880.0" x2="766.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="1880.0" x2="780.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="1880.0" x2="794.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="1880.0" x2="808.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="1880.0" x2="822.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="1880.0" x2="836.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="1880.0" x2="850.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="1880.0" x2="864.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="1880.0" x2="878.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="1880.0" x2="892.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="1880.0" x2="906.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="1880.0" x2="920.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="1880.0" x2="934.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="1880.0" x2="948.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="1880.0" x2="962.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="1880.0" x2="976.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="1880.0" x2="990.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="1880.0" x2="1004.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="1880.0" x2="1018.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="1880.0" x2="1032.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="1880.0" x2="1046.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="1880.0" x2="1060.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="1880.0" x2="1074.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="1880.0" x2="1088.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="1880.0" x2="1102.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="1880.0" x2="1116.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="1880.0" x2="1125.0" y2="1880.0" stroke="#2863D8" stroke-width="2" />
+      <polygon points="1125,1880 1110,1871 1110,1889" fill="#FFFFFF" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-6">
+      <rect x="56" y="1912" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1939" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1939">services</tspan></text>
+      <text x="76" y="1969" font-size="17" fill="#183048"><tspan x="76" y="1969">Infrastructure 實作</tspan></text>
+      <text x="1155" y="1939" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1939">domain</tspan></text>
+      <text x="1155" y="1969" font-size="17" fill="#183048"><tspan x="1155" y="1969">Domain</tspan></text>
+      <text x="325" y="1939" font-size="17" fill="#183048"><tspan x="325" y="1939">06 dependency | 以 Entity 與純規則維護業務不變條件</tspan></text>
+      <line x1="325.0" y1="1996.0" x2="332.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="1996.0" x2="346.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="1996.0" x2="360.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="1996.0" x2="374.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="1996.0" x2="388.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="1996.0" x2="402.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="1996.0" x2="416.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="1996.0" x2="430.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="1996.0" x2="444.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="1996.0" x2="458.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="1996.0" x2="472.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="1996.0" x2="486.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="1996.0" x2="500.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="1996.0" x2="514.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="1996.0" x2="528.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="1996.0" x2="542.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="1996.0" x2="556.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="1996.0" x2="570.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="1996.0" x2="584.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="1996.0" x2="598.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="1996.0" x2="612.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="1996.0" x2="626.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="1996.0" x2="640.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="1996.0" x2="654.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="1996.0" x2="668.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="1996.0" x2="682.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="1996.0" x2="696.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="1996.0" x2="710.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="1996.0" x2="724.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="1996.0" x2="738.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="1996.0" x2="752.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="1996.0" x2="766.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="1996.0" x2="780.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="1996.0" x2="794.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="1996.0" x2="808.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="1996.0" x2="822.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="1996.0" x2="836.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="1996.0" x2="850.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="1996.0" x2="864.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="1996.0" x2="878.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="1996.0" x2="892.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="1996.0" x2="906.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="1996.0" x2="920.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="1996.0" x2="934.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="1996.0" x2="948.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="1996.0" x2="962.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="1996.0" x2="976.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="1996.0" x2="990.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="1996.0" x2="1004.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="1996.0" x2="1018.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="1996.0" x2="1032.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="1996.0" x2="1046.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="1996.0" x2="1060.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="1996.0" x2="1074.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="1996.0" x2="1088.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="1996.0" x2="1102.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="1996.0" x2="1116.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="1996.0" x2="1125.0" y2="1996.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,1989 1125,1996 1113,2003" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-7">
+      <rect x="56" y="2028" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="2055" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="2055">services</tspan></text>
+      <text x="76" y="2085" font-size="17" fill="#183048"><tspan x="76" y="2085">Infrastructure 實作</tspan></text>
+      <text x="1155" y="2055" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="2055">contexts</tspan></text>
+      <text x="1155" y="2085" font-size="17" fill="#183048"><tspan x="1155" y="2085">服務 DbContext</tspan></text>
+      <text x="325" y="2055" font-size="17" fill="#183048"><tspan x="325" y="2055">07 dependency | 使用服務自己的 EF Core Unit of Work 與交易</tspan></text>
+      <line x1="325.0" y1="2112.0" x2="332.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="2112.0" x2="346.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="2112.0" x2="360.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="2112.0" x2="374.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="2112.0" x2="388.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="2112.0" x2="402.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="2112.0" x2="416.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="2112.0" x2="430.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="2112.0" x2="444.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="2112.0" x2="458.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="2112.0" x2="472.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="2112.0" x2="486.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="2112.0" x2="500.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="2112.0" x2="514.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="2112.0" x2="528.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="2112.0" x2="542.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="2112.0" x2="556.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="2112.0" x2="570.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="2112.0" x2="584.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="2112.0" x2="598.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="2112.0" x2="612.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="2112.0" x2="626.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="2112.0" x2="640.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="2112.0" x2="654.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="2112.0" x2="668.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="2112.0" x2="682.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="2112.0" x2="696.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="2112.0" x2="710.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="2112.0" x2="724.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="2112.0" x2="738.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="2112.0" x2="752.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="2112.0" x2="766.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="2112.0" x2="780.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="2112.0" x2="794.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="2112.0" x2="808.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="2112.0" x2="822.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="2112.0" x2="836.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="2112.0" x2="850.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="2112.0" x2="864.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="2112.0" x2="878.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="2112.0" x2="892.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="2112.0" x2="906.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="2112.0" x2="920.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="2112.0" x2="934.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="2112.0" x2="948.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="2112.0" x2="962.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="2112.0" x2="976.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="2112.0" x2="990.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="2112.0" x2="1004.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="2112.0" x2="1018.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="2112.0" x2="1032.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="2112.0" x2="1046.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="2112.0" x2="1060.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="2112.0" x2="1074.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="2112.0" x2="1088.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="2112.0" x2="1102.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="2112.0" x2="1116.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="2112.0" x2="1125.0" y2="2112.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,2105 1125,2112 1113,2119" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-8">
+      <rect x="56" y="2144" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="2171" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="2171">contexts</tspan></text>
+      <text x="76" y="2201" font-size="17" fill="#183048"><tspan x="76" y="2201">服務 DbContext</tspan></text>
+      <text x="1155" y="2171" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="2171">base</tspan></text>
+      <text x="1155" y="2201" font-size="17" fill="#183048"><tspan x="1155" y="2201">PlatformDbContext</tspan></text>
+      <text x="325" y="2171" font-size="17" fill="#183048"><tspan x="325" y="2171">08 inheritance | 三個 DbContext 繼承共用技術基底，不共用同一實例或資料庫</tspan></text>
+      <line x1="325" y1="2228" x2="1125" y2="2228" stroke="#2863D8" stroke-width="2" />
+      <polygon points="1125,2228 1110,2219 1110,2237" fill="#FFFFFF" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-9">
+      <rect x="56" y="2260" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="2287" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="2287">workers</tspan></text>
+      <text x="76" y="2317" font-size="17" fill="#183048"><tspan x="76" y="2317">背景工作</tspan></text>
+      <text x="1155" y="2287" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="2287">base</tspan></text>
+      <text x="1155" y="2317" font-size="17" fill="#183048"><tspan x="1155" y="2317">PlatformDbContext</tspan></text>
+      <text x="325" y="2287" font-size="17" fill="#183048"><tspan x="325" y="2287">09 dependency | Publisher／Consumer 使用技術 Outbox／Inbox／Audit</tspan></text>
+      <line x1="325.0" y1="2344.0" x2="332.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="2344.0" x2="346.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="2344.0" x2="360.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="2344.0" x2="374.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="2344.0" x2="388.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="2344.0" x2="402.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="2344.0" x2="416.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="2344.0" x2="430.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="2344.0" x2="444.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="2344.0" x2="458.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="2344.0" x2="472.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="2344.0" x2="486.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="2344.0" x2="500.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="2344.0" x2="514.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="2344.0" x2="528.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="2344.0" x2="542.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="2344.0" x2="556.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="2344.0" x2="570.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="2344.0" x2="584.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="2344.0" x2="598.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="2344.0" x2="612.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="2344.0" x2="626.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="2344.0" x2="640.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="2344.0" x2="654.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="2344.0" x2="668.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="2344.0" x2="682.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="2344.0" x2="696.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="2344.0" x2="710.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="2344.0" x2="724.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="2344.0" x2="738.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="2344.0" x2="752.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="2344.0" x2="766.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="2344.0" x2="780.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="2344.0" x2="794.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="2344.0" x2="808.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="2344.0" x2="822.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="2344.0" x2="836.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="2344.0" x2="850.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="2344.0" x2="864.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="2344.0" x2="878.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="2344.0" x2="892.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="2344.0" x2="906.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="2344.0" x2="920.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="2344.0" x2="934.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="2344.0" x2="948.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="2344.0" x2="962.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="2344.0" x2="976.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="2344.0" x2="990.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="2344.0" x2="1004.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="2344.0" x2="1018.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="2344.0" x2="1032.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="2344.0" x2="1046.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="2344.0" x2="1060.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="2344.0" x2="1074.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="2344.0" x2="1088.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="2344.0" x2="1102.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="2344.0" x2="1116.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="2344.0" x2="1125.0" y2="2344.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,2337 1125,2344 1113,2351" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-10">
+      <rect x="56" y="2376" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="2403" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="2403">interfaces</tspan></text>
+      <text x="76" y="2433" font-size="17" fill="#183048"><tspan x="76" y="2433">Application 合約</tspan></text>
+      <text x="1155" y="2403" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="2403">contracts</tspan></text>
+      <text x="1155" y="2433" font-size="17" fill="#183048"><tspan x="1155" y="2433">Shared.Contracts</tspan></text>
+      <text x="325" y="2403" font-size="17" fill="#183048"><tspan x="325" y="2403">10 dependency | DTO 與 Actor／事件合約共享；不共享業務 Entity</tspan></text>
+      <line x1="325.0" y1="2460.0" x2="332.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="2460.0" x2="346.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="2460.0" x2="360.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="2460.0" x2="374.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="2460.0" x2="388.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="2460.0" x2="402.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="2460.0" x2="416.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="2460.0" x2="430.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="2460.0" x2="444.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="2460.0" x2="458.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="2460.0" x2="472.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="2460.0" x2="486.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="2460.0" x2="500.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="2460.0" x2="514.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="2460.0" x2="528.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="2460.0" x2="542.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="2460.0" x2="556.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="2460.0" x2="570.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="2460.0" x2="584.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="2460.0" x2="598.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="2460.0" x2="612.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="2460.0" x2="626.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="2460.0" x2="640.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="2460.0" x2="654.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="2460.0" x2="668.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="2460.0" x2="682.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="2460.0" x2="696.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="2460.0" x2="710.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="2460.0" x2="724.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="2460.0" x2="738.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="2460.0" x2="752.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="2460.0" x2="766.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="2460.0" x2="780.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="2460.0" x2="794.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="2460.0" x2="808.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="2460.0" x2="822.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="2460.0" x2="836.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="2460.0" x2="850.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="2460.0" x2="864.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="2460.0" x2="878.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="2460.0" x2="892.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="2460.0" x2="906.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="2460.0" x2="920.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="2460.0" x2="934.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="2460.0" x2="948.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="2460.0" x2="962.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="2460.0" x2="976.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="2460.0" x2="990.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="2460.0" x2="1004.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="2460.0" x2="1018.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="2460.0" x2="1032.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="2460.0" x2="1046.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="2460.0" x2="1060.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="2460.0" x2="1074.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="2460.0" x2="1088.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="2460.0" x2="1102.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="2460.0" x2="1116.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="2460.0" x2="1125.0" y2="2460.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,2453 1125,2460 1113,2467" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="section-70">
+      <text x="56" y="2526" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="2526">準則</tspan></text>
+    </g>
+    <g id="line-72">
+      <text x="70" y="2568" font-size="18" fill="#52677C"><tspan x="70" y="2568">實作類別位於 Infrastructure；Application 定義介面與請求／回應，不等同已實作完整 DDD use-case 分層。</tspan></text>
+    </g>
+    <g id="line-73">
+      <text x="70" y="2610" font-size="18" fill="#52677C"><tspan x="70" y="2610">新增服務須配置自己的 PostgreSQL／Redis；新增業務 Entity 不得放進 Shared。</tspan></text>
+    </g>
+    <g id="line-74">
+      <text x="70" y="2652" font-size="18" fill="#52677C"><tspan x="70" y="2652">C# 架構測試與 .csproj 依賴為驗證依據；知識圖譜的自動分群只作探索線索。</tspan></text>
+    </g>
+    <g id="section-76">
+      <text x="56" y="2717" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="2717">來源</tspan></text>
+    </g>
+    <g id="line-78">
+      <text x="70" y="2759" font-size="15" fill="#52677C"><tspan x="70" y="2759">src/Services/Auth/Auth.Application/Contracts.cs</tspan></text>
+    </g>
+    <g id="line-79">
+      <text x="70" y="2798" font-size="15" fill="#52677C"><tspan x="70" y="2798">src/Services/Auth/Auth.Infrastructure/AuthService.cs</tspan></text>
+    </g>
+    <g id="line-80">
+      <text x="70" y="2837" font-size="15" fill="#52677C"><tspan x="70" y="2837">src/Services/Account/Account.Application/Contracts.cs</tspan></text>
+    </g>
+    <g id="line-81">
+      <text x="70" y="2876" font-size="15" fill="#52677C"><tspan x="70" y="2876">src/Services/Account/Account.Infrastructure/AccountService.cs</tspan></text>
+    </g>
+    <g id="line-82">
+      <text x="70" y="2915" font-size="15" fill="#52677C"><tspan x="70" y="2915">src/Services/Message/Message.Application/Contracts.cs</tspan></text>
+    </g>
+    <g id="line-83">
+      <text x="70" y="2954" font-size="15" fill="#52677C"><tspan x="70" y="2954">src/Services/Message/Message.Infrastructure/ChatService.cs</tspan></text>
+    </g>
+    <g id="line-84">
+      <text x="70" y="2993" font-size="15" fill="#52677C"><tspan x="70" y="2993">src/Shared/BuildingBlocks/Persistence.cs</tspan></text>
+    </g>
+    <g id="line-85">
+      <text x="70" y="3032" font-size="15" fill="#52677C"><tspan x="70" y="3032">tests/MicroserviceStarter.Tests/ArchitectureTests.cs</tspan></text>
+    </g>
+    <g id="line-86">
+      <text x="70" y="3071" font-size="15" fill="#52677C"><tspan x="70" y="3071">src/Services/Auth/Auth.Api/Auth.Api.csproj</tspan></text>
+    </g>
+    <g id="line-87">
+      <text x="70" y="3110" font-size="15" fill="#52677C"><tspan x="70" y="3110">src/Services/Auth/Auth.Application/Auth.Application.csproj</tspan></text>
+    </g>
+    <g id="line-88">
+      <text x="70" y="3149" font-size="15" fill="#52677C"><tspan x="70" y="3149">src/Services/Auth/Auth.Domain/Auth.Domain.csproj</tspan></text>
+    </g>
+    <g id="line-89">
+      <text x="70" y="3188" font-size="15" fill="#52677C"><tspan x="70" y="3188">src/Services/Auth/Auth.Infrastructure/Auth.Infrastructure.csproj</tspan></text>
+    </g>
+    <line x1="56" y1="3257" x2="1384" y2="3257" stroke="#CEDAE8" stroke-width="2" />
+    <text x="56" y="3283" font-size="12" fill="#52677C"><tspan x="56" y="3283">RELAY / STATIC SVG / MARKDOWN IS THE CONTENT AUTHORITY</tspan></text>
+  </g>
+</svg>

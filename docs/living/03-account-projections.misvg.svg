@@ -1,0 +1,284 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:a="https://github.com/Lian0123/my-c-sharp-templates/ns/living-docs/1" xmlns:m="https://example.org/ns/markdown-in-svg/0.1" version="1.1" width="1440" height="2490" viewBox="0 0 1440 2490">
+  <title>Account 與跨服務資料投影</title>
+  <desc>繁體中文 Agent living document。Markdown 是內容權威；UML 關係、資料來源與更新規則以原生靜態 SVG 呈現。</desc>
+  <metadata>
+    <m:document version="0.1" profile="static" doc-id="urn:uuid:30aed66d-d592-437b-9e5d-5d57f06ae7d2" revision="3">
+      <m:source media-type="text/markdown" dialect="commonmark-0.31.2" xml:space="preserve"># Account 與跨服務資料投影
+
+視圖：cards
+範圍：身分、公開資料與聊天室使用者之間，以相同 UserId／Id 建立的跨庫邏輯對應。
+讀圖：event 為事件驅動投影；相同 ID 不是跨庫 FK，也不授權跨服務查詢資料庫。
+
+## 節點
+
+### identity | «authority» Auth.User
+
+- User.Id：跨服務使用者識別碼
+- Active／EmailVerified／Role／SecurityVersion 由 Auth 決定
+- InitialDisplayName 是註冊時名稱，非持續同步的個人資料權威
+
+### profile | «entity» Account.Profile
+
+- PK Id = Auth.User.Id（事件建立）
+- DisplayName 最大 50；Bio 最大 500
+- Active／IdentityVersion 為身分投影
+- Version : long concurrency token；更新後遞增
+- CreatedAt；資料表 Profiles
+
+### chatuser | «projection» Message.ChatUser
+
+- PK Id = UserId；資料表 Users（Message DB）
+- DisplayName／Active：服務所需的最小資料
+- ProfileVersion／IdentityVersion 分開追蹤
+- 不保存密碼、Refresh Token、Email 驗證 Token
+
+### cache | «cache» Account Redis
+
+- account:profile:{userId}
+- ProfileView 快取 30 秒；更新／事件時失效
+- Redis 故障或 JSON 損毀時回源 Account PostgreSQL
+
+### inbox | «technical» Inbox／Outbox
+
+- Inbox.Id = EventId；ProcessedAt
+- Profile 更新與 account.profile.changed.v1 Outbox 同交易
+- 事件重複由 Inbox 去重；舊版本由 Handler 忽略
+
+## 關係
+
+- event | identity | profile | auth.identity.changed.v1：新建 Profile 或更新 Active／IdentityVersion
+- event | identity | chatuser | auth.identity.changed.v1：更新 IdentityVersion／Active；無個人資料時補初始名稱
+- event | profile | chatuser | account.profile.changed.v1：更新 ProfileVersion／DisplayName；只在沒有身分版本時補 Active
+- association | profile | cache | 唯讀快取，不是資料所有權或授權依據
+- association | profile | inbox | Consumer 在同交易提交投影、Inbox 與新的 Outbox
+
+## 準則
+
+- Profile.IdentityVersion 與 Profile.Version 含意不同；ChatUser 的兩個版本也必須獨立比較。
+- Account 不消費 ProfileChanged；Auth 不消費 ProfileChanged。不要畫出不存在的反向同步。
+- Account /me 在投影尚未建立時回傳 202、Retry-After: 2；前端等待初始化完成才開放編輯。
+- 公開個人資料搜尋只回傳 Active 的有限筆結果；CMS 目前載入最新最多 100 筆帳號，並非全域統計。
+
+## 來源
+
+- src/Shared/Contracts/IntegrationEvents.cs
+- src/Services/Account/Account.Domain/Profile.cs
+- src/Services/Account/Account.Infrastructure/AccountDbContext.cs
+- src/Services/Account/Account.Infrastructure/AccountService.cs
+- src/Services/Account/Account.Api/Program.cs
+- src/Services/Message/Message.Infrastructure/MessageIntegrationHandler.cs
+- src/Web/src/App.tsx
+- src/Web/src/AdminPage.tsx
+</m:source>
+      <m:presentation root-ref="view" source-digest="sha256:abef04a4c383ea343661789c99f758cd97da41d5ea0cd290cf4c91ac29c972be" renderer="relay-living-docs" renderer-version="1.0.0" />
+      <m:bindings>
+        <m:bind target="document-title" start-line="1" end-line="1" />
+        <m:bind target="intro-3" start-line="3" end-line="3" />
+        <m:bind target="intro-4" start-line="4" end-line="4" />
+        <m:bind target="intro-5" start-line="5" end-line="5" />
+        <m:bind target="nodes-heading" start-line="7" end-line="7" />
+        <m:bind target="node-identity" start-line="9" end-line="13" />
+        <m:bind target="node-profile" start-line="15" end-line="21" />
+        <m:bind target="node-chatuser" start-line="23" end-line="28" />
+        <m:bind target="node-cache" start-line="30" end-line="34" />
+        <m:bind target="node-inbox" start-line="36" end-line="40" />
+        <m:bind target="edges-heading" start-line="42" end-line="42" />
+        <m:bind target="edge-1" start-line="44" end-line="44" />
+        <m:bind target="edge-2" start-line="45" end-line="45" />
+        <m:bind target="edge-3" start-line="46" end-line="46" />
+        <m:bind target="edge-4" start-line="47" end-line="47" />
+        <m:bind target="edge-5" start-line="48" end-line="48" />
+        <m:bind target="section-50" start-line="50" end-line="50" />
+        <m:bind target="line-52" start-line="52" end-line="52" />
+        <m:bind target="line-53" start-line="53" end-line="53" />
+        <m:bind target="line-54" start-line="54" end-line="54" />
+        <m:bind target="line-55" start-line="55" end-line="55" />
+        <m:bind target="section-57" start-line="57" end-line="57" />
+        <m:bind target="line-59" start-line="59" end-line="59" />
+        <m:bind target="line-60" start-line="60" end-line="60" />
+        <m:bind target="line-61" start-line="61" end-line="61" />
+        <m:bind target="line-62" start-line="62" end-line="62" />
+        <m:bind target="line-63" start-line="63" end-line="63" />
+        <m:bind target="line-64" start-line="64" end-line="64" />
+        <m:bind target="line-65" start-line="65" end-line="65" />
+        <m:bind target="line-66" start-line="66" end-line="66" />
+      </m:bindings>
+      <m:extensions>
+        <a:provenance version="1" spec-commit="c7c0d96aa398d650c6bea5588e5d060bc6d60da5">
+          <a:file path="src/Shared/Contracts/IntegrationEvents.cs" sha256="cce8c726f046d844bbcfdd1392298ff03532cb829d2c6e6b3eeaa68b42792a62" />
+          <a:file path="src/Services/Account/Account.Domain/Profile.cs" sha256="6c2166af3f61c4a9ced69b358c8728e282c8400305c0b79a788cfbf840b76d45" />
+          <a:file path="src/Services/Account/Account.Infrastructure/AccountDbContext.cs" sha256="18a2c3f14c464a631359578d0a7eead933fc43aa5c924923fa6467df9ff3686c" />
+          <a:file path="src/Services/Account/Account.Infrastructure/AccountService.cs" sha256="70f0901f1497d1d97d749640daaec7e4a0635e97a154030b68be203dc12ec28a" />
+          <a:file path="src/Services/Account/Account.Api/Program.cs" sha256="e359461925b2ab6fabb368505e554e16ff23920be124ffdaf1de379fb9f836cc" />
+          <a:file path="src/Services/Message/Message.Infrastructure/MessageIntegrationHandler.cs" sha256="da2224f113f6756b6cc877cb5f41d87357e1fbd10986f4fec2384c46b873683c" />
+          <a:file path="src/Web/src/App.tsx" sha256="5dfedeb03e42c16af4867bb7af788bd9b74ca80a1e9deab42eaa46e3b5088776" />
+          <a:file path="src/Web/src/AdminPage.tsx" sha256="9848f011658265e936ceffc7473017fc771f30f3b24b0c041c1105f7d7fa8988" />
+        </a:provenance>
+      </m:extensions>
+    </m:document>
+  </metadata>
+  <g id="view" font-family="PingFang TC, Noto Sans CJK TC, Microsoft JhengHei, sans-serif" fill="#183048">
+    <rect x="0" y="0" width="1440" height="2490" fill="#FFFFFF" />
+    <rect x="0" y="0" width="1440" height="180" fill="#183048" />
+    <text x="56" y="45" font-size="16" fill="#9EBFE8"><tspan x="56" y="45">RELAY / AGENT LIVING DOCUMENT</tspan></text>
+    <text x="56" y="105" font-size="34" fill="#FFFFFF" font-weight="bold" id="document-title"><tspan x="56" y="105">Account 與跨服務資料投影</tspan></text>
+    <g id="intro-3">
+      <text x="56" y="215" font-size="19" fill="#52677C"><tspan x="56" y="215">視圖：cards</tspan></text>
+    </g>
+    <g id="intro-4">
+      <text x="56" y="250" font-size="19" fill="#52677C"><tspan x="56" y="250">範圍：身分、公開資料與聊天室使用者之間，以相同 UserId／Id 建立的跨庫邏輯對應。</tspan></text>
+    </g>
+    <g id="intro-5">
+      <text x="56" y="285" font-size="19" fill="#52677C"><tspan x="56" y="285">讀圖：event 為事件驅動投影；相同 ID 不是跨庫 FK，也不授權跨服務查詢資料庫。</tspan></text>
+    </g>
+    <g id="nodes-heading">
+      <text x="56" y="338" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="338">節點</tspan></text>
+    </g>
+    <g id="node-identity">
+      <rect x="56" y="372" width="646" height="265" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="398" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="398">identity</tspan></text>
+      <text x="78" y="429" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="429">«authority» Auth.User</tspan></text>
+      <line x1="74" y1="451" x2="684" y2="451" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="475" font-size="18" fill="#52677C"><tspan x="78" y="475">User.Id：跨服務使用者識別碼</tspan></text>
+      <text x="78" y="507" font-size="18" fill="#52677C"><tspan x="78" y="507">Active／EmailVerified／Role／SecurityVersion 由 Auth 決定</tspan></text>
+      <text x="78" y="539" font-size="18" fill="#52677C"><tspan x="78" y="539">InitialDisplayName 是註冊時名稱，非持續同步的個人資料權威</tspan></text>
+    </g>
+    <g id="node-profile">
+      <rect x="734" y="372" width="646" height="265" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="398" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="398">profile</tspan></text>
+      <text x="756" y="429" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="429">«entity» Account.Profile</tspan></text>
+      <line x1="752" y1="451" x2="1362" y2="451" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="475" font-size="18" fill="#52677C"><tspan x="756" y="475">PK Id = Auth.User.Id（事件建立）</tspan></text>
+      <text x="756" y="507" font-size="18" fill="#52677C"><tspan x="756" y="507">DisplayName 最大 50；Bio 最大 500</tspan></text>
+      <text x="756" y="539" font-size="18" fill="#52677C"><tspan x="756" y="539">Active／IdentityVersion 為身分投影</tspan></text>
+      <text x="756" y="571" font-size="18" fill="#52677C"><tspan x="756" y="571">Version : long concurrency token；更新後遞增</tspan></text>
+      <text x="756" y="603" font-size="18" fill="#52677C"><tspan x="756" y="603">CreatedAt；資料表 Profiles</tspan></text>
+    </g>
+    <g id="node-chatuser">
+      <rect x="56" y="663" width="646" height="232" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="689" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="689">chatuser</tspan></text>
+      <text x="78" y="720" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="720">«projection» Message.ChatUser</tspan></text>
+      <line x1="74" y1="742" x2="684" y2="742" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="766" font-size="18" fill="#52677C"><tspan x="78" y="766">PK Id = UserId；資料表 Users（Message DB）</tspan></text>
+      <text x="78" y="798" font-size="18" fill="#52677C"><tspan x="78" y="798">DisplayName／Active：服務所需的最小資料</tspan></text>
+      <text x="78" y="830" font-size="18" fill="#52677C"><tspan x="78" y="830">ProfileVersion／IdentityVersion 分開追蹤</tspan></text>
+      <text x="78" y="862" font-size="18" fill="#52677C"><tspan x="78" y="862">不保存密碼、Refresh Token、Email 驗證 Token</tspan></text>
+    </g>
+    <g id="node-cache">
+      <rect x="734" y="663" width="646" height="232" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="689" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="689">cache</tspan></text>
+      <text x="756" y="720" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="720">«cache» Account Redis</tspan></text>
+      <line x1="752" y1="742" x2="1362" y2="742" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="766" font-size="18" fill="#52677C"><tspan x="756" y="766">account:profile:{userId}</tspan></text>
+      <text x="756" y="798" font-size="18" fill="#52677C"><tspan x="756" y="798">ProfileView 快取 30 秒；更新／事件時失效</tspan></text>
+      <text x="756" y="830" font-size="18" fill="#52677C"><tspan x="756" y="830">Redis 故障或 JSON 損毀時回源 Account PostgreSQL</tspan></text>
+    </g>
+    <g id="node-inbox">
+      <rect x="56" y="921" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="947" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="947">inbox</tspan></text>
+      <text x="78" y="978" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="978">«technical» Inbox／Outbox</tspan></text>
+      <line x1="74" y1="1000" x2="684" y2="1000" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="1024" font-size="18" fill="#52677C"><tspan x="78" y="1024">Inbox.Id = EventId；ProcessedAt</tspan></text>
+      <text x="78" y="1056" font-size="18" fill="#52677C"><tspan x="78" y="1056">Profile 更新與 account.profile.changed.v1 Outbox 同交易</tspan></text>
+      <text x="78" y="1088" font-size="18" fill="#52677C"><tspan x="78" y="1088">事件重複由 Inbox 去重；舊版本由 Handler 忽略</tspan></text>
+    </g>
+    <g id="edges-heading">
+      <text x="56" y="1161" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="1161">關係</tspan></text>
+    </g>
+    <g id="edge-1">
+      <rect x="56" y="1196" width="1324" height="109" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1223" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1223">identity</tspan></text>
+      <text x="76" y="1253" font-size="17" fill="#183048"><tspan x="76" y="1253">Auth.User</tspan></text>
+      <text x="1155" y="1223" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1223">profile</tspan></text>
+      <text x="1155" y="1253" font-size="17" fill="#183048"><tspan x="1155" y="1253">Account.Profile</tspan></text>
+      <text x="325" y="1223" font-size="17" fill="#183048"><tspan x="325" y="1223">01 event | auth.identity.changed.v1：新建 Profile 或更新 Active／IdentityVersion</tspan></text>
+      <line x1="325" y1="1285" x2="1125" y2="1285" stroke="#087E7C" stroke-width="2" />
+      <polyline points="1113,1278 1125,1285 1113,1292" fill="none" stroke="#087E7C" stroke-width="2" />
+    </g>
+    <g id="edge-2">
+      <rect x="56" y="1317" width="1324" height="109" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1344" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1344">identity</tspan></text>
+      <text x="76" y="1374" font-size="17" fill="#183048"><tspan x="76" y="1374">Auth.User</tspan></text>
+      <text x="1155" y="1344" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1344">chatuser</tspan></text>
+      <text x="1155" y="1374" font-size="17" fill="#183048"><tspan x="1155" y="1374">Message.ChatUser</tspan></text>
+      <text x="325" y="1344" font-size="17" fill="#183048"><tspan x="325" y="1344">02 event | auth.identity.changed.v1：更新 IdentityVersion／Active；無個人資料時補初始</tspan><tspan x="325" y="1370">名稱</tspan></text>
+      <line x1="325" y1="1406" x2="1125" y2="1406" stroke="#087E7C" stroke-width="2" />
+      <polyline points="1113,1399 1125,1406 1113,1413" fill="none" stroke="#087E7C" stroke-width="2" />
+    </g>
+    <g id="edge-3">
+      <rect x="56" y="1438" width="1324" height="109" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1465" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1465">profile</tspan></text>
+      <text x="76" y="1495" font-size="17" fill="#183048"><tspan x="76" y="1495">Account.Profile</tspan></text>
+      <text x="1155" y="1465" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1465">chatuser</tspan></text>
+      <text x="1155" y="1495" font-size="17" fill="#183048"><tspan x="1155" y="1495">Message.ChatUser</tspan></text>
+      <text x="325" y="1465" font-size="17" fill="#183048"><tspan x="325" y="1465">03 event | account.profile.changed.v1：更新 ProfileVersion／DisplayName；只在沒有身分</tspan><tspan x="325" y="1491">版本時補 Active</tspan></text>
+      <line x1="325" y1="1527" x2="1125" y2="1527" stroke="#087E7C" stroke-width="2" />
+      <polyline points="1113,1520 1125,1527 1113,1534" fill="none" stroke="#087E7C" stroke-width="2" />
+    </g>
+    <g id="edge-4">
+      <rect x="56" y="1559" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1586" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1586">profile</tspan></text>
+      <text x="76" y="1616" font-size="17" fill="#183048"><tspan x="76" y="1616">Account.Profile</tspan></text>
+      <text x="1155" y="1586" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1586">cache</tspan></text>
+      <text x="1155" y="1616" font-size="17" fill="#183048"><tspan x="1155" y="1616">Account Redis</tspan></text>
+      <text x="325" y="1586" font-size="17" fill="#183048"><tspan x="325" y="1586">04 association | 唯讀快取，不是資料所有權或授權依據</tspan></text>
+      <line x1="325" y1="1643" x2="1125" y2="1643" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,1636 1125,1643 1113,1650" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-5">
+      <rect x="56" y="1675" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1702" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1702">profile</tspan></text>
+      <text x="76" y="1732" font-size="17" fill="#183048"><tspan x="76" y="1732">Account.Profile</tspan></text>
+      <text x="1155" y="1702" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1702">inbox</tspan></text>
+      <text x="1155" y="1732" font-size="17" fill="#183048"><tspan x="1155" y="1732">Inbox／Outbox</tspan></text>
+      <text x="325" y="1702" font-size="17" fill="#183048"><tspan x="325" y="1702">05 association | Consumer 在同交易提交投影、Inbox 與新的 Outbox</tspan></text>
+      <line x1="325" y1="1759" x2="1125" y2="1759" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,1752 1125,1759 1113,1766" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="section-50">
+      <text x="56" y="1825" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="1825">準則</tspan></text>
+    </g>
+    <g id="line-52">
+      <text x="70" y="1867" font-size="18" fill="#52677C"><tspan x="70" y="1867">Profile.IdentityVersion 與 Profile.Version 含意不同；ChatUser 的兩個版本也必須獨立比較。</tspan></text>
+    </g>
+    <g id="line-53">
+      <text x="70" y="1909" font-size="18" fill="#52677C"><tspan x="70" y="1909">Account 不消費 ProfileChanged；Auth 不消費 ProfileChanged。不要畫出不存在的反向同步。</tspan></text>
+    </g>
+    <g id="line-54">
+      <text x="70" y="1951" font-size="18" fill="#52677C"><tspan x="70" y="1951">Account /me 在投影尚未建立時回傳 202、Retry-After: 2；前端等待初始化完成才開放編輯。</tspan></text>
+    </g>
+    <g id="line-55">
+      <text x="70" y="1993" font-size="18" fill="#52677C"><tspan x="70" y="1993">公開個人資料搜尋只回傳 Active 的有限筆結果；CMS 目前載入最新最多 100 筆帳號，並非全域統計。</tspan></text>
+    </g>
+    <g id="section-57">
+      <text x="56" y="2058" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="2058">來源</tspan></text>
+    </g>
+    <g id="line-59">
+      <text x="70" y="2100" font-size="15" fill="#52677C"><tspan x="70" y="2100">src/Shared/Contracts/IntegrationEvents.cs</tspan></text>
+    </g>
+    <g id="line-60">
+      <text x="70" y="2139" font-size="15" fill="#52677C"><tspan x="70" y="2139">src/Services/Account/Account.Domain/Profile.cs</tspan></text>
+    </g>
+    <g id="line-61">
+      <text x="70" y="2178" font-size="15" fill="#52677C"><tspan x="70" y="2178">src/Services/Account/Account.Infrastructure/AccountDbContext.cs</tspan></text>
+    </g>
+    <g id="line-62">
+      <text x="70" y="2217" font-size="15" fill="#52677C"><tspan x="70" y="2217">src/Services/Account/Account.Infrastructure/AccountService.cs</tspan></text>
+    </g>
+    <g id="line-63">
+      <text x="70" y="2256" font-size="15" fill="#52677C"><tspan x="70" y="2256">src/Services/Account/Account.Api/Program.cs</tspan></text>
+    </g>
+    <g id="line-64">
+      <text x="70" y="2295" font-size="15" fill="#52677C"><tspan x="70" y="2295">src/Services/Message/Message.Infrastructure/MessageIntegrationHandler.cs</tspan></text>
+    </g>
+    <g id="line-65">
+      <text x="70" y="2334" font-size="15" fill="#52677C"><tspan x="70" y="2334">src/Web/src/App.tsx</tspan></text>
+    </g>
+    <g id="line-66">
+      <text x="70" y="2373" font-size="15" fill="#52677C"><tspan x="70" y="2373">src/Web/src/AdminPage.tsx</tspan></text>
+    </g>
+    <line x1="56" y1="2442" x2="1384" y2="2442" stroke="#CEDAE8" stroke-width="2" />
+    <text x="56" y="2468" font-size="12" fill="#52677C"><tspan x="56" y="2468">RELAY / STATIC SVG / MARKDOWN IS THE CONTENT AUTHORITY</tspan></text>
+  </g>
+</svg>

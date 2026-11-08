@@ -51,6 +51,8 @@ flowchart LR
 
 詳見 [架構決策](docs/architecture.md)、[API 與錯誤規範](docs/api.md) 及 [維運與故障處理](docs/operations.md)。
 
+可持續更新的 [Agent Living Document](docs/living/README.md) 提供十份 Markdown-in-SVG 圖頁，包含 UML 分層、資料模型、實體外鍵與邏輯參照、事件同步、撤銷及聊天時序；每份 SVG 內嵌權威 Markdown 與程式來源雜湊，CI 會檢查文件是否隨實作更新。
+
 ## 驗收與覆蓋率
 
 測試使用獨立 `microservice-starter-tests` Compose 專案，Gateway／Mailpit 分別為 `18080`／`18025`。後端與前端各自要求 **行覆蓋率 ≥95%、分支覆蓋率 ≥90%**；不達標即失敗。後端包含 Gateway、共用程式及三個服務的全部自寫程式，僅排除 Migration／編譯器產生程式；前端僅排除測試與產生的 API 型別。

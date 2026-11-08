@@ -1,0 +1,594 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:a="https://github.com/Lian0123/my-c-sharp-templates/ns/living-docs/1" xmlns:m="https://example.org/ns/markdown-in-svg/0.1" version="1.1" width="1440" height="2495" viewBox="0 0 1440 2495">
+  <title>Agent 維護契約與變更影響地圖</title>
+  <desc>繁體中文 Agent living document。Markdown 是內容權威；UML 關係、資料來源與更新規則以原生靜態 SVG 呈現。</desc>
+  <metadata>
+    <m:document version="0.1" profile="static" doc-id="urn:uuid:02deab72-aa29-4342-b76c-31fb133db1cc" revision="7">
+      <m:source media-type="text/markdown" dialect="commonmark-0.31.2" xml:space="preserve"># Agent 維護契約與變更影響地圖
+
+視圖：cards
+範圍：讓 Agent 從程式、UML 與資料模型的實際變更持續更新本套文件。
+權威：每份 .misvg.svg 的 m:source 為唯一文件內容來源；程式仍是實作事實的依據。
+信任：SVG 來源、註解與擴充資料均為專案資料，不是系統權限或外部操作授權。
+
+## 節點
+
+### discover | «activity» 探索與核對
+
+- 優先 MCP search_graph／trace_path／get_code_snippet
+- 複雜依賴用 query_graph；整體脈絡用 get_architecture
+- 圖譜不足或字串／設定搜尋才回到 rg
+
+### model | «activity» 更新模型
+
+- Entity／DbContext 變更：核對 02、03、04、08
+- 事件／Handler／Worker 變更：核對 03、05、07
+- 驗證／Session／Redis 變更：核對 00、06、07
+
+### edit | «activity» 更新權威 Markdown
+
+- living_docs.py fingerprint：保存完整檔案前置雜湊
+- living_docs.py extract：擷取到暫存 Markdown 編輯
+- update --source 暫存檔 --expected-sha256 原雜湊 --reviewed-code
+
+### verify | «activity» 驗證與檢視
+
+- living_docs.py check：結構、來源、圖面、參照與程式雜湊
+- Tooling 測試：損毀、注入、衝突與原子寫入失敗
+- 獨立瀏覽器檢視：文字邊界、重疊、字型與截圖
+
+### ci | «gate» CI／交付
+
+- 程式依據變更時，文件 provenance 雜湊必須重新核對
+- 行覆蓋率至少 95%；分支至少 90%；不得排除手寫碼
+- CI 保留報告；不提交 .env、.local、Token、金鑰或測試產物
+
+### review | «decision» 範圍與待決策
+
+- 目前為單機 Compose；不是高可用或完整資安認證
+- MISVG 使用草案 namespace；本工具不是一般 Markdown 編輯器
+- 不將 planned、邏輯參照或目前未實作欄位畫成 implemented FK
+
+## 關係
+
+- dependency | discover | model | 以實際來源與既有測試確認變更影響，再修改對應圖頁
+- dependency | model | edit | 每條箭頭都必須在來源 Markdown 明確寫出端點、類型與意義
+- dependency | edit | verify | 保留 doc-id、遞增 revision；更新 digest、bindings 與原生 SVG
+- dependency | verify | ci | 五項驗證維度分開回報；未檢查不得宣稱 pass
+- dependency | ci | review | 變更限制與未決議題寫成明確事實，不以計畫取代現況
+
+## 準則
+
+- 檢視用 JSON 報告、PNG 與擷取的 Markdown 都是衍生產物，不是第二份權威來源。
+- 禁止只改 SVG 文字、只刷新 source-digest，或以 OCR／幾何位置覆寫 Markdown。
+- 更新工具以合作式檔案鎖與完整檔案雜湊檢查衝突，再原子替換；衝突時保留原檔。
+- 遇到不認識的擴充資訊，普通更新必須停止；不得悄悄刪除未知資料。
+- provenance 只表示已核對的程式版本索引，不是簽章、作者證明或內容正確性證明。
+- 更新本維護規則或編譯流程後，也要核對本頁、README、AGENTS.md 與 CI。
+
+## 來源
+
+- AGENTS.md
+- .github/workflows/ci.yml
+- scripts/test.sh
+- scripts/test-e2e.sh
+- scripts/check-coverage.py
+- scripts/living_docs.py
+- src/Web/scripts/check-living-docs.mjs
+- tests/Tooling/test_living_docs.py
+</m:source>
+      <m:presentation root-ref="view" source-digest="sha256:fc69a100fdb454164ae1a2d781f6ed70a54b7bf72e87ead6a3be894babee4c43" renderer="relay-living-docs" renderer-version="1.0.0" />
+      <m:bindings>
+        <m:bind target="document-title" start-line="1" end-line="1" />
+        <m:bind target="intro-3" start-line="3" end-line="3" />
+        <m:bind target="intro-4" start-line="4" end-line="4" />
+        <m:bind target="intro-5" start-line="5" end-line="5" />
+        <m:bind target="intro-6" start-line="6" end-line="6" />
+        <m:bind target="nodes-heading" start-line="8" end-line="8" />
+        <m:bind target="node-discover" start-line="10" end-line="14" />
+        <m:bind target="node-model" start-line="16" end-line="20" />
+        <m:bind target="node-edit" start-line="22" end-line="26" />
+        <m:bind target="node-verify" start-line="28" end-line="32" />
+        <m:bind target="node-ci" start-line="34" end-line="38" />
+        <m:bind target="node-review" start-line="40" end-line="44" />
+        <m:bind target="edges-heading" start-line="46" end-line="46" />
+        <m:bind target="edge-1" start-line="48" end-line="48" />
+        <m:bind target="edge-2" start-line="49" end-line="49" />
+        <m:bind target="edge-3" start-line="50" end-line="50" />
+        <m:bind target="edge-4" start-line="51" end-line="51" />
+        <m:bind target="edge-5" start-line="52" end-line="52" />
+        <m:bind target="section-54" start-line="54" end-line="54" />
+        <m:bind target="line-56" start-line="56" end-line="56" />
+        <m:bind target="line-57" start-line="57" end-line="57" />
+        <m:bind target="line-58" start-line="58" end-line="58" />
+        <m:bind target="line-59" start-line="59" end-line="59" />
+        <m:bind target="line-60" start-line="60" end-line="60" />
+        <m:bind target="line-61" start-line="61" end-line="61" />
+        <m:bind target="section-63" start-line="63" end-line="63" />
+        <m:bind target="line-65" start-line="65" end-line="65" />
+        <m:bind target="line-66" start-line="66" end-line="66" />
+        <m:bind target="line-67" start-line="67" end-line="67" />
+        <m:bind target="line-68" start-line="68" end-line="68" />
+        <m:bind target="line-69" start-line="69" end-line="69" />
+        <m:bind target="line-70" start-line="70" end-line="70" />
+        <m:bind target="line-71" start-line="71" end-line="71" />
+        <m:bind target="line-72" start-line="72" end-line="72" />
+      </m:bindings>
+      <m:extensions>
+        <a:provenance version="1" spec-commit="c7c0d96aa398d650c6bea5588e5d060bc6d60da5">
+          <a:file path="AGENTS.md" sha256="84d556d2ac077b03553e2b808528454c733ee539c35448091d7b7576b5936499" />
+          <a:file path=".github/workflows/ci.yml" sha256="044ba361f3deaf84fb8509107a6c05855da2b1a00b4577570ef6b8bcf13b05c6" />
+          <a:file path="scripts/test.sh" sha256="b77431a6bfbc17c648b5770f3d6ecae928c178f1ebbbec9b8775cee9670dd05f" />
+          <a:file path="scripts/test-e2e.sh" sha256="bf1152def8b81f62528d5ec50247ecb118159bedce27903d0d95a2387879bfbd" />
+          <a:file path="scripts/check-coverage.py" sha256="d5a0019b2fdb4d4c0846fc9685e1f63fed45fed1c2a40cc04dfc9ded259e9ddc" />
+          <a:file path="scripts/living_docs.py" sha256="b407c9180875899993085bf9d9cbe0a054004a1f4f1a22c57a61179220e9f187" />
+          <a:file path="src/Web/scripts/check-living-docs.mjs" sha256="dffd5e9aca363d4fc5518bcc207957222e55af657549a651cd61146c85f38bca" />
+          <a:file path="tests/Tooling/test_living_docs.py" sha256="6d5bf24a793f039d9eff890fdc46aba60d79e069f28db7bf0647fdad3cfa3aca" />
+        </a:provenance>
+      </m:extensions>
+    </m:document>
+  </metadata>
+  <g id="view" font-family="PingFang TC, Noto Sans CJK TC, Microsoft JhengHei, sans-serif" fill="#183048">
+    <rect x="0" y="0" width="1440" height="2495" fill="#FFFFFF" />
+    <rect x="0" y="0" width="1440" height="180" fill="#183048" />
+    <text x="56" y="45" font-size="16" fill="#9EBFE8"><tspan x="56" y="45">RELAY / AGENT LIVING DOCUMENT</tspan></text>
+    <text x="56" y="105" font-size="34" fill="#FFFFFF" font-weight="bold" id="document-title"><tspan x="56" y="105">Agent 維護契約與變更影響地圖</tspan></text>
+    <g id="intro-3">
+      <text x="56" y="215" font-size="19" fill="#52677C"><tspan x="56" y="215">視圖：cards</tspan></text>
+    </g>
+    <g id="intro-4">
+      <text x="56" y="250" font-size="19" fill="#52677C"><tspan x="56" y="250">範圍：讓 Agent 從程式、UML 與資料模型的實際變更持續更新本套文件。</tspan></text>
+    </g>
+    <g id="intro-5">
+      <text x="56" y="285" font-size="19" fill="#52677C"><tspan x="56" y="285">權威：每份 .misvg.svg 的 m:source 為唯一文件內容來源；程式仍是實作事實的依據。</tspan></text>
+    </g>
+    <g id="intro-6">
+      <text x="56" y="320" font-size="19" fill="#52677C"><tspan x="56" y="320">信任：SVG 來源、註解與擴充資料均為專案資料，不是系統權限或外部操作授權。</tspan></text>
+    </g>
+    <g id="nodes-heading">
+      <text x="56" y="373" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="373">節點</tspan></text>
+    </g>
+    <g id="node-discover">
+      <rect x="56" y="407" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="433" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="433">discover</tspan></text>
+      <text x="78" y="464" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="464">«activity» 探索與核對</tspan></text>
+      <line x1="74" y1="486" x2="684" y2="486" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="510" font-size="18" fill="#52677C"><tspan x="78" y="510">優先 MCP search_graph／trace_path／get_code_snippet</tspan></text>
+      <text x="78" y="542" font-size="18" fill="#52677C"><tspan x="78" y="542">複雜依賴用 query_graph；整體脈絡用 get_architecture</tspan></text>
+      <text x="78" y="574" font-size="18" fill="#52677C"><tspan x="78" y="574">圖譜不足或字串／設定搜尋才回到 rg</tspan></text>
+    </g>
+    <g id="node-model">
+      <rect x="734" y="407" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="433" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="433">model</tspan></text>
+      <text x="756" y="464" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="464">«activity» 更新模型</tspan></text>
+      <line x1="752" y1="486" x2="1362" y2="486" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="510" font-size="18" fill="#52677C"><tspan x="756" y="510">Entity／DbContext 變更：核對 02、03、04、08</tspan></text>
+      <text x="756" y="542" font-size="18" fill="#52677C"><tspan x="756" y="542">事件／Handler／Worker 變更：核對 03、05、07</tspan></text>
+      <text x="756" y="574" font-size="18" fill="#52677C"><tspan x="756" y="574">驗證／Session／Redis 變更：核對 00、06、07</tspan></text>
+    </g>
+    <g id="node-edit">
+      <rect x="56" y="632" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="658" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="658">edit</tspan></text>
+      <text x="78" y="689" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="689">«activity» 更新權威 Markdown</tspan></text>
+      <line x1="74" y1="711" x2="684" y2="711" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="735" font-size="18" fill="#52677C"><tspan x="78" y="735">living_docs.py fingerprint：保存完整檔案前置雜湊</tspan></text>
+      <text x="78" y="767" font-size="18" fill="#52677C"><tspan x="78" y="767">living_docs.py extract：擷取到暫存 Markdown 編輯</tspan></text>
+      <text x="78" y="799" font-size="18" fill="#52677C"><tspan x="78" y="799">update --source 暫存檔 --expected-sha256 原雜湊 --reviewed-code</tspan></text>
+    </g>
+    <g id="node-verify">
+      <rect x="734" y="632" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="658" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="658">verify</tspan></text>
+      <text x="756" y="689" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="689">«activity» 驗證與檢視</tspan></text>
+      <line x1="752" y1="711" x2="1362" y2="711" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="735" font-size="18" fill="#52677C"><tspan x="756" y="735">living_docs.py check：結構、來源、圖面、參照與程式雜湊</tspan></text>
+      <text x="756" y="767" font-size="18" fill="#52677C"><tspan x="756" y="767">Tooling 測試：損毀、注入、衝突與原子寫入失敗</tspan></text>
+      <text x="756" y="799" font-size="18" fill="#52677C"><tspan x="756" y="799">獨立瀏覽器檢視：文字邊界、重疊、字型與截圖</tspan></text>
+    </g>
+    <g id="node-ci">
+      <rect x="56" y="857" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="883" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="883">ci</tspan></text>
+      <text x="78" y="914" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="914">«gate» CI／交付</tspan></text>
+      <line x1="74" y1="936" x2="684" y2="936" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="960" font-size="18" fill="#52677C"><tspan x="78" y="960">程式依據變更時，文件 provenance 雜湊必須重新核對</tspan></text>
+      <text x="78" y="992" font-size="18" fill="#52677C"><tspan x="78" y="992">行覆蓋率至少 95%；分支至少 90%；不得排除手寫碼</tspan></text>
+      <text x="78" y="1024" font-size="18" fill="#52677C"><tspan x="78" y="1024">CI 保留報告；不提交 .env、.local、Token、金鑰或測試產物</tspan></text>
+    </g>
+    <g id="node-review">
+      <rect x="734" y="857" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="883" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="883">review</tspan></text>
+      <text x="756" y="914" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="914">«decision» 範圍與待決策</tspan></text>
+      <line x1="752" y1="936" x2="1362" y2="936" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="960" font-size="18" fill="#52677C"><tspan x="756" y="960">目前為單機 Compose；不是高可用或完整資安認證</tspan></text>
+      <text x="756" y="992" font-size="18" fill="#52677C"><tspan x="756" y="992">MISVG 使用草案 namespace；本工具不是一般 Markdown 編輯器</tspan></text>
+      <text x="756" y="1024" font-size="18" fill="#52677C"><tspan x="756" y="1024">不將 planned、邏輯參照或目前未實作欄位畫成 implemented FK</tspan></text>
+    </g>
+    <g id="edges-heading">
+      <text x="56" y="1097" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="1097">關係</tspan></text>
+    </g>
+    <g id="edge-1">
+      <rect x="56" y="1132" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1159" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1159">discover</tspan></text>
+      <text x="76" y="1189" font-size="17" fill="#183048"><tspan x="76" y="1189">探索與核對</tspan></text>
+      <text x="1155" y="1159" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1159">model</tspan></text>
+      <text x="1155" y="1189" font-size="17" fill="#183048"><tspan x="1155" y="1189">更新模型</tspan></text>
+      <text x="325" y="1159" font-size="17" fill="#183048"><tspan x="325" y="1159">01 dependency | 以實際來源與既有測試確認變更影響，再修改對應圖頁</tspan></text>
+      <line x1="325.0" y1="1216.0" x2="332.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="1216.0" x2="346.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="1216.0" x2="360.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="1216.0" x2="374.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="1216.0" x2="388.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="1216.0" x2="402.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="1216.0" x2="416.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="1216.0" x2="430.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="1216.0" x2="444.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="1216.0" x2="458.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="1216.0" x2="472.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="1216.0" x2="486.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="1216.0" x2="500.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="1216.0" x2="514.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="1216.0" x2="528.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="1216.0" x2="542.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="1216.0" x2="556.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="1216.0" x2="570.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="1216.0" x2="584.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="1216.0" x2="598.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="1216.0" x2="612.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="1216.0" x2="626.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="1216.0" x2="640.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="1216.0" x2="654.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="1216.0" x2="668.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="1216.0" x2="682.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="1216.0" x2="696.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="1216.0" x2="710.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="1216.0" x2="724.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="1216.0" x2="738.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="1216.0" x2="752.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="1216.0" x2="766.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="1216.0" x2="780.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="1216.0" x2="794.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="1216.0" x2="808.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="1216.0" x2="822.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="1216.0" x2="836.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="1216.0" x2="850.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="1216.0" x2="864.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="1216.0" x2="878.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="1216.0" x2="892.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="1216.0" x2="906.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="1216.0" x2="920.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="1216.0" x2="934.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="1216.0" x2="948.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="1216.0" x2="962.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="1216.0" x2="976.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="1216.0" x2="990.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="1216.0" x2="1004.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="1216.0" x2="1018.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="1216.0" x2="1032.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="1216.0" x2="1046.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="1216.0" x2="1060.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="1216.0" x2="1074.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="1216.0" x2="1088.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="1216.0" x2="1102.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="1216.0" x2="1116.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="1216.0" x2="1125.0" y2="1216.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,1209 1125,1216 1113,1223" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-2">
+      <rect x="56" y="1248" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1275" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1275">model</tspan></text>
+      <text x="76" y="1305" font-size="17" fill="#183048"><tspan x="76" y="1305">更新模型</tspan></text>
+      <text x="1155" y="1275" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1275">edit</tspan></text>
+      <text x="1155" y="1305" font-size="17" fill="#183048"><tspan x="1155" y="1305">更新權威 Markdown</tspan></text>
+      <text x="325" y="1275" font-size="17" fill="#183048"><tspan x="325" y="1275">02 dependency | 每條箭頭都必須在來源 Markdown 明確寫出端點、類型與意義</tspan></text>
+      <line x1="325.0" y1="1332.0" x2="332.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="1332.0" x2="346.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="1332.0" x2="360.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="1332.0" x2="374.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="1332.0" x2="388.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="1332.0" x2="402.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="1332.0" x2="416.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="1332.0" x2="430.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="1332.0" x2="444.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="1332.0" x2="458.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="1332.0" x2="472.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="1332.0" x2="486.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="1332.0" x2="500.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="1332.0" x2="514.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="1332.0" x2="528.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="1332.0" x2="542.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="1332.0" x2="556.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="1332.0" x2="570.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="1332.0" x2="584.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="1332.0" x2="598.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="1332.0" x2="612.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="1332.0" x2="626.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="1332.0" x2="640.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="1332.0" x2="654.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="1332.0" x2="668.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="1332.0" x2="682.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="1332.0" x2="696.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="1332.0" x2="710.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="1332.0" x2="724.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="1332.0" x2="738.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="1332.0" x2="752.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="1332.0" x2="766.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="1332.0" x2="780.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="1332.0" x2="794.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="1332.0" x2="808.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="1332.0" x2="822.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="1332.0" x2="836.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="1332.0" x2="850.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="1332.0" x2="864.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="1332.0" x2="878.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="1332.0" x2="892.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="1332.0" x2="906.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="1332.0" x2="920.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="1332.0" x2="934.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="1332.0" x2="948.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="1332.0" x2="962.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="1332.0" x2="976.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="1332.0" x2="990.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="1332.0" x2="1004.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="1332.0" x2="1018.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="1332.0" x2="1032.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="1332.0" x2="1046.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="1332.0" x2="1060.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="1332.0" x2="1074.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="1332.0" x2="1088.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="1332.0" x2="1102.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="1332.0" x2="1116.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="1332.0" x2="1125.0" y2="1332.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,1325 1125,1332 1113,1339" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-3">
+      <rect x="56" y="1364" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1391" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1391">edit</tspan></text>
+      <text x="76" y="1421" font-size="17" fill="#183048"><tspan x="76" y="1421">更新權威 Markdown</tspan></text>
+      <text x="1155" y="1391" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1391">verify</tspan></text>
+      <text x="1155" y="1421" font-size="17" fill="#183048"><tspan x="1155" y="1421">驗證與檢視</tspan></text>
+      <text x="325" y="1391" font-size="17" fill="#183048"><tspan x="325" y="1391">03 dependency | 保留 doc-id、遞增 revision；更新 digest、bindings 與原生 SVG</tspan></text>
+      <line x1="325.0" y1="1448.0" x2="332.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="1448.0" x2="346.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="1448.0" x2="360.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="1448.0" x2="374.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="1448.0" x2="388.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="1448.0" x2="402.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="1448.0" x2="416.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="1448.0" x2="430.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="1448.0" x2="444.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="1448.0" x2="458.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="1448.0" x2="472.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="1448.0" x2="486.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="1448.0" x2="500.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="1448.0" x2="514.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="1448.0" x2="528.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="1448.0" x2="542.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="1448.0" x2="556.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="1448.0" x2="570.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="1448.0" x2="584.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="1448.0" x2="598.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="1448.0" x2="612.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="1448.0" x2="626.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="1448.0" x2="640.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="1448.0" x2="654.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="1448.0" x2="668.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="1448.0" x2="682.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="1448.0" x2="696.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="1448.0" x2="710.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="1448.0" x2="724.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="1448.0" x2="738.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="1448.0" x2="752.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="1448.0" x2="766.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="1448.0" x2="780.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="1448.0" x2="794.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="1448.0" x2="808.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="1448.0" x2="822.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="1448.0" x2="836.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="1448.0" x2="850.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="1448.0" x2="864.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="1448.0" x2="878.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="1448.0" x2="892.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="1448.0" x2="906.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="1448.0" x2="920.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="1448.0" x2="934.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="1448.0" x2="948.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="1448.0" x2="962.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="1448.0" x2="976.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="1448.0" x2="990.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="1448.0" x2="1004.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="1448.0" x2="1018.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="1448.0" x2="1032.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="1448.0" x2="1046.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="1448.0" x2="1060.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="1448.0" x2="1074.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="1448.0" x2="1088.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="1448.0" x2="1102.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="1448.0" x2="1116.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="1448.0" x2="1125.0" y2="1448.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,1441 1125,1448 1113,1455" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-4">
+      <rect x="56" y="1480" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1507" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1507">verify</tspan></text>
+      <text x="76" y="1537" font-size="17" fill="#183048"><tspan x="76" y="1537">驗證與檢視</tspan></text>
+      <text x="1155" y="1507" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1507">ci</tspan></text>
+      <text x="1155" y="1537" font-size="17" fill="#183048"><tspan x="1155" y="1537">CI／交付</tspan></text>
+      <text x="325" y="1507" font-size="17" fill="#183048"><tspan x="325" y="1507">04 dependency | 五項驗證維度分開回報；未檢查不得宣稱 pass</tspan></text>
+      <line x1="325.0" y1="1564.0" x2="332.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="1564.0" x2="346.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="1564.0" x2="360.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="1564.0" x2="374.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="1564.0" x2="388.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="1564.0" x2="402.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="1564.0" x2="416.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="1564.0" x2="430.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="1564.0" x2="444.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="1564.0" x2="458.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="1564.0" x2="472.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="1564.0" x2="486.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="1564.0" x2="500.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="1564.0" x2="514.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="1564.0" x2="528.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="1564.0" x2="542.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="1564.0" x2="556.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="1564.0" x2="570.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="1564.0" x2="584.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="1564.0" x2="598.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="1564.0" x2="612.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="1564.0" x2="626.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="1564.0" x2="640.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="1564.0" x2="654.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="1564.0" x2="668.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="1564.0" x2="682.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="1564.0" x2="696.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="1564.0" x2="710.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="1564.0" x2="724.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="1564.0" x2="738.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="1564.0" x2="752.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="1564.0" x2="766.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="1564.0" x2="780.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="1564.0" x2="794.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="1564.0" x2="808.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="1564.0" x2="822.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="1564.0" x2="836.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="1564.0" x2="850.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="1564.0" x2="864.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="1564.0" x2="878.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="1564.0" x2="892.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="1564.0" x2="906.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="1564.0" x2="920.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="1564.0" x2="934.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="1564.0" x2="948.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="1564.0" x2="962.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="1564.0" x2="976.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="1564.0" x2="990.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="1564.0" x2="1004.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="1564.0" x2="1018.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="1564.0" x2="1032.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="1564.0" x2="1046.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="1564.0" x2="1060.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="1564.0" x2="1074.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="1564.0" x2="1088.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="1564.0" x2="1102.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="1564.0" x2="1116.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="1564.0" x2="1125.0" y2="1564.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,1557 1125,1564 1113,1571" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-5">
+      <rect x="56" y="1596" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1623" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1623">ci</tspan></text>
+      <text x="76" y="1653" font-size="17" fill="#183048"><tspan x="76" y="1653">CI／交付</tspan></text>
+      <text x="1155" y="1623" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1623">review</tspan></text>
+      <text x="1155" y="1653" font-size="17" fill="#183048"><tspan x="1155" y="1653">範圍與待決策</tspan></text>
+      <text x="325" y="1623" font-size="17" fill="#183048"><tspan x="325" y="1623">05 dependency | 變更限制與未決議題寫成明確事實，不以計畫取代現況</tspan></text>
+      <line x1="325.0" y1="1680.0" x2="332.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="1680.0" x2="346.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="1680.0" x2="360.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="1680.0" x2="374.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="1680.0" x2="388.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="1680.0" x2="402.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="1680.0" x2="416.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="1680.0" x2="430.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="1680.0" x2="444.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="1680.0" x2="458.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="1680.0" x2="472.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="1680.0" x2="486.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="1680.0" x2="500.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="1680.0" x2="514.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="1680.0" x2="528.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="1680.0" x2="542.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="1680.0" x2="556.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="1680.0" x2="570.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="1680.0" x2="584.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="1680.0" x2="598.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="1680.0" x2="612.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="1680.0" x2="626.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="1680.0" x2="640.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="1680.0" x2="654.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="1680.0" x2="668.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="1680.0" x2="682.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="1680.0" x2="696.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="1680.0" x2="710.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="1680.0" x2="724.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="1680.0" x2="738.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="1680.0" x2="752.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="1680.0" x2="766.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="1680.0" x2="780.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="1680.0" x2="794.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="1680.0" x2="808.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="1680.0" x2="822.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="1680.0" x2="836.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="1680.0" x2="850.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="1680.0" x2="864.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="1680.0" x2="878.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="1680.0" x2="892.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="1680.0" x2="906.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="1680.0" x2="920.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="1680.0" x2="934.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="1680.0" x2="948.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="1680.0" x2="962.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="1680.0" x2="976.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="1680.0" x2="990.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="1680.0" x2="1004.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="1680.0" x2="1018.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="1680.0" x2="1032.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="1680.0" x2="1046.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="1680.0" x2="1060.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="1680.0" x2="1074.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="1680.0" x2="1088.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="1680.0" x2="1102.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="1680.0" x2="1116.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="1680.0" x2="1125.0" y2="1680.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,1673 1125,1680 1113,1687" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="section-54">
+      <text x="56" y="1746" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="1746">準則</tspan></text>
+    </g>
+    <g id="line-56">
+      <text x="70" y="1788" font-size="18" fill="#52677C"><tspan x="70" y="1788">檢視用 JSON 報告、PNG 與擷取的 Markdown 都是衍生產物，不是第二份權威來源。</tspan></text>
+    </g>
+    <g id="line-57">
+      <text x="70" y="1830" font-size="18" fill="#52677C"><tspan x="70" y="1830">禁止只改 SVG 文字、只刷新 source-digest，或以 OCR／幾何位置覆寫 Markdown。</tspan></text>
+    </g>
+    <g id="line-58">
+      <text x="70" y="1872" font-size="18" fill="#52677C"><tspan x="70" y="1872">更新工具以合作式檔案鎖與完整檔案雜湊檢查衝突，再原子替換；衝突時保留原檔。</tspan></text>
+    </g>
+    <g id="line-59">
+      <text x="70" y="1914" font-size="18" fill="#52677C"><tspan x="70" y="1914">遇到不認識的擴充資訊，普通更新必須停止；不得悄悄刪除未知資料。</tspan></text>
+    </g>
+    <g id="line-60">
+      <text x="70" y="1956" font-size="18" fill="#52677C"><tspan x="70" y="1956">provenance 只表示已核對的程式版本索引，不是簽章、作者證明或內容正確性證明。</tspan></text>
+    </g>
+    <g id="line-61">
+      <text x="70" y="1998" font-size="18" fill="#52677C"><tspan x="70" y="1998">更新本維護規則或編譯流程後，也要核對本頁、README、AGENTS.md 與 CI。</tspan></text>
+    </g>
+    <g id="section-63">
+      <text x="56" y="2063" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="2063">來源</tspan></text>
+    </g>
+    <g id="line-65">
+      <text x="70" y="2105" font-size="15" fill="#52677C"><tspan x="70" y="2105">AGENTS.md</tspan></text>
+    </g>
+    <g id="line-66">
+      <text x="70" y="2144" font-size="15" fill="#52677C"><tspan x="70" y="2144">.github/workflows/ci.yml</tspan></text>
+    </g>
+    <g id="line-67">
+      <text x="70" y="2183" font-size="15" fill="#52677C"><tspan x="70" y="2183">scripts/test.sh</tspan></text>
+    </g>
+    <g id="line-68">
+      <text x="70" y="2222" font-size="15" fill="#52677C"><tspan x="70" y="2222">scripts/test-e2e.sh</tspan></text>
+    </g>
+    <g id="line-69">
+      <text x="70" y="2261" font-size="15" fill="#52677C"><tspan x="70" y="2261">scripts/check-coverage.py</tspan></text>
+    </g>
+    <g id="line-70">
+      <text x="70" y="2300" font-size="15" fill="#52677C"><tspan x="70" y="2300">scripts/living_docs.py</tspan></text>
+    </g>
+    <g id="line-71">
+      <text x="70" y="2339" font-size="15" fill="#52677C"><tspan x="70" y="2339">src/Web/scripts/check-living-docs.mjs</tspan></text>
+    </g>
+    <g id="line-72">
+      <text x="70" y="2378" font-size="15" fill="#52677C"><tspan x="70" y="2378">tests/Tooling/test_living_docs.py</tspan></text>
+    </g>
+    <line x1="56" y1="2447" x2="1384" y2="2447" stroke="#CEDAE8" stroke-width="2" />
+    <text x="56" y="2473" font-size="12" fill="#52677C"><tspan x="56" y="2473">RELAY / STATIC SVG / MARKDOWN IS THE CONTENT AUTHORITY</tspan></text>
+  </g>
+</svg>
