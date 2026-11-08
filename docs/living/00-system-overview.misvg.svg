@@ -1,12 +1,21 @@
 <?xml version='1.0' encoding='utf-8'?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:a="https://github.com/Lian0123/my-c-sharp-templates/ns/living-docs/1" xmlns:m="https://example.org/ns/markdown-in-svg/0.1" version="1.1" width="1440" height="3746" viewBox="0 0 1440 3746">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:a="https://github.com/Lian0123/my-c-sharp-templates/ns/living-docs/1" xmlns:m="https://example.org/ns/markdown-in-svg/0.1" version="1.1" width="1440" height="3968" viewBox="0 0 1440 3968">
   <title>專案全景與服務邊界</title>
   <desc>繁體中文 Agent living document。Markdown 是內容權威；UML 關係、資料來源與更新規則以原生靜態 SVG 呈現。</desc>
   <metadata>
-    <m:document version="0.1" profile="static" doc-id="urn:uuid:93f102b3-d456-4525-879c-d2a94062504f" revision="3">
+    <m:document version="0.1" profile="static" doc-id="urn:uuid:93f102b3-d456-4525-879c-d2a94062504f" revision="6">
       <m:source media-type="text/markdown" dialect="commonmark-0.31.2" xml:space="preserve"># 專案全景與服務邊界
 
 視圖：cards
+文件編號：DOC-00
+文件狀態：current
+核准狀態：not-recorded
+維護角色：架構維護角色（待具名確認）
+具名負責人：unassigned
+適用基準：referenced-source-sha256；歷史測試僅適用其紀錄版本
+最後審查：2026-11-08
+關聯需求：REQ-BOUNDARY-001,REQ-AUTH-001,REQ-SYNC-001,REQ-CMS-001,REQ-DOC-001,REQ-DELIVERY-001
+關聯決策：ADR-DATA-001,ADR-AUTH-001,ADR-SYNC-001,ADR-DOC-001
 範圍：MicroserviceStarter／Relay；三個業務服務、YARP Gateway 與 React 網頁。
 讀圖：節點為 UML 元件／部署資源；下方每條有向關係使用同一組節點 ID。
 導覽：01 分層類別、02 Auth 資料、03 投影、04 Message 資料、05 事件、06 撤銷、07 聊天、08 附件、09 維護。
@@ -104,49 +113,58 @@
 - src/Web/src/App.tsx
 - src/Shared/BuildingBlocks/Platform.cs
 </m:source>
-      <m:presentation root-ref="view" source-digest="sha256:d7bdf829e9292df45f226afa7800339b367a764390841ff656ea61a5d9764a82" renderer="relay-living-docs" renderer-version="1.0.0" />
+      <m:presentation root-ref="view" source-digest="sha256:f93a90901483c02887616ece5b046175470dc779b0670b00e7e7eb23c2dffb70" renderer="relay-living-docs" renderer-version="1.2.0" />
       <m:bindings>
         <m:bind target="document-title" start-line="1" end-line="1" />
         <m:bind target="intro-3" start-line="3" end-line="3" />
         <m:bind target="intro-4" start-line="4" end-line="4" />
         <m:bind target="intro-5" start-line="5" end-line="5" />
         <m:bind target="intro-6" start-line="6" end-line="6" />
-        <m:bind target="nodes-heading" start-line="8" end-line="8" />
-        <m:bind target="node-web" start-line="10" end-line="14" />
-        <m:bind target="node-gateway" start-line="16" end-line="20" />
-        <m:bind target="node-auth" start-line="22" end-line="26" />
-        <m:bind target="node-account" start-line="28" end-line="32" />
-        <m:bind target="node-message" start-line="34" end-line="38" />
-        <m:bind target="node-authStore" start-line="40" end-line="44" />
-        <m:bind target="node-accountStore" start-line="46" end-line="50" />
-        <m:bind target="node-messageStore" start-line="52" end-line="56" />
-        <m:bind target="node-broker" start-line="58" end-line="62" />
-        <m:bind target="node-storage" start-line="64" end-line="68" />
-        <m:bind target="edges-heading" start-line="70" end-line="70" />
-        <m:bind target="edge-1" start-line="72" end-line="72" />
-        <m:bind target="edge-2" start-line="73" end-line="73" />
-        <m:bind target="edge-3" start-line="74" end-line="74" />
-        <m:bind target="edge-4" start-line="75" end-line="75" />
-        <m:bind target="edge-5" start-line="76" end-line="76" />
-        <m:bind target="edge-6" start-line="77" end-line="77" />
-        <m:bind target="edge-7" start-line="78" end-line="78" />
-        <m:bind target="edge-8" start-line="79" end-line="79" />
-        <m:bind target="edge-9" start-line="80" end-line="80" />
-        <m:bind target="edge-10" start-line="81" end-line="81" />
-        <m:bind target="edge-11" start-line="82" end-line="82" />
-        <m:bind target="edge-12" start-line="83" end-line="83" />
-        <m:bind target="edge-13" start-line="84" end-line="84" />
-        <m:bind target="edge-14" start-line="85" end-line="85" />
-        <m:bind target="section-87" start-line="87" end-line="87" />
-        <m:bind target="line-89" start-line="89" end-line="89" />
-        <m:bind target="line-90" start-line="90" end-line="90" />
-        <m:bind target="line-91" start-line="91" end-line="91" />
-        <m:bind target="section-93" start-line="93" end-line="93" />
-        <m:bind target="line-95" start-line="95" end-line="95" />
-        <m:bind target="line-96" start-line="96" end-line="96" />
-        <m:bind target="line-97" start-line="97" end-line="97" />
+        <m:bind target="intro-7" start-line="7" end-line="7" />
+        <m:bind target="intro-8" start-line="8" end-line="8" />
+        <m:bind target="intro-9" start-line="9" end-line="9" />
+        <m:bind target="intro-10" start-line="10" end-line="10" />
+        <m:bind target="intro-11" start-line="11" end-line="11" />
+        <m:bind target="intro-12" start-line="12" end-line="12" />
+        <m:bind target="intro-13" start-line="13" end-line="13" />
+        <m:bind target="intro-14" start-line="14" end-line="14" />
+        <m:bind target="intro-15" start-line="15" end-line="15" />
+        <m:bind target="nodes-heading" start-line="17" end-line="17" />
+        <m:bind target="node-web" start-line="19" end-line="23" />
+        <m:bind target="node-gateway" start-line="25" end-line="29" />
+        <m:bind target="node-auth" start-line="31" end-line="35" />
+        <m:bind target="node-account" start-line="37" end-line="41" />
+        <m:bind target="node-message" start-line="43" end-line="47" />
+        <m:bind target="node-authStore" start-line="49" end-line="53" />
+        <m:bind target="node-accountStore" start-line="55" end-line="59" />
+        <m:bind target="node-messageStore" start-line="61" end-line="65" />
+        <m:bind target="node-broker" start-line="67" end-line="71" />
+        <m:bind target="node-storage" start-line="73" end-line="77" />
+        <m:bind target="edges-heading" start-line="79" end-line="79" />
+        <m:bind target="edge-1" start-line="81" end-line="81" />
+        <m:bind target="edge-2" start-line="82" end-line="82" />
+        <m:bind target="edge-3" start-line="83" end-line="83" />
+        <m:bind target="edge-4" start-line="84" end-line="84" />
+        <m:bind target="edge-5" start-line="85" end-line="85" />
+        <m:bind target="edge-6" start-line="86" end-line="86" />
+        <m:bind target="edge-7" start-line="87" end-line="87" />
+        <m:bind target="edge-8" start-line="88" end-line="88" />
+        <m:bind target="edge-9" start-line="89" end-line="89" />
+        <m:bind target="edge-10" start-line="90" end-line="90" />
+        <m:bind target="edge-11" start-line="91" end-line="91" />
+        <m:bind target="edge-12" start-line="92" end-line="92" />
+        <m:bind target="edge-13" start-line="93" end-line="93" />
+        <m:bind target="edge-14" start-line="94" end-line="94" />
+        <m:bind target="section-96" start-line="96" end-line="96" />
         <m:bind target="line-98" start-line="98" end-line="98" />
         <m:bind target="line-99" start-line="99" end-line="99" />
+        <m:bind target="line-100" start-line="100" end-line="100" />
+        <m:bind target="section-102" start-line="102" end-line="102" />
+        <m:bind target="line-104" start-line="104" end-line="104" />
+        <m:bind target="line-105" start-line="105" end-line="105" />
+        <m:bind target="line-106" start-line="106" end-line="106" />
+        <m:bind target="line-107" start-line="107" end-line="107" />
+        <m:bind target="line-108" start-line="108" end-line="108" />
       </m:bindings>
       <m:extensions>
         <a:provenance version="1" spec-commit="c7c0d96aa398d650c6bea5588e5d060bc6d60da5">
@@ -160,7 +178,7 @@
     </m:document>
   </metadata>
   <g id="view" font-family="PingFang TC, Noto Sans CJK TC, Microsoft JhengHei, sans-serif" fill="#183048">
-    <rect x="0" y="0" width="1440" height="3746" fill="#FFFFFF" />
+    <rect x="0" y="0" width="1440" height="3968" fill="#FFFFFF" />
     <rect x="0" y="0" width="1440" height="180" fill="#183048" />
     <text x="56" y="45" font-size="16" fill="#9EBFE8"><tspan x="56" y="45">RELAY / AGENT LIVING DOCUMENT</tspan></text>
     <text x="56" y="105" font-size="34" fill="#FFFFFF" font-weight="bold" id="document-title"><tspan x="56" y="105">專案全景與服務邊界</tspan></text>
@@ -168,281 +186,308 @@
       <text x="56" y="215" font-size="19" fill="#52677C"><tspan x="56" y="215">視圖：cards</tspan></text>
     </g>
     <g id="intro-4">
-      <text x="56" y="250" font-size="19" fill="#52677C"><tspan x="56" y="250">範圍：MicroserviceStarter／Relay；三個業務服務、YARP Gateway 與 React 網頁。</tspan></text>
+      <text x="56" y="250" font-size="16" fill="#52677C"><tspan x="56" y="250">文件編號：DOC-00</tspan></text>
     </g>
     <g id="intro-5">
-      <text x="56" y="285" font-size="19" fill="#52677C"><tspan x="56" y="285">讀圖：節點為 UML 元件／部署資源；下方每條有向關係使用同一組節點 ID。</tspan></text>
+      <text x="734" y="250" font-size="16" fill="#087E7C"><tspan x="734" y="250">文件狀態：current</tspan></text>
     </g>
     <g id="intro-6">
-      <text x="56" y="320" font-size="19" fill="#52677C"><tspan x="56" y="320">導覽：01 分層類別、02 Auth 資料、03 投影、04 Message 資料、05 事件、06 撤銷、07 聊天、08 附件、09 維護。</tspan></text>
+      <text x="56" y="287" font-size="16" fill="#52677C"><tspan x="56" y="287">核准狀態：not-recorded</tspan></text>
+    </g>
+    <g id="intro-7">
+      <text x="734" y="287" font-size="16" fill="#52677C"><tspan x="734" y="287">維護角色：架構維護角色（待具名確認）</tspan></text>
+    </g>
+    <g id="intro-8">
+      <text x="56" y="324" font-size="16" fill="#52677C"><tspan x="56" y="324">具名負責人：unassigned</tspan></text>
+    </g>
+    <g id="intro-9">
+      <text x="734" y="324" font-size="16" fill="#52677C"><tspan x="734" y="324">適用基準：referenced-source-sha256；歷史測試僅適用其紀錄版本</tspan></text>
+    </g>
+    <g id="intro-10">
+      <text x="56" y="361" font-size="16" fill="#52677C"><tspan x="56" y="361">最後審查：2026-11-08</tspan></text>
+    </g>
+    <g id="intro-11">
+      <text x="734" y="361" font-size="16" fill="#52677C"><tspan x="734" y="361">關聯需求：REQ-BOUNDARY-001,REQ-AUTH-001,REQ-SYNC-001,REQ-CMS</tspan><tspan x="734" y="386">-001,REQ-DOC-001,REQ-DELIVERY-001</tspan></text>
+    </g>
+    <g id="intro-12">
+      <text x="56" y="423" font-size="16" fill="#52677C"><tspan x="56" y="423">關聯決策：ADR-DATA-001,ADR-AUTH-001,ADR-SYNC-001,ADR-DOC-001</tspan></text>
+    </g>
+    <g id="intro-13">
+      <text x="56" y="472" font-size="19" fill="#52677C"><tspan x="56" y="472">範圍：MicroserviceStarter／Relay；三個業務服務、YARP Gateway 與 React 網頁。</tspan></text>
+    </g>
+    <g id="intro-14">
+      <text x="56" y="507" font-size="19" fill="#52677C"><tspan x="56" y="507">讀圖：節點為 UML 元件／部署資源；下方每條有向關係使用同一組節點 ID。</tspan></text>
+    </g>
+    <g id="intro-15">
+      <text x="56" y="542" font-size="19" fill="#52677C"><tspan x="56" y="542">導覽：01 分層類別、02 Auth 資料、03 投影、04 Message 資料、05 事件、06 撤銷、07 聊天、08 附件、09 維護。</tspan></text>
     </g>
     <g id="nodes-heading">
-      <text x="56" y="373" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="373">節點</tspan></text>
+      <text x="56" y="595" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="595">節點</tspan></text>
     </g>
     <g id="node-web">
-      <rect x="56" y="407" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
-      <text x="78" y="433" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="433">web</tspan></text>
-      <text x="78" y="464" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="464">«component» React CMS／聊天室</tspan></text>
-      <line x1="74" y1="486" x2="684" y2="486" stroke="#CEDAE8" stroke-width="2" />
-      <text x="78" y="510" font-size="18" fill="#52677C"><tspan x="78" y="510">/chat 會員區；/admin 管理區</tspan></text>
-      <text x="78" y="542" font-size="18" fill="#52677C"><tspan x="78" y="542">React、TypeScript、Vite、Ant Design</tspan></text>
-      <text x="78" y="574" font-size="18" fill="#52677C"><tspan x="78" y="574">Access Token 僅在記憶體；Refresh Cookie 為 HttpOnly</tspan></text>
+      <rect x="56" y="629" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="655" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="655">web</tspan></text>
+      <text x="78" y="686" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="686">«component» React CMS／聊天室</tspan></text>
+      <line x1="74" y1="708" x2="684" y2="708" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="732" font-size="18" fill="#52677C"><tspan x="78" y="732">/chat 會員區；/admin 管理區</tspan></text>
+      <text x="78" y="764" font-size="18" fill="#52677C"><tspan x="78" y="764">React、TypeScript、Vite、Ant Design</tspan></text>
+      <text x="78" y="796" font-size="18" fill="#52677C"><tspan x="78" y="796">Access Token 僅在記憶體；Refresh Cookie 為 HttpOnly</tspan></text>
     </g>
     <g id="node-gateway">
-      <rect x="734" y="407" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
-      <text x="756" y="433" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="433">gateway</tspan></text>
-      <text x="756" y="464" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="464">«component» YARP Gateway</tspan></text>
-      <line x1="752" y1="486" x2="1362" y2="486" stroke="#CEDAE8" stroke-width="2" />
-      <text x="756" y="510" font-size="18" fill="#52677C"><tspan x="756" y="510">公開入口：127.0.0.1:8080</tspan></text>
-      <text x="756" y="542" font-size="18" fill="#52677C"><tspan x="756" y="542">REST、/hubs/chat、/docs、/openapi 與網頁路由</tspan></text>
-      <text x="756" y="574" font-size="18" fill="#52677C"><tspan x="756" y="574">初步 RS256 驗證、限流、統一 Problem Details</tspan></text>
+      <rect x="734" y="629" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="655" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="655">gateway</tspan></text>
+      <text x="756" y="686" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="686">«component» YARP Gateway</tspan></text>
+      <line x1="752" y1="708" x2="1362" y2="708" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="732" font-size="18" fill="#52677C"><tspan x="756" y="732">公開入口：127.0.0.1:8080</tspan></text>
+      <text x="756" y="764" font-size="18" fill="#52677C"><tspan x="756" y="764">REST、/hubs/chat、/docs、/openapi 與網頁路由</tspan></text>
+      <text x="756" y="796" font-size="18" fill="#52677C"><tspan x="756" y="796">初步 RS256 驗證、限流、統一 Problem Details</tspan></text>
     </g>
     <g id="node-auth">
-      <rect x="56" y="632" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
-      <text x="78" y="658" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="658">auth</tspan></text>
-      <text x="78" y="689" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="689">«service» Auth</tspan></text>
-      <line x1="74" y1="711" x2="684" y2="711" stroke="#CEDAE8" stroke-width="2" />
-      <text x="78" y="735" font-size="18" fill="#52677C"><tspan x="78" y="735">唯一身分／角色／Session 權威</tspan></text>
-      <text x="78" y="767" font-size="18" fill="#52677C"><tspan x="78" y="767">註冊、驗證信、登入、重設、輪替與撤銷</tspan></text>
-      <text x="78" y="799" font-size="18" fill="#52677C"><tspan x="78" y="799">內部查驗不由 Gateway 公開代理</tspan></text>
+      <rect x="56" y="854" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="880" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="880">auth</tspan></text>
+      <text x="78" y="911" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="911">«service» Auth</tspan></text>
+      <line x1="74" y1="933" x2="684" y2="933" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="957" font-size="18" fill="#52677C"><tspan x="78" y="957">唯一身分／角色／Session 權威</tspan></text>
+      <text x="78" y="989" font-size="18" fill="#52677C"><tspan x="78" y="989">註冊、驗證信、登入、重設、輪替與撤銷</tspan></text>
+      <text x="78" y="1021" font-size="18" fill="#52677C"><tspan x="78" y="1021">內部查驗不由 Gateway 公開代理</tspan></text>
     </g>
     <g id="node-account">
-      <rect x="734" y="632" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
-      <text x="756" y="658" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="658">account</tspan></text>
-      <text x="756" y="689" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="689">«service» Account</tspan></text>
-      <line x1="752" y1="711" x2="1362" y2="711" stroke="#CEDAE8" stroke-width="2" />
-      <text x="756" y="735" font-size="18" fill="#52677C"><tspan x="756" y="735">公開個人資料的權威</tspan></text>
-      <text x="756" y="767" font-size="18" fill="#52677C"><tspan x="756" y="767">身分 Active／IdentityVersion 為 Auth 投影</tspan></text>
-      <text x="756" y="799" font-size="18" fill="#52677C"><tspan x="756" y="799">會員資料快取失敗時回源 PostgreSQL</tspan></text>
+      <rect x="734" y="854" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="880" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="880">account</tspan></text>
+      <text x="756" y="911" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="911">«service» Account</tspan></text>
+      <line x1="752" y1="933" x2="1362" y2="933" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="957" font-size="18" fill="#52677C"><tspan x="756" y="957">公開個人資料的權威</tspan></text>
+      <text x="756" y="989" font-size="18" fill="#52677C"><tspan x="756" y="989">身分 Active／IdentityVersion 為 Auth 投影</tspan></text>
+      <text x="756" y="1021" font-size="18" fill="#52677C"><tspan x="756" y="1021">會員資料快取失敗時回源 PostgreSQL</tspan></text>
     </g>
     <g id="node-message">
-      <rect x="56" y="857" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
-      <text x="78" y="883" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="883">message</tspan></text>
-      <text x="78" y="914" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="914">«service» Message</tspan></text>
-      <line x1="74" y1="936" x2="684" y2="936" stroke="#CEDAE8" stroke-width="2" />
-      <text x="78" y="960" font-size="18" fill="#52677C"><tspan x="78" y="960">聊天室、成員、訊息、已讀、附件的權威</tspan></text>
-      <text x="78" y="992" font-size="18" fill="#52677C"><tspan x="78" y="992">SignalR WebSocket；推送前批次查驗 Auth</tspan></text>
-      <text x="78" y="1024" font-size="18" fill="#52677C"><tspan x="78" y="1024">管理員可依原因查閱並記錄稽核</tspan></text>
+      <rect x="56" y="1079" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="1105" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="1105">message</tspan></text>
+      <text x="78" y="1136" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="1136">«service» Message</tspan></text>
+      <line x1="74" y1="1158" x2="684" y2="1158" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="1182" font-size="18" fill="#52677C"><tspan x="78" y="1182">聊天室、成員、訊息、已讀、附件的權威</tspan></text>
+      <text x="78" y="1214" font-size="18" fill="#52677C"><tspan x="78" y="1214">SignalR WebSocket；推送前批次查驗 Auth</tspan></text>
+      <text x="78" y="1246" font-size="18" fill="#52677C"><tspan x="78" y="1246">管理員可依原因查閱並記錄稽核</tspan></text>
     </g>
     <g id="node-authStore">
-      <rect x="734" y="857" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
-      <text x="756" y="883" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="883">authStore</tspan></text>
-      <text x="756" y="914" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="914">«deployment» Auth 資料資源</tspan></text>
-      <line x1="752" y1="936" x2="1362" y2="936" stroke="#CEDAE8" stroke-width="2" />
-      <text x="756" y="960" font-size="18" fill="#52677C"><tspan x="756" y="960">auth-postgres／auth-redis／auth-keys</tspan></text>
-      <text x="756" y="992" font-size="18" fill="#52677C"><tspan x="756" y="992">獨立帳密、Volume、auth-data 內網</tspan></text>
-      <text x="756" y="1024" font-size="18" fill="#52677C"><tspan x="756" y="1024">Redis：限流、驗證計數、已撤銷 Session 快取</tspan></text>
+      <rect x="734" y="1079" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="1105" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="1105">authStore</tspan></text>
+      <text x="756" y="1136" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="1136">«deployment» Auth 資料資源</tspan></text>
+      <line x1="752" y1="1158" x2="1362" y2="1158" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="1182" font-size="18" fill="#52677C"><tspan x="756" y="1182">auth-postgres／auth-redis／auth-keys</tspan></text>
+      <text x="756" y="1214" font-size="18" fill="#52677C"><tspan x="756" y="1214">獨立帳密、Volume、auth-data 內網</tspan></text>
+      <text x="756" y="1246" font-size="18" fill="#52677C"><tspan x="756" y="1246">Redis：限流、驗證計數、已撤銷 Session 快取</tspan></text>
     </g>
     <g id="node-accountStore">
-      <rect x="56" y="1082" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
-      <text x="78" y="1108" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="1108">accountStore</tspan></text>
-      <text x="78" y="1139" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="1139">«deployment» Account 資料資源</tspan></text>
-      <line x1="74" y1="1161" x2="684" y2="1161" stroke="#CEDAE8" stroke-width="2" />
-      <text x="78" y="1185" font-size="18" fill="#52677C"><tspan x="78" y="1185">account-postgres／account-redis</tspan></text>
-      <text x="78" y="1217" font-size="18" fill="#52677C"><tspan x="78" y="1217">獨立帳密、Volume、account-data 內網</tspan></text>
-      <text x="78" y="1249" font-size="18" fill="#52677C"><tspan x="78" y="1249">Redis：account:profile:{userId}，30 秒快取</tspan></text>
+      <rect x="56" y="1304" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="1330" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="1330">accountStore</tspan></text>
+      <text x="78" y="1361" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="1361">«deployment» Account 資料資源</tspan></text>
+      <line x1="74" y1="1383" x2="684" y2="1383" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="1407" font-size="18" fill="#52677C"><tspan x="78" y="1407">account-postgres／account-redis</tspan></text>
+      <text x="78" y="1439" font-size="18" fill="#52677C"><tspan x="78" y="1439">獨立帳密、Volume、account-data 內網</tspan></text>
+      <text x="78" y="1471" font-size="18" fill="#52677C"><tspan x="78" y="1471">Redis：account:profile:{userId}，30 秒快取</tspan></text>
     </g>
     <g id="node-messageStore">
-      <rect x="734" y="1082" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
-      <text x="756" y="1108" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="1108">messageStore</tspan></text>
-      <text x="756" y="1139" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="1139">«deployment» Message 資料資源</tspan></text>
-      <line x1="752" y1="1161" x2="1362" y2="1161" stroke="#CEDAE8" stroke-width="2" />
-      <text x="756" y="1185" font-size="18" fill="#52677C"><tspan x="756" y="1185">message-postgres／message-redis</tspan></text>
-      <text x="756" y="1217" font-size="18" fill="#52677C"><tspan x="756" y="1217">獨立帳密、Volume、message-data 內網</tspan></text>
-      <text x="756" y="1249" font-size="18" fill="#52677C"><tspan x="756" y="1249">Redis：presence、連線索引與 SignalR backplane</tspan></text>
+      <rect x="734" y="1304" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="1330" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="1330">messageStore</tspan></text>
+      <text x="756" y="1361" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="1361">«deployment» Message 資料資源</tspan></text>
+      <line x1="752" y1="1383" x2="1362" y2="1383" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="1407" font-size="18" fill="#52677C"><tspan x="756" y="1407">message-postgres／message-redis</tspan></text>
+      <text x="756" y="1439" font-size="18" fill="#52677C"><tspan x="756" y="1439">獨立帳密、Volume、message-data 內網</tspan></text>
+      <text x="756" y="1471" font-size="18" fill="#52677C"><tspan x="756" y="1471">Redis：presence、連線索引與 SignalR backplane</tspan></text>
     </g>
     <g id="node-broker">
-      <rect x="56" y="1307" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
-      <text x="78" y="1333" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="1333">broker</tspan></text>
-      <text x="78" y="1364" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="1364">«infrastructure» RabbitMQ</tspan></text>
-      <line x1="74" y1="1386" x2="684" y2="1386" stroke="#CEDAE8" stroke-width="2" />
-      <text x="78" y="1410" font-size="18" fill="#52677C"><tspan x="78" y="1410">持久化 topic exchange：microservices.events.v1</tspan></text>
-      <text x="78" y="1442" font-size="18" fill="#52677C"><tspan x="78" y="1442">Account／Message 獨立主、重試與死信佇列</tspan></text>
-      <text x="78" y="1474" font-size="18" fill="#52677C"><tspan x="78" y="1474">至少一次投遞；Confirm、手動 ACK、Inbox 去重</tspan></text>
+      <rect x="56" y="1529" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="1555" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="1555">broker</tspan></text>
+      <text x="78" y="1586" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="1586">«infrastructure» RabbitMQ</tspan></text>
+      <line x1="74" y1="1608" x2="684" y2="1608" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="1632" font-size="18" fill="#52677C"><tspan x="78" y="1632">持久化 topic exchange：microservices.events.v1</tspan></text>
+      <text x="78" y="1664" font-size="18" fill="#52677C"><tspan x="78" y="1664">Account／Message 獨立主、重試與死信佇列</tspan></text>
+      <text x="78" y="1696" font-size="18" fill="#52677C"><tspan x="78" y="1696">至少一次投遞；Confirm、手動 ACK、Inbox 去重</tspan></text>
     </g>
     <g id="node-storage">
-      <rect x="734" y="1307" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
-      <text x="756" y="1333" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="1333">storage</tspan></text>
-      <text x="756" y="1364" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="1364">«infrastructure» Garage／SMTP</tspan></text>
-      <line x1="752" y1="1386" x2="1362" y2="1386" stroke="#CEDAE8" stroke-width="2" />
-      <text x="756" y="1410" font-size="18" fill="#52677C"><tspan x="756" y="1410">Garage 私有 attachments bucket；僅 Message 存取</tspan></text>
-      <text x="756" y="1442" font-size="18" fill="#52677C"><tspan x="756" y="1442">Auth 寄信至 Mailpit／可配置正式 SMTP</tspan></text>
-      <text x="756" y="1474" font-size="18" fill="#52677C"><tspan x="756" y="1474">Mailpit 8025、RabbitMQ 管理介面僅綁本機</tspan></text>
+      <rect x="734" y="1529" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="1555" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="1555">storage</tspan></text>
+      <text x="756" y="1586" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="1586">«infrastructure» Garage／SMTP</tspan></text>
+      <line x1="752" y1="1608" x2="1362" y2="1608" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="1632" font-size="18" fill="#52677C"><tspan x="756" y="1632">Garage 私有 attachments bucket；僅 Message 存取</tspan></text>
+      <text x="756" y="1664" font-size="18" fill="#52677C"><tspan x="756" y="1664">Auth 寄信至 Mailpit／可配置正式 SMTP</tspan></text>
+      <text x="756" y="1696" font-size="18" fill="#52677C"><tspan x="756" y="1696">Mailpit 8025、RabbitMQ 管理介面僅綁本機</tspan></text>
     </g>
     <g id="edges-heading">
-      <text x="56" y="1547" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="1547">關係</tspan></text>
+      <text x="56" y="1769" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="1769">關係</tspan></text>
     </g>
     <g id="edge-1">
-      <rect x="56" y="1582" width="1324" height="104" rx="8" fill="#F2F6FC" />
-      <text x="76" y="1609" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1609">web</tspan></text>
-      <text x="76" y="1639" font-size="17" fill="#183048"><tspan x="76" y="1639">React CMS／聊天室</tspan></text>
-      <text x="1155" y="1609" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1609">gateway</tspan></text>
-      <text x="1155" y="1639" font-size="17" fill="#183048"><tspan x="1155" y="1639">YARP Gateway</tspan></text>
-      <text x="325" y="1609" font-size="17" fill="#183048"><tspan x="325" y="1609">01 call | 同源 REST 與 WebSocket；網頁及 Swagger 由統一入口提供</tspan></text>
-      <line x1="325" y1="1666" x2="1125" y2="1666" stroke="#2863D8" stroke-width="2" />
-      <polyline points="1113,1659 1125,1666 1113,1673" fill="none" stroke="#2863D8" stroke-width="2" />
+      <rect x="56" y="1804" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1831" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1831">web</tspan></text>
+      <text x="76" y="1861" font-size="17" fill="#183048"><tspan x="76" y="1861">React CMS／聊天室</tspan></text>
+      <text x="1155" y="1831" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1831">gateway</tspan></text>
+      <text x="1155" y="1861" font-size="17" fill="#183048"><tspan x="1155" y="1861">YARP Gateway</tspan></text>
+      <text x="325" y="1831" font-size="17" fill="#183048"><tspan x="325" y="1831">01 call | 同源 REST 與 WebSocket；網頁及 Swagger 由統一入口提供</tspan></text>
+      <line x1="325" y1="1888" x2="1125" y2="1888" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,1881 1125,1888 1113,1895" fill="none" stroke="#2863D8" stroke-width="2" />
     </g>
     <g id="edge-2">
-      <rect x="56" y="1698" width="1324" height="104" rx="8" fill="#F2F6FC" />
-      <text x="76" y="1725" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1725">gateway</tspan></text>
-      <text x="76" y="1755" font-size="17" fill="#183048"><tspan x="76" y="1755">YARP Gateway</tspan></text>
-      <text x="1155" y="1725" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1725">auth</tspan></text>
-      <text x="1155" y="1755" font-size="17" fill="#183048"><tspan x="1155" y="1755">Auth</tspan></text>
-      <text x="325" y="1725" font-size="17" fill="#183048"><tspan x="325" y="1725">02 call | /api/v1/auth；RS256 JWT 初步驗證後轉送</tspan></text>
-      <line x1="325" y1="1782" x2="1125" y2="1782" stroke="#2863D8" stroke-width="2" />
-      <polyline points="1113,1775 1125,1782 1113,1789" fill="none" stroke="#2863D8" stroke-width="2" />
+      <rect x="56" y="1920" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1947" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1947">gateway</tspan></text>
+      <text x="76" y="1977" font-size="17" fill="#183048"><tspan x="76" y="1977">YARP Gateway</tspan></text>
+      <text x="1155" y="1947" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1947">auth</tspan></text>
+      <text x="1155" y="1977" font-size="17" fill="#183048"><tspan x="1155" y="1977">Auth</tspan></text>
+      <text x="325" y="1947" font-size="17" fill="#183048"><tspan x="325" y="1947">02 call | /api/v1/auth；RS256 JWT 初步驗證後轉送</tspan></text>
+      <line x1="325" y1="2004" x2="1125" y2="2004" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,1997 1125,2004 1113,2011" fill="none" stroke="#2863D8" stroke-width="2" />
     </g>
     <g id="edge-3">
-      <rect x="56" y="1814" width="1324" height="104" rx="8" fill="#F2F6FC" />
-      <text x="76" y="1841" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1841">gateway</tspan></text>
-      <text x="76" y="1871" font-size="17" fill="#183048"><tspan x="76" y="1871">YARP Gateway</tspan></text>
-      <text x="1155" y="1841" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1841">account</tspan></text>
-      <text x="1155" y="1871" font-size="17" fill="#183048"><tspan x="1155" y="1871">Account</tspan></text>
-      <text x="325" y="1841" font-size="17" fill="#183048"><tspan x="325" y="1841">03 call | /api/v1/accounts；業務服務再查驗 Auth</tspan></text>
-      <line x1="325" y1="1898" x2="1125" y2="1898" stroke="#2863D8" stroke-width="2" />
-      <polyline points="1113,1891 1125,1898 1113,1905" fill="none" stroke="#2863D8" stroke-width="2" />
+      <rect x="56" y="2036" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="2063" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="2063">gateway</tspan></text>
+      <text x="76" y="2093" font-size="17" fill="#183048"><tspan x="76" y="2093">YARP Gateway</tspan></text>
+      <text x="1155" y="2063" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="2063">account</tspan></text>
+      <text x="1155" y="2093" font-size="17" fill="#183048"><tspan x="1155" y="2093">Account</tspan></text>
+      <text x="325" y="2063" font-size="17" fill="#183048"><tspan x="325" y="2063">03 call | /api/v1/accounts；業務服務再查驗 Auth</tspan></text>
+      <line x1="325" y1="2120" x2="1125" y2="2120" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,2113 1125,2120 1113,2127" fill="none" stroke="#2863D8" stroke-width="2" />
     </g>
     <g id="edge-4">
-      <rect x="56" y="1930" width="1324" height="104" rx="8" fill="#F2F6FC" />
-      <text x="76" y="1957" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1957">gateway</tspan></text>
-      <text x="76" y="1987" font-size="17" fill="#183048"><tspan x="76" y="1987">YARP Gateway</tspan></text>
-      <text x="1155" y="1957" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1957">message</tspan></text>
-      <text x="1155" y="1987" font-size="17" fill="#183048"><tspan x="1155" y="1987">Message</tspan></text>
-      <text x="325" y="1957" font-size="17" fill="#183048"><tspan x="325" y="1957">04 call | /api/v1/chat 與 /hubs/chat；支援 WebSocket 代理</tspan></text>
-      <line x1="325" y1="2014" x2="1125" y2="2014" stroke="#2863D8" stroke-width="2" />
-      <polyline points="1113,2007 1125,2014 1113,2021" fill="none" stroke="#2863D8" stroke-width="2" />
+      <rect x="56" y="2152" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="2179" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="2179">gateway</tspan></text>
+      <text x="76" y="2209" font-size="17" fill="#183048"><tspan x="76" y="2209">YARP Gateway</tspan></text>
+      <text x="1155" y="2179" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="2179">message</tspan></text>
+      <text x="1155" y="2209" font-size="17" fill="#183048"><tspan x="1155" y="2209">Message</tspan></text>
+      <text x="325" y="2179" font-size="17" fill="#183048"><tspan x="325" y="2179">04 call | /api/v1/chat 與 /hubs/chat；支援 WebSocket 代理</tspan></text>
+      <line x1="325" y1="2236" x2="1125" y2="2236" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,2229 1125,2236 1113,2243" fill="none" stroke="#2863D8" stroke-width="2" />
     </g>
     <g id="edge-5">
-      <rect x="56" y="2046" width="1324" height="104" rx="8" fill="#F2F6FC" />
-      <text x="76" y="2073" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="2073">auth</tspan></text>
-      <text x="76" y="2103" font-size="17" fill="#183048"><tspan x="76" y="2103">Auth</tspan></text>
-      <text x="1155" y="2073" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="2073">authStore</tspan></text>
-      <text x="1155" y="2103" font-size="17" fill="#183048"><tspan x="1155" y="2103">Auth 資料資源</tspan></text>
-      <text x="325" y="2073" font-size="17" fill="#183048"><tspan x="325" y="2073">05 association | Auth 唯一擁有此 PostgreSQL、Redis 與 Data Protection Volume</tspan></text>
-      <line x1="325" y1="2130" x2="1125" y2="2130" stroke="#2863D8" stroke-width="2" />
-      <polyline points="1113,2123 1125,2130 1113,2137" fill="none" stroke="#2863D8" stroke-width="2" />
+      <rect x="56" y="2268" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="2295" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="2295">auth</tspan></text>
+      <text x="76" y="2325" font-size="17" fill="#183048"><tspan x="76" y="2325">Auth</tspan></text>
+      <text x="1155" y="2295" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="2295">authStore</tspan></text>
+      <text x="1155" y="2325" font-size="17" fill="#183048"><tspan x="1155" y="2325">Auth 資料資源</tspan></text>
+      <text x="325" y="2295" font-size="17" fill="#183048"><tspan x="325" y="2295">05 association | Auth 唯一擁有此 PostgreSQL、Redis 與 Data Protection Volume</tspan></text>
+      <line x1="325" y1="2352" x2="1125" y2="2352" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,2345 1125,2352 1113,2359" fill="none" stroke="#2863D8" stroke-width="2" />
     </g>
     <g id="edge-6">
-      <rect x="56" y="2162" width="1324" height="104" rx="8" fill="#F2F6FC" />
-      <text x="76" y="2189" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="2189">account</tspan></text>
-      <text x="76" y="2219" font-size="17" fill="#183048"><tspan x="76" y="2219">Account</tspan></text>
-      <text x="1155" y="2189" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="2189">accountStore</tspan></text>
-      <text x="1155" y="2219" font-size="17" fill="#183048"><tspan x="1155" y="2219">Account 資料資源</tspan></text>
-      <text x="325" y="2189" font-size="17" fill="#183048"><tspan x="325" y="2189">06 association | Account 唯一擁有此 PostgreSQL 與 Redis</tspan></text>
-      <line x1="325" y1="2246" x2="1125" y2="2246" stroke="#2863D8" stroke-width="2" />
-      <polyline points="1113,2239 1125,2246 1113,2253" fill="none" stroke="#2863D8" stroke-width="2" />
+      <rect x="56" y="2384" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="2411" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="2411">account</tspan></text>
+      <text x="76" y="2441" font-size="17" fill="#183048"><tspan x="76" y="2441">Account</tspan></text>
+      <text x="1155" y="2411" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="2411">accountStore</tspan></text>
+      <text x="1155" y="2441" font-size="17" fill="#183048"><tspan x="1155" y="2441">Account 資料資源</tspan></text>
+      <text x="325" y="2411" font-size="17" fill="#183048"><tspan x="325" y="2411">06 association | Account 唯一擁有此 PostgreSQL 與 Redis</tspan></text>
+      <line x1="325" y1="2468" x2="1125" y2="2468" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,2461 1125,2468 1113,2475" fill="none" stroke="#2863D8" stroke-width="2" />
     </g>
     <g id="edge-7">
-      <rect x="56" y="2278" width="1324" height="104" rx="8" fill="#F2F6FC" />
-      <text x="76" y="2305" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="2305">message</tspan></text>
-      <text x="76" y="2335" font-size="17" fill="#183048"><tspan x="76" y="2335">Message</tspan></text>
-      <text x="1155" y="2305" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="2305">messageStore</tspan></text>
-      <text x="1155" y="2335" font-size="17" fill="#183048"><tspan x="1155" y="2335">Message 資料資源</tspan></text>
-      <text x="325" y="2305" font-size="17" fill="#183048"><tspan x="325" y="2305">07 association | Message 唯一擁有此 PostgreSQL 與 Redis</tspan></text>
-      <line x1="325" y1="2362" x2="1125" y2="2362" stroke="#2863D8" stroke-width="2" />
-      <polyline points="1113,2355 1125,2362 1113,2369" fill="none" stroke="#2863D8" stroke-width="2" />
+      <rect x="56" y="2500" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="2527" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="2527">message</tspan></text>
+      <text x="76" y="2557" font-size="17" fill="#183048"><tspan x="76" y="2557">Message</tspan></text>
+      <text x="1155" y="2527" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="2527">messageStore</tspan></text>
+      <text x="1155" y="2557" font-size="17" fill="#183048"><tspan x="1155" y="2557">Message 資料資源</tspan></text>
+      <text x="325" y="2527" font-size="17" fill="#183048"><tspan x="325" y="2527">07 association | Message 唯一擁有此 PostgreSQL 與 Redis</tspan></text>
+      <line x1="325" y1="2584" x2="1125" y2="2584" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,2577 1125,2584 1113,2591" fill="none" stroke="#2863D8" stroke-width="2" />
     </g>
     <g id="edge-8">
-      <rect x="56" y="2394" width="1324" height="104" rx="8" fill="#F2F6FC" />
-      <text x="76" y="2421" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="2421">auth</tspan></text>
-      <text x="76" y="2451" font-size="17" fill="#183048"><tspan x="76" y="2451">Auth</tspan></text>
-      <text x="1155" y="2421" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="2421">broker</tspan></text>
-      <text x="1155" y="2451" font-size="17" fill="#183048"><tspan x="1155" y="2451">RabbitMQ</tspan></text>
-      <text x="325" y="2421" font-size="17" fill="#183048"><tspan x="325" y="2421">08 event | 發布 auth.identity.changed.v1；Auth 沒有業務事件 Consumer</tspan></text>
-      <line x1="325" y1="2478" x2="1125" y2="2478" stroke="#087E7C" stroke-width="2" />
-      <polyline points="1113,2471 1125,2478 1113,2485" fill="none" stroke="#087E7C" stroke-width="2" />
+      <rect x="56" y="2616" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="2643" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="2643">auth</tspan></text>
+      <text x="76" y="2673" font-size="17" fill="#183048"><tspan x="76" y="2673">Auth</tspan></text>
+      <text x="1155" y="2643" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="2643">broker</tspan></text>
+      <text x="1155" y="2673" font-size="17" fill="#183048"><tspan x="1155" y="2673">RabbitMQ</tspan></text>
+      <text x="325" y="2643" font-size="17" fill="#183048"><tspan x="325" y="2643">08 event | 發布 auth.identity.changed.v1；Auth 沒有業務事件 Consumer</tspan></text>
+      <line x1="325" y1="2700" x2="1125" y2="2700" stroke="#087E7C" stroke-width="2" />
+      <polyline points="1113,2693 1125,2700 1113,2707" fill="none" stroke="#087E7C" stroke-width="2" />
     </g>
     <g id="edge-9">
-      <rect x="56" y="2510" width="1324" height="104" rx="8" fill="#F2F6FC" />
-      <text x="76" y="2537" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="2537">account</tspan></text>
-      <text x="76" y="2567" font-size="17" fill="#183048"><tspan x="76" y="2567">Account</tspan></text>
-      <text x="1155" y="2537" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="2537">broker</tspan></text>
-      <text x="1155" y="2567" font-size="17" fill="#183048"><tspan x="1155" y="2567">RabbitMQ</tspan></text>
-      <text x="325" y="2537" font-size="17" fill="#183048"><tspan x="325" y="2537">09 event | 消費身分事件，發布 account.profile.changed.v1</tspan></text>
-      <line x1="325" y1="2594" x2="1125" y2="2594" stroke="#087E7C" stroke-width="2" />
-      <polyline points="1113,2587 1125,2594 1113,2601" fill="none" stroke="#087E7C" stroke-width="2" />
+      <rect x="56" y="2732" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="2759" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="2759">account</tspan></text>
+      <text x="76" y="2789" font-size="17" fill="#183048"><tspan x="76" y="2789">Account</tspan></text>
+      <text x="1155" y="2759" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="2759">broker</tspan></text>
+      <text x="1155" y="2789" font-size="17" fill="#183048"><tspan x="1155" y="2789">RabbitMQ</tspan></text>
+      <text x="325" y="2759" font-size="17" fill="#183048"><tspan x="325" y="2759">09 event | 消費身分事件，發布 account.profile.changed.v1</tspan></text>
+      <line x1="325" y1="2816" x2="1125" y2="2816" stroke="#087E7C" stroke-width="2" />
+      <polyline points="1113,2809 1125,2816 1113,2823" fill="none" stroke="#087E7C" stroke-width="2" />
     </g>
     <g id="edge-10">
-      <rect x="56" y="2626" width="1324" height="104" rx="8" fill="#F2F6FC" />
-      <text x="76" y="2653" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="2653">message</tspan></text>
-      <text x="76" y="2683" font-size="17" fill="#183048"><tspan x="76" y="2683">Message</tspan></text>
-      <text x="1155" y="2653" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="2653">broker</tspan></text>
-      <text x="1155" y="2683" font-size="17" fill="#183048"><tspan x="1155" y="2683">RabbitMQ</tspan></text>
-      <text x="325" y="2653" font-size="17" fill="#183048"><tspan x="325" y="2653">10 event | 消費身分、個人資料與聊天事件；發布 message.chat.changed.v1</tspan></text>
-      <line x1="325" y1="2710" x2="1125" y2="2710" stroke="#087E7C" stroke-width="2" />
-      <polyline points="1113,2703 1125,2710 1113,2717" fill="none" stroke="#087E7C" stroke-width="2" />
+      <rect x="56" y="2848" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="2875" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="2875">message</tspan></text>
+      <text x="76" y="2905" font-size="17" fill="#183048"><tspan x="76" y="2905">Message</tspan></text>
+      <text x="1155" y="2875" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="2875">broker</tspan></text>
+      <text x="1155" y="2905" font-size="17" fill="#183048"><tspan x="1155" y="2905">RabbitMQ</tspan></text>
+      <text x="325" y="2875" font-size="17" fill="#183048"><tspan x="325" y="2875">10 event | 消費身分、個人資料與聊天事件；發布 message.chat.changed.v1</tspan></text>
+      <line x1="325" y1="2932" x2="1125" y2="2932" stroke="#087E7C" stroke-width="2" />
+      <polyline points="1113,2925 1125,2932 1113,2939" fill="none" stroke="#087E7C" stroke-width="2" />
     </g>
     <g id="edge-11">
-      <rect x="56" y="2742" width="1324" height="104" rx="8" fill="#F2F6FC" />
-      <text x="76" y="2769" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="2769">message</tspan></text>
-      <text x="76" y="2799" font-size="17" fill="#183048"><tspan x="76" y="2799">Message</tspan></text>
-      <text x="1155" y="2769" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="2769">auth</tspan></text>
-      <text x="1155" y="2799" font-size="17" fill="#183048"><tspan x="1155" y="2799">Auth</tspan></text>
-      <text x="325" y="2769" font-size="17" fill="#183048"><tspan x="325" y="2769">11 call | 內部 Session 查驗；無法查驗時拒絕操作／推送</tspan></text>
-      <line x1="325" y1="2826" x2="1125" y2="2826" stroke="#2863D8" stroke-width="2" />
-      <polyline points="1113,2819 1125,2826 1113,2833" fill="none" stroke="#2863D8" stroke-width="2" />
+      <rect x="56" y="2964" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="2991" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="2991">message</tspan></text>
+      <text x="76" y="3021" font-size="17" fill="#183048"><tspan x="76" y="3021">Message</tspan></text>
+      <text x="1155" y="2991" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="2991">auth</tspan></text>
+      <text x="1155" y="3021" font-size="17" fill="#183048"><tspan x="1155" y="3021">Auth</tspan></text>
+      <text x="325" y="2991" font-size="17" fill="#183048"><tspan x="325" y="2991">11 call | 內部 Session 查驗；無法查驗時拒絕操作／推送</tspan></text>
+      <line x1="325" y1="3048" x2="1125" y2="3048" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,3041 1125,3048 1113,3055" fill="none" stroke="#2863D8" stroke-width="2" />
     </g>
     <g id="edge-12">
-      <rect x="56" y="2858" width="1324" height="104" rx="8" fill="#F2F6FC" />
-      <text x="76" y="2885" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="2885">account</tspan></text>
-      <text x="76" y="2915" font-size="17" fill="#183048"><tspan x="76" y="2915">Account</tspan></text>
-      <text x="1155" y="2885" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="2885">auth</tspan></text>
-      <text x="1155" y="2915" font-size="17" fill="#183048"><tspan x="1155" y="2915">Auth</tspan></text>
-      <text x="325" y="2885" font-size="17" fill="#183048"><tspan x="325" y="2885">12 call | 內部 Session 查驗；禁止使用投影判斷登入有效性</tspan></text>
-      <line x1="325" y1="2942" x2="1125" y2="2942" stroke="#2863D8" stroke-width="2" />
-      <polyline points="1113,2935 1125,2942 1113,2949" fill="none" stroke="#2863D8" stroke-width="2" />
+      <rect x="56" y="3080" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="3107" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="3107">account</tspan></text>
+      <text x="76" y="3137" font-size="17" fill="#183048"><tspan x="76" y="3137">Account</tspan></text>
+      <text x="1155" y="3107" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="3107">auth</tspan></text>
+      <text x="1155" y="3137" font-size="17" fill="#183048"><tspan x="1155" y="3137">Auth</tspan></text>
+      <text x="325" y="3107" font-size="17" fill="#183048"><tspan x="325" y="3107">12 call | 內部 Session 查驗；禁止使用投影判斷登入有效性</tspan></text>
+      <line x1="325" y1="3164" x2="1125" y2="3164" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,3157 1125,3164 1113,3171" fill="none" stroke="#2863D8" stroke-width="2" />
     </g>
     <g id="edge-13">
-      <rect x="56" y="2974" width="1324" height="104" rx="8" fill="#F2F6FC" />
-      <text x="76" y="3001" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="3001">message</tspan></text>
-      <text x="76" y="3031" font-size="17" fill="#183048"><tspan x="76" y="3031">Message</tspan></text>
-      <text x="1155" y="3001" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="3001">storage</tspan></text>
-      <text x="1155" y="3031" font-size="17" fill="#183048"><tspan x="1155" y="3031">Garage／SMTP</tspan></text>
-      <text x="325" y="3001" font-size="17" fill="#183048"><tspan x="325" y="3001">13 call | 經身分與房間權限驗證後讀寫 Garage</tspan></text>
-      <line x1="325" y1="3058" x2="1125" y2="3058" stroke="#2863D8" stroke-width="2" />
-      <polyline points="1113,3051 1125,3058 1113,3065" fill="none" stroke="#2863D8" stroke-width="2" />
+      <rect x="56" y="3196" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="3223" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="3223">message</tspan></text>
+      <text x="76" y="3253" font-size="17" fill="#183048"><tspan x="76" y="3253">Message</tspan></text>
+      <text x="1155" y="3223" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="3223">storage</tspan></text>
+      <text x="1155" y="3253" font-size="17" fill="#183048"><tspan x="1155" y="3253">Garage／SMTP</tspan></text>
+      <text x="325" y="3223" font-size="17" fill="#183048"><tspan x="325" y="3223">13 call | 經身分與房間權限驗證後讀寫 Garage</tspan></text>
+      <line x1="325" y1="3280" x2="1125" y2="3280" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,3273 1125,3280 1113,3287" fill="none" stroke="#2863D8" stroke-width="2" />
     </g>
     <g id="edge-14">
-      <rect x="56" y="3090" width="1324" height="104" rx="8" fill="#F2F6FC" />
-      <text x="76" y="3117" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="3117">auth</tspan></text>
-      <text x="76" y="3147" font-size="17" fill="#183048"><tspan x="76" y="3147">Auth</tspan></text>
-      <text x="1155" y="3117" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="3117">storage</tspan></text>
-      <text x="1155" y="3147" font-size="17" fill="#183048"><tspan x="1155" y="3147">Garage／SMTP</tspan></text>
-      <text x="325" y="3117" font-size="17" fill="#183048"><tspan x="325" y="3117">14 call | SMTP 寄送持久化加密郵件工作</tspan></text>
-      <line x1="325" y1="3174" x2="1125" y2="3174" stroke="#2863D8" stroke-width="2" />
-      <polyline points="1113,3167 1125,3174 1113,3181" fill="none" stroke="#2863D8" stroke-width="2" />
+      <rect x="56" y="3312" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="3339" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="3339">auth</tspan></text>
+      <text x="76" y="3369" font-size="17" fill="#183048"><tspan x="76" y="3369">Auth</tspan></text>
+      <text x="1155" y="3339" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="3339">storage</tspan></text>
+      <text x="1155" y="3369" font-size="17" fill="#183048"><tspan x="1155" y="3369">Garage／SMTP</tspan></text>
+      <text x="325" y="3339" font-size="17" fill="#183048"><tspan x="325" y="3339">14 call | SMTP 寄送持久化加密郵件工作</tspan></text>
+      <line x1="325" y1="3396" x2="1125" y2="3396" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,3389 1125,3396 1113,3403" fill="none" stroke="#2863D8" stroke-width="2" />
     </g>
-    <g id="section-87">
-      <text x="56" y="3240" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="3240">準則</tspan></text>
-    </g>
-    <g id="line-89">
-      <text x="70" y="3282" font-size="18" fill="#52677C"><tspan x="70" y="3282">禁止跨服務直接讀寫資料庫；Gateway／CMS 沒有專屬 PostgreSQL 或 Redis。</tspan></text>
-    </g>
-    <g id="line-90">
-      <text x="70" y="3324" font-size="18" fill="#52677C"><tspan x="70" y="3324">三個 Migration 工作先完成，再啟動對應服務；Compose 是單機開發／驗收部署。</tspan></text>
-    </g>
-    <g id="line-91">
-      <text x="70" y="3366" font-size="18" fill="#52677C"><tspan x="70" y="3366">外部正式部署仍需 HTTPS、SMTP、持久化磁碟與備份排程；單節點 RabbitMQ／Garage 不代表高可用。</tspan></text>
-    </g>
-    <g id="section-93">
-      <text x="56" y="3431" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="3431">來源</tspan></text>
-    </g>
-    <g id="line-95">
-      <text x="70" y="3473" font-size="15" fill="#52677C"><tspan x="70" y="3473">docker-compose.yml</tspan></text>
-    </g>
-    <g id="line-96">
-      <text x="70" y="3512" font-size="15" fill="#52677C"><tspan x="70" y="3512">src/Gateway/appsettings.json</tspan></text>
-    </g>
-    <g id="line-97">
-      <text x="70" y="3551" font-size="15" fill="#52677C"><tspan x="70" y="3551">src/Gateway/Program.cs</tspan></text>
+    <g id="section-96">
+      <text x="56" y="3462" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="3462">準則</tspan></text>
     </g>
     <g id="line-98">
-      <text x="70" y="3590" font-size="15" fill="#52677C"><tspan x="70" y="3590">src/Web/src/App.tsx</tspan></text>
+      <text x="70" y="3504" font-size="18" fill="#52677C"><tspan x="70" y="3504">禁止跨服務直接讀寫資料庫；Gateway／CMS 沒有專屬 PostgreSQL 或 Redis。</tspan></text>
     </g>
     <g id="line-99">
-      <text x="70" y="3629" font-size="15" fill="#52677C"><tspan x="70" y="3629">src/Shared/BuildingBlocks/Platform.cs</tspan></text>
+      <text x="70" y="3546" font-size="18" fill="#52677C"><tspan x="70" y="3546">三個 Migration 工作先完成，再啟動對應服務；Compose 是單機開發／驗收部署。</tspan></text>
     </g>
-    <line x1="56" y1="3698" x2="1384" y2="3698" stroke="#CEDAE8" stroke-width="2" />
-    <text x="56" y="3724" font-size="12" fill="#52677C"><tspan x="56" y="3724">RELAY / STATIC SVG / MARKDOWN IS THE CONTENT AUTHORITY</tspan></text>
+    <g id="line-100">
+      <text x="70" y="3588" font-size="18" fill="#52677C"><tspan x="70" y="3588">外部正式部署仍需 HTTPS、SMTP、持久化磁碟與備份排程；單節點 RabbitMQ／Garage 不代表高可用。</tspan></text>
+    </g>
+    <g id="section-102">
+      <text x="56" y="3653" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="3653">來源</tspan></text>
+    </g>
+    <g id="line-104">
+      <text x="70" y="3695" font-size="15" fill="#52677C"><tspan x="70" y="3695">docker-compose.yml</tspan></text>
+    </g>
+    <g id="line-105">
+      <text x="70" y="3734" font-size="15" fill="#52677C"><tspan x="70" y="3734">src/Gateway/appsettings.json</tspan></text>
+    </g>
+    <g id="line-106">
+      <text x="70" y="3773" font-size="15" fill="#52677C"><tspan x="70" y="3773">src/Gateway/Program.cs</tspan></text>
+    </g>
+    <g id="line-107">
+      <text x="70" y="3812" font-size="15" fill="#52677C"><tspan x="70" y="3812">src/Web/src/App.tsx</tspan></text>
+    </g>
+    <g id="line-108">
+      <text x="70" y="3851" font-size="15" fill="#52677C"><tspan x="70" y="3851">src/Shared/BuildingBlocks/Platform.cs</tspan></text>
+    </g>
+    <line x1="56" y1="3920" x2="1384" y2="3920" stroke="#CEDAE8" stroke-width="2" />
+    <text x="56" y="3946" font-size="12" fill="#52677C"><tspan x="56" y="3946">RELAY / STATIC SVG / MARKDOWN IS THE CONTENT AUTHORITY</tspan></text>
   </g>
 </svg>

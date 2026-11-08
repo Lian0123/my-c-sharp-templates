@@ -1,0 +1,1120 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:a="https://github.com/Lian0123/my-c-sharp-templates/ns/living-docs/1" xmlns:m="https://example.org/ns/markdown-in-svg/0.1" version="1.1" width="1440" height="4972" viewBox="0 0 1440 4972">
+  <title>開發規則、強制邊界與任務契約</title>
+  <desc>繁體中文 Agent living document。Markdown 是內容權威；UML 關係、資料來源與更新規則以原生靜態 SVG 呈現。</desc>
+  <metadata>
+    <m:document version="0.1" profile="static" doc-id="urn:uuid:203ce516-90ce-4234-918a-f859b8b7bdea" revision="6">
+      <m:source media-type="text/markdown" dialect="commonmark-0.31.2" xml:space="preserve"># 開發規則、強制邊界與任務契約
+
+視圖：cards
+文件編號：DOC-17
+文件狀態：current
+核准狀態：not-recorded
+維護角色：技術／測試維護角色（待具名確認）
+具名負責人：unassigned
+適用基準：referenced-source-sha256；驗證以紀錄快照為準
+最後審查：2026-11-08
+關聯需求：REQ-BOUNDARY-001,REQ-AUTH-001,REQ-SYNC-001,REQ-DOC-001,REQ-DELIVERY-001
+關聯決策：ADR-DATA-001,ADR-SYNC-001,ADR-AUTH-001,ADR-DOC-001
+範圍：依現有實作說明功能與關聯；不冒認本次已執行業務驗收。
+
+## 節點
+
+### RULE-ARCH-001 | «constraint» 專案依賴只向內且服務獨立
+
+- 規則：專案依賴只向內且服務獨立
+- 理由：避免跨服務 Entity／DbContext 與反向分層耦合
+- 檢查方式：automated
+- 適用變更：任何 csproj／專案新增或移動
+- 違反處理：E_ARCH；先更新 ADR、相依政策與相關驗收
+- 測試：tests/Tooling/test_development_rules.py#test_cross_service_and_reversed_layer_project_references_fail
+
+### RULE-ARCH-002 | «constraint» Domain／Application／Contracts 不依賴外框架
+
+- 規則：Domain／Application／Contracts 不依賴外框架
+- 理由：業務規則與交換合約不讀 DB／Redis／HTTP 框架
+- 檢查方式：automated
+- 適用變更：內層 csproj、using 與新檔案
+- 違反處理：E_ARCH；移到外層 adapter 或重新設計契約
+- 測試：tests/Tooling/test_development_rules.py#test_nested_domain_framework_import_and_package_fail
+
+### RULE-API-001 | «constraint» Gateway 公開路由與 JWT 邊界
+
+- 規則：Gateway 公開路由與 JWT 邊界
+- 理由：不把 internal Session／revoke 介面暴露給客戶端
+- 檢查方式：automated
+- 適用變更：路由、cluster、transform 或授權政策
+- 違反處理：E_GATEWAY；以明確路由與受保護政策修正
+- 測試：tests/Tooling/test_development_rules.py#test_gateway_internal_proxy_and_lost_jwt_policy_fail
+
+### RULE-TRACE-001 | «constraint» 公開業務操作只能有一個功能契約 owner
+
+- 規則：公開業務操作只能有一個功能契約 owner
+- 理由：防止只加 API 卻沒有範圍、失敗與測試定義
+- 檢查方式：automated
+- 適用變更：IAuthService／IAccountService／IChatService 新增方法或 FEAT 修改
+- 違反處理：E_FEATURE／E_UML；補功能、圖頁與測試；不能捏造已通過
+- 測試：tests/Tooling/test_development_rules.py#test_unmapped_new_interface_operation_fails
+
+### RULE-DATA-001 | «constraint» 交易、事件與冪等
+
+- 規則：交易、事件與冪等
+- 理由：SaveChanges 與 Outbox 同交易；Confirm／ACK／Inbox／版本語意不能被重構破壞
+- 檢查方式：review-required
+- 適用變更：資料寫入、事件 schema、worker 或 Migration
+- 違反處理：核對 Transaction／唯一鍵及中斷、重複、亂序、重啟測試；異動事件須評估 schemaVersion
+- 測試：tests/Tooling/test_development_rules.py#test_feature_requires_bounds_failure_handling_and_rollback
+
+### RULE-AUTH-001 | «constraint» 權威 Session、最小權限與稽核
+
+- 規則：權威 Session、最小權限與稽核
+- 理由：拒絕正向有效快取；撤銷不等 MQ；敏感讀寫需原因
+- 檢查方式：review-required
+- 適用變更：JWT、Cookie／CSRF、Admin、連線／推送、附件授權
+- 違反處理：執行對應權限與故障測試；檢查不得洩漏 Token／密碼／內容
+- 測試：tests/Tooling/test_development_rules.py#test_feature_cannot_claim_current_pass_from_references
+
+### RULE-ERROR-001 | «constraint» 錯誤、API 與外部服務契約
+
+- 規則：錯誤、API 與外部服務契約
+- 理由：七位碼區間唯一；Problem Details；不得回傳堆疊或連線機密
+- 檢查方式：review-required
+- 適用變更：公開 DTO、路由、狀態碼、外部逾時／重試
+- 違反處理：核對 Errors 目錄、錯誤斷言、OpenAPI／TS 型別同步與向後相容
+- 測試：tests/Tooling/test_development_rules.py#test_feature_requires_bounds_failure_handling_and_rollback
+
+### RULE-QUALITY-001 | «constraint» 固定檢查與可信覆蓋率
+
+- 規則：固定檢查與可信覆蓋率
+- 理由：行 95%／分支 90% 不得排除手寫碼；參照覆蓋不是驗收
+- 檢查方式：review-required
+- 適用變更：所有行為、前端、共用模組及依賴修改
+- 違反處理：CI 執行格式／靜態／型別／建置、測試、audit、OpenAPI 一致性、Docker；依風險擴大
+- 測試：tests/Tooling/test_development_rules.py#test_feature_cannot_claim_current_pass_from_references
+
+### RULE-CHANGE-001 | «constraint» 有界任務與文件同步
+
+- 規則：有界任務與文件同步
+- 理由：每次從 FEAT 定義修改範圍、預期、檢查與回復；不任意新增抽象
+- 檢查方式：review-required
+- 適用變更：功能、介面、資料或規則變更
+- 違反處理：先用任務契約核對；超範圍需重評影響，保持原有授權，不增無依據的確認流程
+- 測試：tests/Tooling/test_development_rules.py#test_feature_requires_bounds_failure_handling_and_rollback
+
+### RULE-DELIVERY-001 | «constraint» 版本交付、恢復與唯增紀錄
+
+- 規則：版本交付、恢復與唯增紀錄
+- 理由：原始產物不進 Git；歷史 CI 不當作本次驗收
+- 檢查方式：review-required
+- 適用變更：部署、備份、金鑰、規則與交接變更
+- 違反處理：保留限定版本摘要與原始指紋；未做列 not-run；更正用新紀錄而非覆寫
+- 測試：tests/Tooling/test_development_rules.py#test_feature_cannot_claim_current_pass_from_references
+
+### TASK-CONTRACT | «artifact» 每次開發的任務契約
+
+- 識別：TASK ID＋目標 FEAT／REQ／AC／ADR；指明 implemented／planned
+- 範圍：允許修改與不做範圍；列呼叫者、資料表、事件、API、前端及部署影響
+- 預期：Given／When／Then 及獨立依據；同步成功與非同步完成分開
+- 驗證：格式、型別、建置、正常／邊界／錯誤／權限／故障；記錄命令與環境
+- 回復：契約／schema 相容、回退方式、已知資料風險與成功判據
+- 結束：檔案指紋、pass／fail／skipped／not-run、文件更新與封存摘要
+
+## 關係
+
+- dependency | TASK-CONTRACT | RULE-ARCH-001 | 任務依影響選擇規則；自動化與人工／行為驗證範圍分開。
+
+- dependency | TASK-CONTRACT | RULE-ARCH-002 | 任務依影響選擇規則；自動化與人工／行為驗證範圍分開。
+
+- dependency | TASK-CONTRACT | RULE-API-001 | 任務依影響選擇規則；自動化與人工／行為驗證範圍分開。
+
+- dependency | TASK-CONTRACT | RULE-TRACE-001 | 任務依影響選擇規則；自動化與人工／行為驗證範圍分開。
+
+- dependency | TASK-CONTRACT | RULE-DATA-001 | 任務依影響選擇規則；自動化與人工／行為驗證範圍分開。
+
+- dependency | TASK-CONTRACT | RULE-AUTH-001 | 任務依影響選擇規則；自動化與人工／行為驗證範圍分開。
+
+- dependency | TASK-CONTRACT | RULE-ERROR-001 | 任務依影響選擇規則；自動化與人工／行為驗證範圍分開。
+
+- dependency | TASK-CONTRACT | RULE-QUALITY-001 | 任務依影響選擇規則；自動化與人工／行為驗證範圍分開。
+
+- dependency | TASK-CONTRACT | RULE-CHANGE-001 | 任務依影響選擇規則；自動化與人工／行為驗證範圍分開。
+
+- dependency | TASK-CONTRACT | RULE-DELIVERY-001 | 任務依影響選擇規則；自動化與人工／行為驗證範圍分開。
+
+## 準則
+
+- 四項 automated 規則有實際 checker；review-required 必須審查與執行相關測試，靜態工具不假稱通過。
+- 程式文字模式檢查是輔助，不是完整 C# 編譯器、安全稽核或一般 UML 認證。
+- 不新增服務、資料表或每功能一個 class 來滿足圖面數量；按責任及測試需求拆分。
+
+## 來源
+
+- .editorconfig
+- .github/workflows/ci.yml
+- AGENTS.md
+- Directory.Build.props
+- coverage.runsettings
+- scripts/check-coverage.py
+- scripts/development_rules.py
+- scripts/living_docs.py
+- tests/Tooling/test_development_rules.py
+</m:source>
+      <m:presentation root-ref="view" source-digest="sha256:6b45390f436b7c0a013187f2ea30dda1ede13339d1fd8371ec0c3c1e6611b834" renderer="relay-living-docs" renderer-version="1.2.0" />
+      <m:bindings>
+        <m:bind target="document-title" start-line="1" end-line="1" />
+        <m:bind target="intro-3" start-line="3" end-line="3" />
+        <m:bind target="intro-4" start-line="4" end-line="4" />
+        <m:bind target="intro-5" start-line="5" end-line="5" />
+        <m:bind target="intro-6" start-line="6" end-line="6" />
+        <m:bind target="intro-7" start-line="7" end-line="7" />
+        <m:bind target="intro-8" start-line="8" end-line="8" />
+        <m:bind target="intro-9" start-line="9" end-line="9" />
+        <m:bind target="intro-10" start-line="10" end-line="10" />
+        <m:bind target="intro-11" start-line="11" end-line="11" />
+        <m:bind target="intro-12" start-line="12" end-line="12" />
+        <m:bind target="intro-13" start-line="13" end-line="13" />
+        <m:bind target="nodes-heading" start-line="15" end-line="15" />
+        <m:bind target="node-RULE-ARCH-001" start-line="17" end-line="24" />
+        <m:bind target="node-RULE-ARCH-002" start-line="26" end-line="33" />
+        <m:bind target="node-RULE-API-001" start-line="35" end-line="42" />
+        <m:bind target="node-RULE-TRACE-001" start-line="44" end-line="51" />
+        <m:bind target="node-RULE-DATA-001" start-line="53" end-line="60" />
+        <m:bind target="node-RULE-AUTH-001" start-line="62" end-line="69" />
+        <m:bind target="node-RULE-ERROR-001" start-line="71" end-line="78" />
+        <m:bind target="node-RULE-QUALITY-001" start-line="80" end-line="87" />
+        <m:bind target="node-RULE-CHANGE-001" start-line="89" end-line="96" />
+        <m:bind target="node-RULE-DELIVERY-001" start-line="98" end-line="105" />
+        <m:bind target="node-TASK-CONTRACT" start-line="107" end-line="114" />
+        <m:bind target="edges-heading" start-line="116" end-line="116" />
+        <m:bind target="edge-1" start-line="118" end-line="118" />
+        <m:bind target="edge-2" start-line="120" end-line="120" />
+        <m:bind target="edge-3" start-line="122" end-line="122" />
+        <m:bind target="edge-4" start-line="124" end-line="124" />
+        <m:bind target="edge-5" start-line="126" end-line="126" />
+        <m:bind target="edge-6" start-line="128" end-line="128" />
+        <m:bind target="edge-7" start-line="130" end-line="130" />
+        <m:bind target="edge-8" start-line="132" end-line="132" />
+        <m:bind target="edge-9" start-line="134" end-line="134" />
+        <m:bind target="edge-10" start-line="136" end-line="136" />
+        <m:bind target="section-138" start-line="138" end-line="138" />
+        <m:bind target="line-140" start-line="140" end-line="140" />
+        <m:bind target="line-141" start-line="141" end-line="141" />
+        <m:bind target="line-142" start-line="142" end-line="142" />
+        <m:bind target="section-144" start-line="144" end-line="144" />
+        <m:bind target="line-146" start-line="146" end-line="146" />
+        <m:bind target="line-147" start-line="147" end-line="147" />
+        <m:bind target="line-148" start-line="148" end-line="148" />
+        <m:bind target="line-149" start-line="149" end-line="149" />
+        <m:bind target="line-150" start-line="150" end-line="150" />
+        <m:bind target="line-151" start-line="151" end-line="151" />
+        <m:bind target="line-152" start-line="152" end-line="152" />
+        <m:bind target="line-153" start-line="153" end-line="153" />
+        <m:bind target="line-154" start-line="154" end-line="154" />
+      </m:bindings>
+      <m:extensions>
+        <a:provenance version="1" spec-commit="c7c0d96aa398d650c6bea5588e5d060bc6d60da5">
+          <a:file path=".editorconfig" sha256="5a20effc0fe2985b0241d47768abe93ba4b24e0ef6bd6da5f2bc1174d1d42aa0" />
+          <a:file path=".github/workflows/ci.yml" sha256="7e373adee14baf35637a76230d3e9b9308e268f9fcdbebc8056929df9db259b1" />
+          <a:file path="AGENTS.md" sha256="037d1133f37436d3eba0a2c4e1f4e059967b21283b12a8db8469da7aa319d476" />
+          <a:file path="Directory.Build.props" sha256="12ab6075015ec12aa01def50136a6b8e3ea0c025e3788d8da7a99949365133f8" />
+          <a:file path="coverage.runsettings" sha256="0e03c5bcc2cb04150edf8d3b9a6be437a4289adc0ec8a7fd7d69b7b0afcb5628" />
+          <a:file path="scripts/check-coverage.py" sha256="d5a0019b2fdb4d4c0846fc9685e1f63fed45fed1c2a40cc04dfc9ded259e9ddc" />
+          <a:file path="scripts/development_rules.py" sha256="33653cc9c01335ed8937eeaacae6c89e5809cfdc1d77c5ebf7de09f95a58f8bc" />
+          <a:file path="scripts/living_docs.py" sha256="664286ba5e350b65649878689055d56678514b9bd1b50e74b53dac89f9057579" />
+          <a:file path="tests/Tooling/test_development_rules.py" sha256="4aa932f97faf97ddb7d3d48e5578ac726434904b5d4fde8bbd8114f7760dc550" />
+        </a:provenance>
+      </m:extensions>
+    </m:document>
+  </metadata>
+  <g id="view" font-family="PingFang TC, Noto Sans CJK TC, Microsoft JhengHei, sans-serif" fill="#183048">
+    <rect x="0" y="0" width="1440" height="4972" fill="#FFFFFF" />
+    <rect x="0" y="0" width="1440" height="180" fill="#183048" />
+    <text x="56" y="45" font-size="16" fill="#9EBFE8"><tspan x="56" y="45">RELAY / AGENT LIVING DOCUMENT</tspan></text>
+    <text x="56" y="105" font-size="34" fill="#FFFFFF" font-weight="bold" id="document-title"><tspan x="56" y="105">開發規則、強制邊界與任務契約</tspan></text>
+    <g id="intro-3">
+      <text x="56" y="215" font-size="19" fill="#52677C"><tspan x="56" y="215">視圖：cards</tspan></text>
+    </g>
+    <g id="intro-4">
+      <text x="56" y="250" font-size="16" fill="#52677C"><tspan x="56" y="250">文件編號：DOC-17</tspan></text>
+    </g>
+    <g id="intro-5">
+      <text x="734" y="250" font-size="16" fill="#087E7C"><tspan x="734" y="250">文件狀態：current</tspan></text>
+    </g>
+    <g id="intro-6">
+      <text x="56" y="287" font-size="16" fill="#52677C"><tspan x="56" y="287">核准狀態：not-recorded</tspan></text>
+    </g>
+    <g id="intro-7">
+      <text x="734" y="287" font-size="16" fill="#52677C"><tspan x="734" y="287">維護角色：技術／測試維護角色（待具名確認）</tspan></text>
+    </g>
+    <g id="intro-8">
+      <text x="56" y="324" font-size="16" fill="#52677C"><tspan x="56" y="324">具名負責人：unassigned</tspan></text>
+    </g>
+    <g id="intro-9">
+      <text x="734" y="324" font-size="16" fill="#52677C"><tspan x="734" y="324">適用基準：referenced-source-sha256；驗證以紀錄快照為準</tspan></text>
+    </g>
+    <g id="intro-10">
+      <text x="56" y="361" font-size="16" fill="#52677C"><tspan x="56" y="361">最後審查：2026-11-08</tspan></text>
+    </g>
+    <g id="intro-11">
+      <text x="734" y="361" font-size="16" fill="#52677C"><tspan x="734" y="361">關聯需求：REQ-BOUNDARY-001,REQ-AUTH-001,REQ-SYNC-001,REQ-DOC</tspan><tspan x="734" y="386">-001,REQ-DELIVERY-001</tspan></text>
+    </g>
+    <g id="intro-12">
+      <text x="56" y="423" font-size="16" fill="#52677C"><tspan x="56" y="423">關聯決策：ADR-DATA-001,ADR-SYNC-001,ADR-AUTH-001,ADR-DOC-001</tspan></text>
+    </g>
+    <g id="intro-13">
+      <text x="56" y="472" font-size="19" fill="#52677C"><tspan x="56" y="472">範圍：依現有實作說明功能與關聯；不冒認本次已執行業務驗收。</tspan></text>
+    </g>
+    <g id="nodes-heading">
+      <text x="56" y="525" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="525">節點</tspan></text>
+    </g>
+    <g id="node-RULE-ARCH-001">
+      <rect x="56" y="559" width="646" height="357" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="585" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="585">RULE-ARCH-001</tspan></text>
+      <text x="78" y="616" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="616">«constraint» 專案依賴只向內且服務獨立</tspan></text>
+      <line x1="74" y1="638" x2="684" y2="638" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="662" font-size="18" fill="#52677C"><tspan x="78" y="662">規則：專案依賴只向內且服務獨立</tspan></text>
+      <text x="78" y="694" font-size="18" fill="#52677C"><tspan x="78" y="694">理由：避免跨服務 Entity／DbContext 與反向分層耦合</tspan></text>
+      <text x="78" y="726" font-size="18" fill="#52677C"><tspan x="78" y="726">檢查方式：automated</tspan></text>
+      <text x="78" y="758" font-size="18" fill="#52677C"><tspan x="78" y="758">適用變更：任何 csproj／專案新增或移動</tspan></text>
+      <text x="78" y="790" font-size="18" fill="#52677C"><tspan x="78" y="790">違反處理：E_ARCH；先更新 ADR、相依政策與相關驗收</tspan></text>
+      <text x="78" y="822" font-size="18" fill="#52677C"><tspan x="78" y="822">測試：tests/Tooling/test_development_rules.py#test_cross</tspan><tspan x="78" y="849">_service_and_reversed_layer_project_references_fail</tspan></text>
+    </g>
+    <g id="node-RULE-ARCH-002">
+      <rect x="734" y="559" width="646" height="357" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="585" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="585">RULE-ARCH-002</tspan></text>
+      <text x="756" y="616" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="616">«constraint» Domain／Application／Contracts 不依賴</tspan><tspan x="756" y="647">外框架</tspan></text>
+      <line x1="752" y1="669" x2="1362" y2="669" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="693" font-size="18" fill="#52677C"><tspan x="756" y="693">規則：Domain／Application／Contracts 不依賴外框架</tspan></text>
+      <text x="756" y="725" font-size="18" fill="#52677C"><tspan x="756" y="725">理由：業務規則與交換合約不讀 DB／Redis／HTTP 框架</tspan></text>
+      <text x="756" y="757" font-size="18" fill="#52677C"><tspan x="756" y="757">檢查方式：automated</tspan></text>
+      <text x="756" y="789" font-size="18" fill="#52677C"><tspan x="756" y="789">適用變更：內層 csproj、using 與新檔案</tspan></text>
+      <text x="756" y="821" font-size="18" fill="#52677C"><tspan x="756" y="821">違反處理：E_ARCH；移到外層 adapter 或重新設計契約</tspan></text>
+      <text x="756" y="853" font-size="18" fill="#52677C"><tspan x="756" y="853">測試：tests/Tooling/test_development_rules.py#test_neste</tspan><tspan x="756" y="880">d_domain_framework_import_and_package_fail</tspan></text>
+    </g>
+    <g id="node-RULE-API-001">
+      <rect x="56" y="942" width="646" height="382" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="968" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="968">RULE-API-001</tspan></text>
+      <text x="78" y="999" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="999">«constraint» Gateway 公開路由與 JWT 邊界</tspan></text>
+      <line x1="74" y1="1021" x2="684" y2="1021" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="1045" font-size="18" fill="#52677C"><tspan x="78" y="1045">規則：Gateway 公開路由與 JWT 邊界</tspan></text>
+      <text x="78" y="1077" font-size="18" fill="#52677C"><tspan x="78" y="1077">理由：不把 internal Session／revoke 介面暴露給客戶端</tspan></text>
+      <text x="78" y="1109" font-size="18" fill="#52677C"><tspan x="78" y="1109">檢查方式：automated</tspan></text>
+      <text x="78" y="1141" font-size="18" fill="#52677C"><tspan x="78" y="1141">適用變更：路由、cluster、transform 或授權政策</tspan></text>
+      <text x="78" y="1173" font-size="18" fill="#52677C"><tspan x="78" y="1173">違反處理：E_GATEWAY；以明確路由與受保護政策修正</tspan></text>
+      <text x="78" y="1205" font-size="18" fill="#52677C"><tspan x="78" y="1205">測試：tests/Tooling/test_development_rules.py#test_gatew</tspan><tspan x="78" y="1232">ay_internal_proxy_and_lost_jwt_policy_fail</tspan></text>
+    </g>
+    <g id="node-RULE-TRACE-001">
+      <rect x="734" y="942" width="646" height="382" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="968" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="968">RULE-TRACE-001</tspan></text>
+      <text x="756" y="999" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="999">«constraint» 公開業務操作只能有一個功能契約 owner</tspan></text>
+      <line x1="752" y1="1021" x2="1362" y2="1021" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="1045" font-size="18" fill="#52677C"><tspan x="756" y="1045">規則：公開業務操作只能有一個功能契約 owner</tspan></text>
+      <text x="756" y="1077" font-size="18" fill="#52677C"><tspan x="756" y="1077">理由：防止只加 API 卻沒有範圍、失敗與測試定義</tspan></text>
+      <text x="756" y="1109" font-size="18" fill="#52677C"><tspan x="756" y="1109">檢查方式：automated</tspan></text>
+      <text x="756" y="1141" font-size="18" fill="#52677C"><tspan x="756" y="1141">適用變更：IAuthService／IAccountService／IChatService 新</tspan><tspan x="756" y="1168">增方法或 FEAT 修改</tspan></text>
+      <text x="756" y="1200" font-size="18" fill="#52677C"><tspan x="756" y="1200">違反處理：E_FEATURE／E_UML；補功能、圖頁與測試；不能捏造</tspan><tspan x="756" y="1227">已通過</tspan></text>
+      <text x="756" y="1259" font-size="18" fill="#52677C"><tspan x="756" y="1259">測試：tests/Tooling/test_development_rules.py#test_unmap</tspan><tspan x="756" y="1286">ped_new_interface_operation_fails</tspan></text>
+    </g>
+    <g id="node-RULE-DATA-001">
+      <rect x="56" y="1350" width="646" height="382" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="1376" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="1376">RULE-DATA-001</tspan></text>
+      <text x="78" y="1407" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="1407">«constraint» 交易、事件與冪等</tspan></text>
+      <line x1="74" y1="1429" x2="684" y2="1429" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="1453" font-size="18" fill="#52677C"><tspan x="78" y="1453">規則：交易、事件與冪等</tspan></text>
+      <text x="78" y="1485" font-size="18" fill="#52677C"><tspan x="78" y="1485">理由：SaveChanges 與 Outbox 同交易；Confirm／ACK／Inbox</tspan><tspan x="78" y="1512">／版本語意不能被重構破壞</tspan></text>
+      <text x="78" y="1544" font-size="18" fill="#52677C"><tspan x="78" y="1544">檢查方式：review-required</tspan></text>
+      <text x="78" y="1576" font-size="18" fill="#52677C"><tspan x="78" y="1576">適用變更：資料寫入、事件 schema、worker 或 Migration</tspan></text>
+      <text x="78" y="1608" font-size="18" fill="#52677C"><tspan x="78" y="1608">違反處理：核對 Transaction／唯一鍵及中斷、重複、亂序、重</tspan><tspan x="78" y="1635">啟測試；異動事件須評估 schemaVersion</tspan></text>
+      <text x="78" y="1667" font-size="18" fill="#52677C"><tspan x="78" y="1667">測試：tests/Tooling/test_development_rules.py#test_featu</tspan><tspan x="78" y="1694">re_requires_bounds_failure_handling_and_rollback</tspan></text>
+    </g>
+    <g id="node-RULE-AUTH-001">
+      <rect x="734" y="1350" width="646" height="382" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="1376" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="1376">RULE-AUTH-001</tspan></text>
+      <text x="756" y="1407" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="1407">«constraint» 權威 Session、最小權限與稽核</tspan></text>
+      <line x1="752" y1="1429" x2="1362" y2="1429" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="1453" font-size="18" fill="#52677C"><tspan x="756" y="1453">規則：權威 Session、最小權限與稽核</tspan></text>
+      <text x="756" y="1485" font-size="18" fill="#52677C"><tspan x="756" y="1485">理由：拒絕正向有效快取；撤銷不等 MQ；敏感讀寫需原因</tspan></text>
+      <text x="756" y="1517" font-size="18" fill="#52677C"><tspan x="756" y="1517">檢查方式：review-required</tspan></text>
+      <text x="756" y="1549" font-size="18" fill="#52677C"><tspan x="756" y="1549">適用變更：JWT、Cookie／CSRF、Admin、連線／推送、附件授權</tspan></text>
+      <text x="756" y="1581" font-size="18" fill="#52677C"><tspan x="756" y="1581">違反處理：執行對應權限與故障測試；檢查不得洩漏 Token／密</tspan><tspan x="756" y="1608">碼／內容</tspan></text>
+      <text x="756" y="1640" font-size="18" fill="#52677C"><tspan x="756" y="1640">測試：tests/Tooling/test_development_rules.py#test_featu</tspan><tspan x="756" y="1667">re_cannot_claim_current_pass_from_references</tspan></text>
+    </g>
+    <g id="node-RULE-ERROR-001">
+      <rect x="56" y="1758" width="646" height="382" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="1784" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="1784">RULE-ERROR-001</tspan></text>
+      <text x="78" y="1815" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="1815">«constraint» 錯誤、API 與外部服務契約</tspan></text>
+      <line x1="74" y1="1837" x2="684" y2="1837" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="1861" font-size="18" fill="#52677C"><tspan x="78" y="1861">規則：錯誤、API 與外部服務契約</tspan></text>
+      <text x="78" y="1893" font-size="18" fill="#52677C"><tspan x="78" y="1893">理由：七位碼區間唯一；Problem Details；不得回傳堆疊或連</tspan><tspan x="78" y="1920">線機密</tspan></text>
+      <text x="78" y="1952" font-size="18" fill="#52677C"><tspan x="78" y="1952">檢查方式：review-required</tspan></text>
+      <text x="78" y="1984" font-size="18" fill="#52677C"><tspan x="78" y="1984">適用變更：公開 DTO、路由、狀態碼、外部逾時／重試</tspan></text>
+      <text x="78" y="2016" font-size="18" fill="#52677C"><tspan x="78" y="2016">違反處理：核對 Errors 目錄、錯誤斷言、OpenAPI／TS 型別同</tspan><tspan x="78" y="2043">步與向後相容</tspan></text>
+      <text x="78" y="2075" font-size="18" fill="#52677C"><tspan x="78" y="2075">測試：tests/Tooling/test_development_rules.py#test_featu</tspan><tspan x="78" y="2102">re_requires_bounds_failure_handling_and_rollback</tspan></text>
+    </g>
+    <g id="node-RULE-QUALITY-001">
+      <rect x="734" y="1758" width="646" height="382" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="1784" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="1784">RULE-QUALITY-001</tspan></text>
+      <text x="756" y="1815" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="1815">«constraint» 固定檢查與可信覆蓋率</tspan></text>
+      <line x1="752" y1="1837" x2="1362" y2="1837" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="1861" font-size="18" fill="#52677C"><tspan x="756" y="1861">規則：固定檢查與可信覆蓋率</tspan></text>
+      <text x="756" y="1893" font-size="18" fill="#52677C"><tspan x="756" y="1893">理由：行 95%／分支 90% 不得排除手寫碼；參照覆蓋不是驗收</tspan></text>
+      <text x="756" y="1925" font-size="18" fill="#52677C"><tspan x="756" y="1925">檢查方式：review-required</tspan></text>
+      <text x="756" y="1957" font-size="18" fill="#52677C"><tspan x="756" y="1957">適用變更：所有行為、前端、共用模組及依賴修改</tspan></text>
+      <text x="756" y="1989" font-size="18" fill="#52677C"><tspan x="756" y="1989">違反處理：CI 執行格式／靜態／型別／建置、測試、audit、Op</tspan><tspan x="756" y="2016">enAPI 一致性、Docker；依風險擴大</tspan></text>
+      <text x="756" y="2048" font-size="18" fill="#52677C"><tspan x="756" y="2048">測試：tests/Tooling/test_development_rules.py#test_featu</tspan><tspan x="756" y="2075">re_cannot_claim_current_pass_from_references</tspan></text>
+    </g>
+    <g id="node-RULE-CHANGE-001">
+      <rect x="56" y="2166" width="646" height="382" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="2192" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="2192">RULE-CHANGE-001</tspan></text>
+      <text x="78" y="2223" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="2223">«constraint» 有界任務與文件同步</tspan></text>
+      <line x1="74" y1="2245" x2="684" y2="2245" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="2269" font-size="18" fill="#52677C"><tspan x="78" y="2269">規則：有界任務與文件同步</tspan></text>
+      <text x="78" y="2301" font-size="18" fill="#52677C"><tspan x="78" y="2301">理由：每次從 FEAT 定義修改範圍、預期、檢查與回復；不任意</tspan><tspan x="78" y="2328">新增抽象</tspan></text>
+      <text x="78" y="2360" font-size="18" fill="#52677C"><tspan x="78" y="2360">檢查方式：review-required</tspan></text>
+      <text x="78" y="2392" font-size="18" fill="#52677C"><tspan x="78" y="2392">適用變更：功能、介面、資料或規則變更</tspan></text>
+      <text x="78" y="2424" font-size="18" fill="#52677C"><tspan x="78" y="2424">違反處理：先用任務契約核對；超範圍需重評影響，保持原有授</tspan><tspan x="78" y="2451">權，不增無依據的確認流程</tspan></text>
+      <text x="78" y="2483" font-size="18" fill="#52677C"><tspan x="78" y="2483">測試：tests/Tooling/test_development_rules.py#test_featu</tspan><tspan x="78" y="2510">re_requires_bounds_failure_handling_and_rollback</tspan></text>
+    </g>
+    <g id="node-RULE-DELIVERY-001">
+      <rect x="734" y="2166" width="646" height="382" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="2192" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="2192">RULE-DELIVERY-001</tspan></text>
+      <text x="756" y="2223" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="2223">«constraint» 版本交付、恢復與唯增紀錄</tspan></text>
+      <line x1="752" y1="2245" x2="1362" y2="2245" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="2269" font-size="18" fill="#52677C"><tspan x="756" y="2269">規則：版本交付、恢復與唯增紀錄</tspan></text>
+      <text x="756" y="2301" font-size="18" fill="#52677C"><tspan x="756" y="2301">理由：原始產物不進 Git；歷史 CI 不當作本次驗收</tspan></text>
+      <text x="756" y="2333" font-size="18" fill="#52677C"><tspan x="756" y="2333">檢查方式：review-required</tspan></text>
+      <text x="756" y="2365" font-size="18" fill="#52677C"><tspan x="756" y="2365">適用變更：部署、備份、金鑰、規則與交接變更</tspan></text>
+      <text x="756" y="2397" font-size="18" fill="#52677C"><tspan x="756" y="2397">違反處理：保留限定版本摘要與原始指紋；未做列 not-run；更</tspan><tspan x="756" y="2424">正用新紀錄而非覆寫</tspan></text>
+      <text x="756" y="2456" font-size="18" fill="#52677C"><tspan x="756" y="2456">測試：tests/Tooling/test_development_rules.py#test_featu</tspan><tspan x="756" y="2483">re_cannot_claim_current_pass_from_references</tspan></text>
+    </g>
+    <g id="node-TASK-CONTRACT">
+      <rect x="56" y="2574" width="646" height="466" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="2600" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="2600">TASK-CONTRACT</tspan></text>
+      <text x="78" y="2631" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="2631">«artifact» 每次開發的任務契約</tspan></text>
+      <line x1="74" y1="2653" x2="684" y2="2653" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="2677" font-size="18" fill="#52677C"><tspan x="78" y="2677">識別：TASK ID＋目標 FEAT／REQ／AC／ADR；指明 implemented</tspan><tspan x="78" y="2704">／planned</tspan></text>
+      <text x="78" y="2736" font-size="18" fill="#52677C"><tspan x="78" y="2736">範圍：允許修改與不做範圍；列呼叫者、資料表、事件、API、</tspan><tspan x="78" y="2763">前端及部署影響</tspan></text>
+      <text x="78" y="2795" font-size="18" fill="#52677C"><tspan x="78" y="2795">預期：Given／When／Then 及獨立依據；同步成功與非同步完成</tspan><tspan x="78" y="2822">分開</tspan></text>
+      <text x="78" y="2854" font-size="18" fill="#52677C"><tspan x="78" y="2854">驗證：格式、型別、建置、正常／邊界／錯誤／權限／故障；記</tspan><tspan x="78" y="2881">錄命令與環境</tspan></text>
+      <text x="78" y="2913" font-size="18" fill="#52677C"><tspan x="78" y="2913">回復：契約／schema 相容、回退方式、已知資料風險與成功判</tspan><tspan x="78" y="2940">據</tspan></text>
+      <text x="78" y="2972" font-size="18" fill="#52677C"><tspan x="78" y="2972">結束：檔案指紋、pass／fail／skipped／not-run、文件更新與</tspan><tspan x="78" y="2999">封存摘要</tspan></text>
+    </g>
+    <g id="edges-heading">
+      <text x="56" y="3081" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="3081">關係</tspan></text>
+    </g>
+    <g id="edge-1">
+      <rect x="56" y="3116" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="3143" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="3143">TASK-CONTRACT</tspan></text>
+      <text x="76" y="3173" font-size="17" fill="#183048"><tspan x="76" y="3173">每次開發的任務契約</tspan></text>
+      <text x="1155" y="3143" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="3143">RULE-ARCH-001</tspan></text>
+      <text x="1155" y="3173" font-size="17" fill="#183048"><tspan x="1155" y="3173">專案依賴只向內且服務獨立</tspan></text>
+      <text x="325" y="3143" font-size="17" fill="#183048"><tspan x="325" y="3143">01 dependency | 任務依影響選擇規則；自動化與人工／行為驗證範圍分開。</tspan></text>
+      <line x1="325.0" y1="3200.0" x2="332.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="3200.0" x2="346.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="3200.0" x2="360.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="3200.0" x2="374.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="3200.0" x2="388.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="3200.0" x2="402.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="3200.0" x2="416.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="3200.0" x2="430.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="3200.0" x2="444.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="3200.0" x2="458.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="3200.0" x2="472.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="3200.0" x2="486.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="3200.0" x2="500.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="3200.0" x2="514.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="3200.0" x2="528.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="3200.0" x2="542.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="3200.0" x2="556.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="3200.0" x2="570.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="3200.0" x2="584.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="3200.0" x2="598.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="3200.0" x2="612.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="3200.0" x2="626.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="3200.0" x2="640.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="3200.0" x2="654.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="3200.0" x2="668.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="3200.0" x2="682.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="3200.0" x2="696.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="3200.0" x2="710.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="3200.0" x2="724.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="3200.0" x2="738.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="3200.0" x2="752.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="3200.0" x2="766.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="3200.0" x2="780.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="3200.0" x2="794.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="3200.0" x2="808.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="3200.0" x2="822.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="3200.0" x2="836.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="3200.0" x2="850.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="3200.0" x2="864.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="3200.0" x2="878.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="3200.0" x2="892.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="3200.0" x2="906.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="3200.0" x2="920.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="3200.0" x2="934.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="3200.0" x2="948.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="3200.0" x2="962.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="3200.0" x2="976.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="3200.0" x2="990.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="3200.0" x2="1004.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="3200.0" x2="1018.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="3200.0" x2="1032.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="3200.0" x2="1046.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="3200.0" x2="1060.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="3200.0" x2="1074.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="3200.0" x2="1088.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="3200.0" x2="1102.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="3200.0" x2="1116.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="3200.0" x2="1125.0" y2="3200.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,3193 1125,3200 1113,3207" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-2">
+      <rect x="56" y="3232" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="3259" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="3259">TASK-CONTRACT</tspan></text>
+      <text x="76" y="3289" font-size="17" fill="#183048"><tspan x="76" y="3289">每次開發的任務契約</tspan></text>
+      <text x="1155" y="3259" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="3259">RULE-ARCH-002</tspan></text>
+      <text x="1155" y="3289" font-size="17" fill="#183048"><tspan x="1155" y="3289">Domain／Application／Contr</tspan><tspan x="1155" y="3315">acts 不依賴外框架</tspan></text>
+      <text x="325" y="3259" font-size="17" fill="#183048"><tspan x="325" y="3259">02 dependency | 任務依影響選擇規則；自動化與人工／行為驗證範圍分開。</tspan></text>
+      <line x1="325.0" y1="3316.0" x2="332.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="3316.0" x2="346.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="3316.0" x2="360.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="3316.0" x2="374.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="3316.0" x2="388.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="3316.0" x2="402.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="3316.0" x2="416.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="3316.0" x2="430.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="3316.0" x2="444.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="3316.0" x2="458.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="3316.0" x2="472.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="3316.0" x2="486.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="3316.0" x2="500.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="3316.0" x2="514.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="3316.0" x2="528.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="3316.0" x2="542.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="3316.0" x2="556.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="3316.0" x2="570.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="3316.0" x2="584.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="3316.0" x2="598.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="3316.0" x2="612.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="3316.0" x2="626.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="3316.0" x2="640.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="3316.0" x2="654.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="3316.0" x2="668.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="3316.0" x2="682.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="3316.0" x2="696.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="3316.0" x2="710.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="3316.0" x2="724.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="3316.0" x2="738.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="3316.0" x2="752.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="3316.0" x2="766.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="3316.0" x2="780.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="3316.0" x2="794.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="3316.0" x2="808.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="3316.0" x2="822.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="3316.0" x2="836.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="3316.0" x2="850.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="3316.0" x2="864.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="3316.0" x2="878.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="3316.0" x2="892.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="3316.0" x2="906.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="3316.0" x2="920.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="3316.0" x2="934.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="3316.0" x2="948.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="3316.0" x2="962.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="3316.0" x2="976.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="3316.0" x2="990.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="3316.0" x2="1004.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="3316.0" x2="1018.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="3316.0" x2="1032.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="3316.0" x2="1046.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="3316.0" x2="1060.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="3316.0" x2="1074.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="3316.0" x2="1088.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="3316.0" x2="1102.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="3316.0" x2="1116.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="3316.0" x2="1125.0" y2="3316.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,3309 1125,3316 1113,3323" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-3">
+      <rect x="56" y="3348" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="3375" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="3375">TASK-CONTRACT</tspan></text>
+      <text x="76" y="3405" font-size="17" fill="#183048"><tspan x="76" y="3405">每次開發的任務契約</tspan></text>
+      <text x="1155" y="3375" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="3375">RULE-API-001</tspan></text>
+      <text x="1155" y="3405" font-size="17" fill="#183048"><tspan x="1155" y="3405">Gateway 公開路由與 JWT 邊</tspan><tspan x="1155" y="3431">界</tspan></text>
+      <text x="325" y="3375" font-size="17" fill="#183048"><tspan x="325" y="3375">03 dependency | 任務依影響選擇規則；自動化與人工／行為驗證範圍分開。</tspan></text>
+      <line x1="325.0" y1="3432.0" x2="332.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="3432.0" x2="346.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="3432.0" x2="360.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="3432.0" x2="374.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="3432.0" x2="388.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="3432.0" x2="402.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="3432.0" x2="416.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="3432.0" x2="430.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="3432.0" x2="444.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="3432.0" x2="458.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="3432.0" x2="472.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="3432.0" x2="486.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="3432.0" x2="500.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="3432.0" x2="514.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="3432.0" x2="528.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="3432.0" x2="542.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="3432.0" x2="556.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="3432.0" x2="570.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="3432.0" x2="584.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="3432.0" x2="598.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="3432.0" x2="612.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="3432.0" x2="626.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="3432.0" x2="640.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="3432.0" x2="654.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="3432.0" x2="668.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="3432.0" x2="682.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="3432.0" x2="696.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="3432.0" x2="710.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="3432.0" x2="724.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="3432.0" x2="738.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="3432.0" x2="752.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="3432.0" x2="766.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="3432.0" x2="780.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="3432.0" x2="794.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="3432.0" x2="808.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="3432.0" x2="822.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="3432.0" x2="836.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="3432.0" x2="850.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="3432.0" x2="864.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="3432.0" x2="878.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="3432.0" x2="892.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="3432.0" x2="906.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="3432.0" x2="920.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="3432.0" x2="934.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="3432.0" x2="948.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="3432.0" x2="962.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="3432.0" x2="976.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="3432.0" x2="990.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="3432.0" x2="1004.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="3432.0" x2="1018.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="3432.0" x2="1032.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="3432.0" x2="1046.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="3432.0" x2="1060.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="3432.0" x2="1074.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="3432.0" x2="1088.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="3432.0" x2="1102.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="3432.0" x2="1116.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="3432.0" x2="1125.0" y2="3432.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,3425 1125,3432 1113,3439" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-4">
+      <rect x="56" y="3464" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="3491" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="3491">TASK-CONTRACT</tspan></text>
+      <text x="76" y="3521" font-size="17" fill="#183048"><tspan x="76" y="3521">每次開發的任務契約</tspan></text>
+      <text x="1155" y="3491" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="3491">RULE-TRACE-001</tspan></text>
+      <text x="1155" y="3521" font-size="17" fill="#183048"><tspan x="1155" y="3521">公開業務操作只能有一個功能</tspan><tspan x="1155" y="3547">契約 owner</tspan></text>
+      <text x="325" y="3491" font-size="17" fill="#183048"><tspan x="325" y="3491">04 dependency | 任務依影響選擇規則；自動化與人工／行為驗證範圍分開。</tspan></text>
+      <line x1="325.0" y1="3548.0" x2="332.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="3548.0" x2="346.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="3548.0" x2="360.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="3548.0" x2="374.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="3548.0" x2="388.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="3548.0" x2="402.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="3548.0" x2="416.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="3548.0" x2="430.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="3548.0" x2="444.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="3548.0" x2="458.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="3548.0" x2="472.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="3548.0" x2="486.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="3548.0" x2="500.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="3548.0" x2="514.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="3548.0" x2="528.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="3548.0" x2="542.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="3548.0" x2="556.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="3548.0" x2="570.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="3548.0" x2="584.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="3548.0" x2="598.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="3548.0" x2="612.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="3548.0" x2="626.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="3548.0" x2="640.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="3548.0" x2="654.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="3548.0" x2="668.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="3548.0" x2="682.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="3548.0" x2="696.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="3548.0" x2="710.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="3548.0" x2="724.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="3548.0" x2="738.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="3548.0" x2="752.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="3548.0" x2="766.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="3548.0" x2="780.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="3548.0" x2="794.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="3548.0" x2="808.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="3548.0" x2="822.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="3548.0" x2="836.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="3548.0" x2="850.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="3548.0" x2="864.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="3548.0" x2="878.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="3548.0" x2="892.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="3548.0" x2="906.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="3548.0" x2="920.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="3548.0" x2="934.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="3548.0" x2="948.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="3548.0" x2="962.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="3548.0" x2="976.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="3548.0" x2="990.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="3548.0" x2="1004.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="3548.0" x2="1018.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="3548.0" x2="1032.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="3548.0" x2="1046.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="3548.0" x2="1060.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="3548.0" x2="1074.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="3548.0" x2="1088.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="3548.0" x2="1102.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="3548.0" x2="1116.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="3548.0" x2="1125.0" y2="3548.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,3541 1125,3548 1113,3555" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-5">
+      <rect x="56" y="3580" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="3607" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="3607">TASK-CONTRACT</tspan></text>
+      <text x="76" y="3637" font-size="17" fill="#183048"><tspan x="76" y="3637">每次開發的任務契約</tspan></text>
+      <text x="1155" y="3607" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="3607">RULE-DATA-001</tspan></text>
+      <text x="1155" y="3637" font-size="17" fill="#183048"><tspan x="1155" y="3637">交易、事件與冪等</tspan></text>
+      <text x="325" y="3607" font-size="17" fill="#183048"><tspan x="325" y="3607">05 dependency | 任務依影響選擇規則；自動化與人工／行為驗證範圍分開。</tspan></text>
+      <line x1="325.0" y1="3664.0" x2="332.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="3664.0" x2="346.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="3664.0" x2="360.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="3664.0" x2="374.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="3664.0" x2="388.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="3664.0" x2="402.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="3664.0" x2="416.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="3664.0" x2="430.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="3664.0" x2="444.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="3664.0" x2="458.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="3664.0" x2="472.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="3664.0" x2="486.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="3664.0" x2="500.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="3664.0" x2="514.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="3664.0" x2="528.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="3664.0" x2="542.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="3664.0" x2="556.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="3664.0" x2="570.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="3664.0" x2="584.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="3664.0" x2="598.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="3664.0" x2="612.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="3664.0" x2="626.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="3664.0" x2="640.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="3664.0" x2="654.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="3664.0" x2="668.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="3664.0" x2="682.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="3664.0" x2="696.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="3664.0" x2="710.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="3664.0" x2="724.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="3664.0" x2="738.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="3664.0" x2="752.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="3664.0" x2="766.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="3664.0" x2="780.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="3664.0" x2="794.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="3664.0" x2="808.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="3664.0" x2="822.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="3664.0" x2="836.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="3664.0" x2="850.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="3664.0" x2="864.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="3664.0" x2="878.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="3664.0" x2="892.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="3664.0" x2="906.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="3664.0" x2="920.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="3664.0" x2="934.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="3664.0" x2="948.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="3664.0" x2="962.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="3664.0" x2="976.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="3664.0" x2="990.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="3664.0" x2="1004.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="3664.0" x2="1018.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="3664.0" x2="1032.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="3664.0" x2="1046.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="3664.0" x2="1060.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="3664.0" x2="1074.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="3664.0" x2="1088.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="3664.0" x2="1102.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="3664.0" x2="1116.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="3664.0" x2="1125.0" y2="3664.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,3657 1125,3664 1113,3671" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-6">
+      <rect x="56" y="3696" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="3723" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="3723">TASK-CONTRACT</tspan></text>
+      <text x="76" y="3753" font-size="17" fill="#183048"><tspan x="76" y="3753">每次開發的任務契約</tspan></text>
+      <text x="1155" y="3723" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="3723">RULE-AUTH-001</tspan></text>
+      <text x="1155" y="3753" font-size="17" fill="#183048"><tspan x="1155" y="3753">權威 Session、最小權限與稽</tspan><tspan x="1155" y="3779">核</tspan></text>
+      <text x="325" y="3723" font-size="17" fill="#183048"><tspan x="325" y="3723">06 dependency | 任務依影響選擇規則；自動化與人工／行為驗證範圍分開。</tspan></text>
+      <line x1="325.0" y1="3780.0" x2="332.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="3780.0" x2="346.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="3780.0" x2="360.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="3780.0" x2="374.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="3780.0" x2="388.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="3780.0" x2="402.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="3780.0" x2="416.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="3780.0" x2="430.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="3780.0" x2="444.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="3780.0" x2="458.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="3780.0" x2="472.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="3780.0" x2="486.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="3780.0" x2="500.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="3780.0" x2="514.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="3780.0" x2="528.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="3780.0" x2="542.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="3780.0" x2="556.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="3780.0" x2="570.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="3780.0" x2="584.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="3780.0" x2="598.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="3780.0" x2="612.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="3780.0" x2="626.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="3780.0" x2="640.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="3780.0" x2="654.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="3780.0" x2="668.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="3780.0" x2="682.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="3780.0" x2="696.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="3780.0" x2="710.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="3780.0" x2="724.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="3780.0" x2="738.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="3780.0" x2="752.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="3780.0" x2="766.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="3780.0" x2="780.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="3780.0" x2="794.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="3780.0" x2="808.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="3780.0" x2="822.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="3780.0" x2="836.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="3780.0" x2="850.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="3780.0" x2="864.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="3780.0" x2="878.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="3780.0" x2="892.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="3780.0" x2="906.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="3780.0" x2="920.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="3780.0" x2="934.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="3780.0" x2="948.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="3780.0" x2="962.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="3780.0" x2="976.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="3780.0" x2="990.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="3780.0" x2="1004.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="3780.0" x2="1018.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="3780.0" x2="1032.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="3780.0" x2="1046.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="3780.0" x2="1060.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="3780.0" x2="1074.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="3780.0" x2="1088.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="3780.0" x2="1102.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="3780.0" x2="1116.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="3780.0" x2="1125.0" y2="3780.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,3773 1125,3780 1113,3787" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-7">
+      <rect x="56" y="3812" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="3839" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="3839">TASK-CONTRACT</tspan></text>
+      <text x="76" y="3869" font-size="17" fill="#183048"><tspan x="76" y="3869">每次開發的任務契約</tspan></text>
+      <text x="1155" y="3839" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="3839">RULE-ERROR-001</tspan></text>
+      <text x="1155" y="3869" font-size="17" fill="#183048"><tspan x="1155" y="3869">錯誤、API 與外部服務契約</tspan></text>
+      <text x="325" y="3839" font-size="17" fill="#183048"><tspan x="325" y="3839">07 dependency | 任務依影響選擇規則；自動化與人工／行為驗證範圍分開。</tspan></text>
+      <line x1="325.0" y1="3896.0" x2="332.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="3896.0" x2="346.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="3896.0" x2="360.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="3896.0" x2="374.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="3896.0" x2="388.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="3896.0" x2="402.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="3896.0" x2="416.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="3896.0" x2="430.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="3896.0" x2="444.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="3896.0" x2="458.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="3896.0" x2="472.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="3896.0" x2="486.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="3896.0" x2="500.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="3896.0" x2="514.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="3896.0" x2="528.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="3896.0" x2="542.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="3896.0" x2="556.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="3896.0" x2="570.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="3896.0" x2="584.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="3896.0" x2="598.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="3896.0" x2="612.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="3896.0" x2="626.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="3896.0" x2="640.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="3896.0" x2="654.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="3896.0" x2="668.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="3896.0" x2="682.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="3896.0" x2="696.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="3896.0" x2="710.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="3896.0" x2="724.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="3896.0" x2="738.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="3896.0" x2="752.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="3896.0" x2="766.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="3896.0" x2="780.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="3896.0" x2="794.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="3896.0" x2="808.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="3896.0" x2="822.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="3896.0" x2="836.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="3896.0" x2="850.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="3896.0" x2="864.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="3896.0" x2="878.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="3896.0" x2="892.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="3896.0" x2="906.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="3896.0" x2="920.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="3896.0" x2="934.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="3896.0" x2="948.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="3896.0" x2="962.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="3896.0" x2="976.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="3896.0" x2="990.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="3896.0" x2="1004.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="3896.0" x2="1018.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="3896.0" x2="1032.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="3896.0" x2="1046.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="3896.0" x2="1060.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="3896.0" x2="1074.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="3896.0" x2="1088.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="3896.0" x2="1102.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="3896.0" x2="1116.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="3896.0" x2="1125.0" y2="3896.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,3889 1125,3896 1113,3903" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-8">
+      <rect x="56" y="3928" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="3955" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="3955">TASK-CONTRACT</tspan></text>
+      <text x="76" y="3985" font-size="17" fill="#183048"><tspan x="76" y="3985">每次開發的任務契約</tspan></text>
+      <text x="1155" y="3955" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="3955">RULE-QUALITY-001</tspan></text>
+      <text x="1155" y="3985" font-size="17" fill="#183048"><tspan x="1155" y="3985">固定檢查與可信覆蓋率</tspan></text>
+      <text x="325" y="3955" font-size="17" fill="#183048"><tspan x="325" y="3955">08 dependency | 任務依影響選擇規則；自動化與人工／行為驗證範圍分開。</tspan></text>
+      <line x1="325.0" y1="4012.0" x2="332.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="4012.0" x2="346.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="4012.0" x2="360.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="4012.0" x2="374.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="4012.0" x2="388.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="4012.0" x2="402.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="4012.0" x2="416.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="4012.0" x2="430.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="4012.0" x2="444.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="4012.0" x2="458.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="4012.0" x2="472.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="4012.0" x2="486.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="4012.0" x2="500.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="4012.0" x2="514.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="4012.0" x2="528.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="4012.0" x2="542.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="4012.0" x2="556.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="4012.0" x2="570.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="4012.0" x2="584.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="4012.0" x2="598.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="4012.0" x2="612.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="4012.0" x2="626.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="4012.0" x2="640.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="4012.0" x2="654.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="4012.0" x2="668.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="4012.0" x2="682.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="4012.0" x2="696.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="4012.0" x2="710.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="4012.0" x2="724.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="4012.0" x2="738.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="4012.0" x2="752.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="4012.0" x2="766.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="4012.0" x2="780.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="4012.0" x2="794.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="4012.0" x2="808.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="4012.0" x2="822.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="4012.0" x2="836.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="4012.0" x2="850.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="4012.0" x2="864.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="4012.0" x2="878.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="4012.0" x2="892.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="4012.0" x2="906.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="4012.0" x2="920.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="4012.0" x2="934.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="4012.0" x2="948.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="4012.0" x2="962.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="4012.0" x2="976.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="4012.0" x2="990.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="4012.0" x2="1004.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="4012.0" x2="1018.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="4012.0" x2="1032.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="4012.0" x2="1046.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="4012.0" x2="1060.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="4012.0" x2="1074.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="4012.0" x2="1088.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="4012.0" x2="1102.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="4012.0" x2="1116.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="4012.0" x2="1125.0" y2="4012.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,4005 1125,4012 1113,4019" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-9">
+      <rect x="56" y="4044" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="4071" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="4071">TASK-CONTRACT</tspan></text>
+      <text x="76" y="4101" font-size="17" fill="#183048"><tspan x="76" y="4101">每次開發的任務契約</tspan></text>
+      <text x="1155" y="4071" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="4071">RULE-CHANGE-001</tspan></text>
+      <text x="1155" y="4101" font-size="17" fill="#183048"><tspan x="1155" y="4101">有界任務與文件同步</tspan></text>
+      <text x="325" y="4071" font-size="17" fill="#183048"><tspan x="325" y="4071">09 dependency | 任務依影響選擇規則；自動化與人工／行為驗證範圍分開。</tspan></text>
+      <line x1="325.0" y1="4128.0" x2="332.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="4128.0" x2="346.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="4128.0" x2="360.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="4128.0" x2="374.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="4128.0" x2="388.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="4128.0" x2="402.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="4128.0" x2="416.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="4128.0" x2="430.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="4128.0" x2="444.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="4128.0" x2="458.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="4128.0" x2="472.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="4128.0" x2="486.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="4128.0" x2="500.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="4128.0" x2="514.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="4128.0" x2="528.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="4128.0" x2="542.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="4128.0" x2="556.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="4128.0" x2="570.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="4128.0" x2="584.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="4128.0" x2="598.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="4128.0" x2="612.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="4128.0" x2="626.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="4128.0" x2="640.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="4128.0" x2="654.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="4128.0" x2="668.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="4128.0" x2="682.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="4128.0" x2="696.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="4128.0" x2="710.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="4128.0" x2="724.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="4128.0" x2="738.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="4128.0" x2="752.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="4128.0" x2="766.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="4128.0" x2="780.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="4128.0" x2="794.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="4128.0" x2="808.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="4128.0" x2="822.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="4128.0" x2="836.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="4128.0" x2="850.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="4128.0" x2="864.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="4128.0" x2="878.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="4128.0" x2="892.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="4128.0" x2="906.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="4128.0" x2="920.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="4128.0" x2="934.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="4128.0" x2="948.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="4128.0" x2="962.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="4128.0" x2="976.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="4128.0" x2="990.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="4128.0" x2="1004.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="4128.0" x2="1018.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="4128.0" x2="1032.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="4128.0" x2="1046.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="4128.0" x2="1060.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="4128.0" x2="1074.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="4128.0" x2="1088.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="4128.0" x2="1102.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="4128.0" x2="1116.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="4128.0" x2="1125.0" y2="4128.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,4121 1125,4128 1113,4135" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-10">
+      <rect x="56" y="4160" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="4187" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="4187">TASK-CONTRACT</tspan></text>
+      <text x="76" y="4217" font-size="17" fill="#183048"><tspan x="76" y="4217">每次開發的任務契約</tspan></text>
+      <text x="1155" y="4187" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="4187">RULE-DELIVERY-001</tspan></text>
+      <text x="1155" y="4217" font-size="17" fill="#183048"><tspan x="1155" y="4217">版本交付、恢復與唯增紀錄</tspan></text>
+      <text x="325" y="4187" font-size="17" fill="#183048"><tspan x="325" y="4187">10 dependency | 任務依影響選擇規則；自動化與人工／行為驗證範圍分開。</tspan></text>
+      <line x1="325.0" y1="4244.0" x2="332.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="4244.0" x2="346.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="4244.0" x2="360.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="4244.0" x2="374.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="4244.0" x2="388.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="4244.0" x2="402.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="4244.0" x2="416.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="4244.0" x2="430.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="4244.0" x2="444.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="4244.0" x2="458.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="4244.0" x2="472.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="4244.0" x2="486.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="4244.0" x2="500.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="4244.0" x2="514.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="4244.0" x2="528.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="4244.0" x2="542.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="4244.0" x2="556.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="4244.0" x2="570.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="4244.0" x2="584.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="4244.0" x2="598.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="4244.0" x2="612.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="4244.0" x2="626.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="4244.0" x2="640.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="4244.0" x2="654.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="4244.0" x2="668.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="4244.0" x2="682.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="4244.0" x2="696.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="4244.0" x2="710.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="4244.0" x2="724.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="4244.0" x2="738.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="4244.0" x2="752.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="4244.0" x2="766.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="4244.0" x2="780.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="4244.0" x2="794.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="4244.0" x2="808.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="4244.0" x2="822.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="4244.0" x2="836.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="4244.0" x2="850.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="4244.0" x2="864.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="4244.0" x2="878.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="4244.0" x2="892.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="4244.0" x2="906.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="4244.0" x2="920.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="4244.0" x2="934.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="4244.0" x2="948.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="4244.0" x2="962.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="4244.0" x2="976.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="4244.0" x2="990.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="4244.0" x2="1004.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="4244.0" x2="1018.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="4244.0" x2="1032.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="4244.0" x2="1046.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="4244.0" x2="1060.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="4244.0" x2="1074.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="4244.0" x2="1088.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="4244.0" x2="1102.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="4244.0" x2="1116.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="4244.0" x2="1125.0" y2="4244.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,4237 1125,4244 1113,4251" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="section-138">
+      <text x="56" y="4310" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="4310">準則</tspan></text>
+    </g>
+    <g id="line-140">
+      <text x="70" y="4352" font-size="18" fill="#52677C"><tspan x="70" y="4352">四項 automated 規則有實際 checker；review-required 必須審查與執行相關測試，靜態工具不假稱通過。</tspan></text>
+    </g>
+    <g id="line-141">
+      <text x="70" y="4394" font-size="18" fill="#52677C"><tspan x="70" y="4394">程式文字模式檢查是輔助，不是完整 C# 編譯器、安全稽核或一般 UML 認證。</tspan></text>
+    </g>
+    <g id="line-142">
+      <text x="70" y="4436" font-size="18" fill="#52677C"><tspan x="70" y="4436">不新增服務、資料表或每功能一個 class 來滿足圖面數量；按責任及測試需求拆分。</tspan></text>
+    </g>
+    <g id="section-144">
+      <text x="56" y="4501" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="4501">來源</tspan></text>
+    </g>
+    <g id="line-146">
+      <text x="70" y="4543" font-size="15" fill="#52677C"><tspan x="70" y="4543">.editorconfig</tspan></text>
+    </g>
+    <g id="line-147">
+      <text x="70" y="4582" font-size="15" fill="#52677C"><tspan x="70" y="4582">.github/workflows/ci.yml</tspan></text>
+    </g>
+    <g id="line-148">
+      <text x="70" y="4621" font-size="15" fill="#52677C"><tspan x="70" y="4621">AGENTS.md</tspan></text>
+    </g>
+    <g id="line-149">
+      <text x="70" y="4660" font-size="15" fill="#52677C"><tspan x="70" y="4660">Directory.Build.props</tspan></text>
+    </g>
+    <g id="line-150">
+      <text x="70" y="4699" font-size="15" fill="#52677C"><tspan x="70" y="4699">coverage.runsettings</tspan></text>
+    </g>
+    <g id="line-151">
+      <text x="70" y="4738" font-size="15" fill="#52677C"><tspan x="70" y="4738">scripts/check-coverage.py</tspan></text>
+    </g>
+    <g id="line-152">
+      <text x="70" y="4777" font-size="15" fill="#52677C"><tspan x="70" y="4777">scripts/development_rules.py</tspan></text>
+    </g>
+    <g id="line-153">
+      <text x="70" y="4816" font-size="15" fill="#52677C"><tspan x="70" y="4816">scripts/living_docs.py</tspan></text>
+    </g>
+    <g id="line-154">
+      <text x="70" y="4855" font-size="15" fill="#52677C"><tspan x="70" y="4855">tests/Tooling/test_development_rules.py</tspan></text>
+    </g>
+    <line x1="56" y1="4924" x2="1384" y2="4924" stroke="#CEDAE8" stroke-width="2" />
+    <text x="56" y="4950" font-size="12" fill="#52677C"><tspan x="56" y="4950">RELAY / STATIC SVG / MARKDOWN IS THE CONTENT AUTHORITY</tspan></text>
+  </g>
+</svg>

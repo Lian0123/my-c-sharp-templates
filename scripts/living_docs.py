@@ -8,13 +8,17 @@ No document content is executed. Only standard-library modules are required.
 import argparse
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from datetime import date, datetime, timezone
 import fcntl
 import hashlib
 import json
 import math
 import os
+import platform
 from pathlib import Path
 import re
+import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -30,7 +34,7 @@ AGENT = 'https://github.com/Lian0123/my-c-sharp-templates/ns/living-docs/1'
 XML = 'http://www.w3.org/XML/1998/namespace'
 SPEC_COMMIT = 'c7c0d96aa398d650c6bea5588e5d060bc6d60da5'
 RENDERER = 'relay-living-docs'
-VERSION = '1.0.0'
+VERSION = '1.2.0'
 MAX_FILE = 8 * 1024 * 1024
 MAX_SOURCE = 1024 * 1024
 MAX_NODES = 50000
@@ -152,7 +156,7 @@ def parse_source(source):
         elif section is None and model.title:
             if raw.startswith('視圖：'):
                 model.view = raw[3:]
-                require(model.view in ['cards', 'sequence'], 'E_UNSUPPORTED', 'unknown project view')
+                require(model.view in ['cards', 'sequence', 'usecase', 'activity', 'state', 'deployment'], 'E_UNSUPPORTED', 'unknown project view')
             model.intro.append((number, raw))
         else:
             raise DocumentError('E_SOURCE', f'line {number}: unsupported authoring syntax')
@@ -238,6 +242,117 @@ class Canvas:
             self.add('polygon', parent, points=f'{x1},{y} {x1+direction*9},{y-6} {x1+direction*18},{y} {x1+direction*9},{y+6}', fill=color, stroke=color)
 
 
+def uml_catalog(c, model, y):
+    """Keep every guard/trigger searchable next to a numbered directed relation."""
+    by_id={n.ident:n for n in model.nodes}
+    group=c.group('uml-edges',model.headings['關係'])
+    c.text('關係／條件目錄',56,y,25,INK,True,group)
+    y+=38
+    for index,edge in enumerate(model.edges,1):
+        group=c.group('edge-'+str(index),edge.line)
+        label=f'{index:02d} {edge.source} → {edge.target} | {edge.kind} | {edge.label}'
+        y+=c.text(label,70,y,17,INK,parent=group,capacity=124)+17
+    return y+20
+
+
+def render_uml(c, model, y):
+    """Project UML views: explicit actors/use cases and guarded vertical flows."""
+    if model.view=='usecase':
+        actors=[n for n in model.nodes if n.title.startswith('«actor»')]
+        cases=[n for n in model.nodes if n.title.startswith('«usecase»')]
+        require(1<=len(actors)<=3 and 1<=len(cases)<=10 and len(actors)+len(cases)==len(model.nodes),'E_SOURCE','usecase needs actors and use cases')
+        require(all(e.kind=='association' and e.source in {n.ident for n in actors} and e.target in {n.ident for n in cases} for e in model.edges),'E_SOURCE','this usecase subset supports actor-to-case associations')
+        height=max(430*len(actors),280*math.ceil(len(cases)/2))+100
+        c.add('rect',x=405,y=y,width=980,height=height,rx=8,fill=PALE,stroke=LINE)
+        c.text('«system» MicroserviceStarter',430,y+35,20,INK,True)
+        anchors={}
+        for i,node in enumerate(actors):
+            cy=y+170+i*430;group=c.group('node-'+node.ident,node.start,node.end)
+            c.add('circle',group,cx=165,cy=cy-35,r=22,fill=WHITE,stroke=BLUE,stroke_width=2)
+            for coords in [(165,cy-13,165,cy+42),(130,cy+8,200,cy+8),(165,cy+42,135,cy+80),(165,cy+42,195,cy+80)]:c.line(*coords,parent=group,color=BLUE)
+            pos=cy+112;c.text(node.ident,65,pos,14,BLUE,True,group)
+            pos+=28;c.text(node.title,65,pos,18,INK,True,group,capacity=29)
+            pos+=55
+            for _,value in node.fields:pos+=c.text(value,65,pos,14,MUTED,parent=group,capacity=29)+5
+            anchors[node.ident]=(220,cy+8)
+        for i,node in enumerate(cases):
+            cx=650+(i%2)*480;cy=y+175+(i//2)*280
+            group=c.group('node-'+node.ident,node.start,node.end)
+            c.add('ellipse',group,cx=cx,cy=cy,rx=205,ry=105,fill=WHITE,stroke=BLUE,stroke_width=2)
+            c.text(node.ident,cx-140,cy-52,14,BLUE,True,group)
+            pos=cy-20;c.text(node.title,cx-140,pos,17,INK,True,group,capacity=31)
+            pos+=40
+            for _,value in node.fields:pos+=c.text(value,cx-140,pos,13,MUTED,parent=group,capacity=36)+4
+            require(pos<=cy+90,'E_LIMIT','usecase text must fit its ellipse; move detail to feature contracts')
+            anchors[node.ident]=(cx-205,cy)
+        # Associations travel through the margins; detailed include/guard labels follow.
+        for i,edge in enumerate(model.edges):
+            require(edge.source in anchors and edge.target in anchors,'E_REFERENCE','unknown usecase endpoint')
+            x1,y1=anchors[edge.source];x2,y2=anchors[edge.target]
+            rail=310+i*4;top=y+50+i*3
+            if x2>900:
+                c.add('polyline',points=f'{x1},{y1} {rail},{y1} {rail},{top} 890,{top} 890,{y2} {x2},{y2}',fill='none',stroke=LINE,stroke_width=1)
+            else:c.add('polyline',points=f'{x1},{y1} {rail},{y1} {rail},{y2} {x2},{y2}',fill='none',stroke=LINE,stroke_width=1)
+        return uml_catalog(c,model,y+height+50)
+    require(model.view in ['activity','state'],'E_UNSUPPORTED','unknown flow view')
+    stereotypes=('«initial»','«final»','«action»','«decision»') if model.view=='activity' else ('«initial»','«final»','«state»')
+    require(all(n.title.startswith(stereotypes) for n in model.nodes) and sum(n.title.startswith('«initial»') for n in model.nodes)==1,'E_SOURCE','flow requires one initial node and supported UML node types')
+    require(all(e.kind=='transition' for e in model.edges),'E_SOURCE','flow edges must be transitions')
+    if model.view=='activity':
+        for node in model.nodes:
+            if node.title.startswith('«decision»'):
+                outgoing=[e for e in model.edges if e.source==node.ident]
+                require(len(outgoing)>=2 and all('[' in e.label and ']' in e.label for e in outgoing),'E_SOURCE','decision branches need explicit guards')
+    anchors={}
+    for node in model.nodes:
+        group=c.group('node-'+node.ident,node.start,node.end)
+        special=node.title.startswith(('«initial»','«final»','«decision»'))
+        require(not special or not node.fields,'E_SOURCE','initial/final/decision details belong in guarded relation labels')
+        height=130 if special else 100+sum(len(wrap(v,48))*25+5 for _,v in node.fields)
+        center=y+height/2
+        if node.title.startswith(('«initial»','«final»')):
+            c.add('circle',group,cx=705,cy=center,r=18,fill=INK,stroke=INK,stroke_width=2)
+            if node.title.startswith('«final»'):c.add('circle',group,cx=705,cy=center,r=25,fill='none',stroke=INK,stroke_width=2)
+            c.text(node.ident+' '+node.title,770,center+6,16,INK,parent=group,capacity=52)
+        elif node.title.startswith('«decision»'):
+            c.add('polygon',group,points=f'705,{y} 955,{center} 705,{y+height} 455,{center}',fill=PALE,stroke=BLUE,stroke_width=2)
+            c.text(node.ident+' '+node.title,550,center+5,16,INK,True,group,capacity=34)
+        else:
+            c.add('rect',group,x=430,y=y,width=550,height=height,rx=28 if model.view=='activity' else 12,fill=WHITE,stroke=BLUE,stroke_width=2)
+            c.text(node.ident,450,y+25,14,BLUE,True,group)
+            pos=y+55;pos+=c.text(node.title,450,pos,20,INK,True,group,capacity=46)+7
+            for _,value in node.fields:pos+=c.text(value,450,pos,16,MUTED,parent=group,capacity=48)+5
+        anchors[node.ident]=(y,y+height,center)
+        y+=height+65
+    link_labels=[]
+    for i,edge in enumerate(model.edges):
+        a,b=anchors[edge.source],anchors[edge.target]
+        source=next(n for n in model.nodes if n.ident==edge.source)
+        target=next(n for n in model.nodes if n.ident==edge.target)
+        group=c.group('uml-link-'+str(i),edge.line)
+        if model.nodes.index(target)==model.nodes.index(source)+1:
+            start=a[2]+18 if source.title.startswith('«initial»') else a[1]
+            end=b[2]-25 if target.title.startswith('«final»') else b[0]
+            c.line(705,start,705,end,group,color=TEAL)
+            c.add('polyline',group,points=f'698,{end-12} 705,{end} 712,{end-12}',fill='none',stroke=TEAL,stroke_width=2)
+            c.text(f'{i+1:02d}',725,(start+end)/2+5,14,BLUE,parent=group)
+            continue
+        # Branches and retry loops have separate rails and numbered labels.
+        rail=60+i*8
+        sx=680 if source.title.startswith(('«initial»','«final»')) else 455 if source.title.startswith('«decision»') else 430
+        tx=680 if target.title.startswith(('«initial»','«final»')) else 455 if target.title.startswith('«decision»') else 430
+        sy=a[2]+20 if edge.source==edge.target else a[2]
+        ty=b[2]-20 if edge.source==edge.target else b[2]
+        c.add('polyline',group,points=f'{sx},{sy} {rail},{sy} {rail},{ty} {tx-12},{ty}',fill='none',stroke=TEAL,stroke_width=2)
+        c.arrow(tx-12,ty,tx,edge.kind,group)
+        lx=32 if edge.source==edge.target else rail+10
+        ly=(sy+ty)/2+5 if edge.source==edge.target else (3*sy+ty)/4+5
+        while any(abs(lx-x)<24 and abs(ly-y)<24 for x,y in link_labels):ly-=28
+        link_labels.append((lx,ly))
+        c.text(f'{i+1:02d}',lx,ly,14,BLUE,parent=group)
+    return uml_catalog(c,model,y+25)
+
+
 def render(model):
     c = Canvas()
     c.add('rect', x=0, y=0, width=WIDTH, height=180, fill=INK)
@@ -245,15 +360,35 @@ def render(model):
     c.text(model.title, 56, 105, 34, WHITE, True, ident='document-title', capacity=74)
     c.bindings.append(('document-title', 1, 1))
     y = 215
-    for number, value in model.intro:
-        group = c.group(f'intro-{number}', number)
-        y += c.text(value, 56, y, 19, MUTED, parent=group, capacity=116) + 7
+    controls={'文件編號','文件狀態','核准狀態','維護角色','具名負責人','適用基準','最後審查','關聯需求','關聯決策'}
+    index=0
+    while index < len(model.intro):
+        number,value=model.intro[index]
+        if value.split('：',1)[0] in controls:
+            items=[]
+            while index<len(model.intro) and model.intro[index][1].split('：',1)[0] in controls:
+                items.append(model.intro[index]);index+=1
+            for offset in range(0,len(items),2):
+                heights=[]
+                for column,(number,value) in enumerate(items[offset:offset+2]):
+                    group=c.group(f'intro-{number}',number)
+                    color=TEAL if value=='文件狀態：current' else MUTED
+                    # Uppercase requirement IDs are wider than average ASCII glyphs.
+                    heights.append(c.text(value,56+column*678,y,16,color,parent=group,capacity=60))
+                y+=max(heights)+12
+            y+=12
+        else:
+            group=c.group(f'intro-{number}',number)
+            y+=c.text(value,56,y,19,MUTED,parent=group,capacity=116)+7
+            index+=1
     y += 18
     group = c.group('nodes-heading', model.headings['節點'])
     c.text('節點', 56, y, 25, INK, True, group)
     y += 34
     by_id = {n.ident: n for n in model.nodes}
-    if model.view == 'sequence':
+    if model.view in ['usecase','activity','state']:
+        y=render_uml(c,model,y)
+    elif model.view == 'sequence':
         count = len(model.nodes)
         cell = (WIDTH-112)/count
         require(cell >= 150, 'E_LIMIT', 'sequence supports at most eight participants')
@@ -301,19 +436,22 @@ def render(model):
         cell, gap = 646, 32
         for offset in range(0, len(model.nodes), 2):
             row = model.nodes[offset:offset+2]
-            heights = [100 + sum(len(wrap(v, 66))*28+5 for _, v in n.fields) + max(0, len(wrap(n.title, 58))-1)*30 for n in row]
+            heights = [100 + sum(len(wrap(v, 56))*28+5 for _, v in n.fields) + max(0, len(wrap(n.title, 50))-1)*31 for n in row]
             height = max(heights)
             for index, node in enumerate(row):
                 x = 56+index*(cell+gap)
                 group = c.group('node-'+node.ident, node.start, node.end)
                 c.add('rect', group, x=x, y=y, width=cell, height=height, rx=10, fill=WHITE, stroke=LINE, stroke_width=2)
+                if model.view=='deployment':
+                    c.add('polyline',group,points=f'{x},{y} {x+12},{y-12} {x+cell+12},{y-12} {x+cell+12},{y+height-12} {x+cell},{y+height}',fill='none',stroke=BLUE,stroke_width=2)
+                    c.line(x+cell,y,x+cell+12,y-12,group,color=BLUE)
                 c.text(node.ident, x+22, y+26, 14, BLUE, True, group)
                 pos = y+57
-                pos += c.text(node.title, x+22, pos, 22, INK, True, group, capacity=54)
+                pos += c.text(node.title, x+22, pos, 22, INK, True, group, capacity=50)
                 c.line(x+18, pos-9, x+cell-18, pos-9, group)
                 pos += 15
                 for _, value in node.fields:
-                    pos += c.text(value, x+22, pos, 18, MUTED, parent=group, capacity=66)+5
+                    pos += c.text(value, x+22, pos, 18, MUTED, parent=group, capacity=56)+5
             y += height+26
         y += 15
         group = c.group('edges-heading', model.headings['關係'])
@@ -465,7 +603,7 @@ def read(data):
     require(presentation.get('source-digest') == 'sha256:'+digest(value.encode('utf-8')), 'E_DIGEST_MISMATCH', 'source differs from digest')
     view = children[3]
     common = {'id','fill','stroke','stroke-width','stroke-linecap','stroke-linejoin','font-family','font-size','font-weight','font-style','text-anchor'}
-    geometry = {'g':set(), 'rect':{'x','y','width','height','rx','ry'}, 'line':{'x1','x2','y1','y2'}, 'polygon':{'points'}, 'polyline':{'points'}, 'text':{'x','y','dx','dy',f'{{{XML}}}space'}, 'tspan':{'x','y','dx','dy'}}
+    geometry = {'g':set(), 'rect':{'x','y','width','height','rx','ry'}, 'circle':{'cx','cy','r'}, 'ellipse':{'cx','cy','rx','ry'}, 'line':{'x1','x2','y1','y2'}, 'polygon':{'points'}, 'polyline':{'points'}, 'text':{'x','y','dx','dy',f'{{{XML}}}space'}, 'tspan':{'x','y','dx','dy'}}
     ids = set()
     for n in view.iter():
         require(isinstance(n.tag, str) and n.tag.startswith('{'+SVG+'}'), 'E_PROFILE', 'foreign elements in view')
@@ -486,9 +624,9 @@ def read(data):
             elif attr == 'font-family':
                 families = [f.strip() for f in v.split(',')]
                 require(families[-1] in ['sans-serif','serif','monospace'] and all(f and all(c.isalpha() or c.isdecimal() or c in ' -' for c in f) for f in families), 'E_PROFILE', 'invalid font list')
-            elif attr in ['x','y','dx','dy','x1','x2','y1','y2','width','height','rx','ry','stroke-width','font-size']:
+            elif attr in ['x','y','cx','cy','r','dx','dy','x1','x2','y1','y2','width','height','rx','ry','stroke-width','font-size']:
                 require(NUMBER.fullmatch(v) and math.isfinite(float(v)), 'E_PROFILE', 'finite unitless number required')
-                if attr in ['width','height','rx','ry','stroke-width','font-size']:
+                if attr in ['width','height','r','rx','ry','stroke-width','font-size']:
                     require(float(v) > 0 if attr == 'font-size' else float(v) >= 0, 'E_PROFILE', 'negative dimension')
             elif attr in ['stroke-linecap','stroke-linejoin','font-style','text-anchor','font-weight',f'{{{XML}}}space']:
                 choices = {'stroke-linecap':['butt','round','square'],'stroke-linejoin':['miter','round','bevel'],'font-style':['normal','italic','oblique'],'text-anchor':['start','middle','end'],'font-weight':['normal','bold']+[str(i) for i in range(100,1000,100)],f'{{{XML}}}space':['preserve']}
@@ -589,6 +727,200 @@ def save(path, source, expected=None, create=False):
     return True
 
 
+def fields(values):
+    """Read project control data from visible, authoritative Markdown fields."""
+    result = {}
+    for _, value in values:
+        if '：' in value:
+            key, content = value.split('：', 1)
+            result.setdefault(key, []).append(content)
+    return result
+
+
+def one(values, key):
+    require(key in values and len(values[key]) == 1 and values[key][0].strip(), 'E_GOVERNANCE', 'one nonempty field required: '+key)
+    return values[key][0]
+
+
+def identifiers(value):
+    return [v.strip() for v in value.split(',') if v.strip()]
+
+
+def code_reference(value, base=ROOT):
+    require('#' in value, 'E_TRACE', 'implementation/test references need path#declared-symbol')
+    name, symbol = value.split('#', 1)
+    require(re.fullmatch(r'[A-Za-z_][A-Za-z0-9_.]*', symbol), 'E_TRACE', 'invalid declared symbol')
+    path = (base/name).resolve()
+    require(base.resolve() in path.parents and path.is_file() and path.suffix in ['.cs','.py','.ts','.tsx'], 'E_TRACE', 'missing code/test reference: '+name)
+    text = path.read_text(encoding='utf-8')
+    short = re.escape(symbol.split('.')[-1])
+    patterns = [r'\b(?:def|class|interface|function)\s+'+short+r'\b',
+                r'\b(?:public|private|internal|protected)\s+(?:(?:async|static|override|virtual|sealed)\s+)*[\w<>,?\[\].]+\s+'+short+r'\s*\(']
+    require(any(re.search(p, text) for p in patterns), 'E_TRACE', 'declared symbol not found: '+value)
+    return value
+
+
+def engineering_catalog(models, base=ROOT):
+    """Trace existence and control completeness, never infer business acceptance."""
+    documents, requirements, decisions, stages, open_items = [], {}, {}, {}, {}
+    for filename, model in sorted(models.items()):
+        info = fields(model.intro)
+        ident = one(info, '文件編號')
+        state, approval = one(info,'文件狀態'), one(info,'核准狀態')
+        require(state in ['current','draft','superseded'] and approval in ['not-recorded','confirmed'], 'E_GOVERNANCE', 'invalid lifecycle/approval status')
+        try:
+            date.fromisoformat(one(info,'最後審查'))
+        except ValueError:
+            raise DocumentError('E_GOVERNANCE','review date must be ISO YYYY-MM-DD') from None
+        if approval == 'confirmed':
+            record_id=one(info,'核准依據')
+            require(re.fullmatch(r'REC-[A-Z0-9-]+',record_id) and one(info,'具名負責人') != 'unassigned', 'E_GOVERNANCE', 'confirmation requires attributable evidence')
+            approval_path=base/'docs/records'/record_id
+            require((approval_path/'record.json').is_file(),'E_GOVERNANCE','confirmation record does not exist')
+            verify_record(approval_path,base)
+            approval_record=json.loads((approval_path/'record.json').read_text(encoding='utf-8'))
+            require(any(a.get('documentId')==ident and a.get('by')==one(info,'具名負責人') and a.get('status')=='confirmed'
+                        for a in approval_record.get('approvals',[])),'E_GOVERNANCE','record does not contain the claimed document confirmation')
+        documents.append({'id':ident,'file':filename,'title':model.title,'status':state,'approval':approval,
+                          'ownerRole':one(info,'維護角色'),'namedOwner':one(info,'具名負責人'),
+                          'applicability':one(info,'適用基準'),'reviewed':one(info,'最後審查'),
+                          'requirements':identifiers(one(info,'關聯需求')),'decisions':identifiers(one(info,'關聯決策'))})
+        for node in model.nodes:
+            target = requirements if node.ident.startswith('REQ-') else decisions if node.ident.startswith('ADR-') else stages if node.ident.startswith('PHASE-') else open_items if node.ident.startswith('OPEN-') else None
+            if target is not None:
+                require(node.ident not in target, 'E_TRACE', 'duplicate control ID: '+node.ident)
+                target[node.ident] = {'id':node.ident,'title':node.title,'document':filename,'fields':fields(node.fields)}
+    require(len({d['id'] for d in documents}) == len(documents), 'E_GOVERNANCE', 'document numbers must be unique')
+    require(set(stages) == {'PHASE-0'+str(i) for i in range(1,7)}, 'E_GOVERNANCE', 'all six engineering stages must be defined')
+    for stage in stages.values():
+        for key in ['輸入','產出','完成條件','責任角色']:
+            one(stage['fields'],key)
+    for decision in decisions.values():
+        f = decision['fields']
+        require(one(f,'決策狀態') in ['observed-retrospective','proposed','superseded'], 'E_GOVERNANCE', 'invalid decision status')
+        for key in ['問題','採用方案','替代方案','理由與代價','重評條件','紀錄性質']:
+            one(f,key)
+    for requirement in requirements.values():
+        f = requirement['fields']
+        require(one(f,'需求狀態') in ['confirmed','proposed','retired'], 'E_GOVERNANCE', 'invalid requirement state')
+        require(one(f,'風險') in ['low','medium','high'], 'E_GOVERNANCE', 'invalid risk')
+        for key in ['目標','需求依據','驗收','預期依據','決策','圖頁','實作','測試','驗證命令','驗證狀態','證據']:
+            one(f,key)
+        require(all(token in one(f,'驗收') for token in ['AC-','Given','When','Then']), 'E_TRACE', 'acceptance needs an ID, precondition, trigger and observable result')
+        require(one(f,'驗證狀態') in ['historical-pass','partial','record-linked','not-run'], 'E_GOVERNANCE', 'existence of tests is not a current pass')
+        require(all(v in decisions for v in identifiers(one(f,'決策'))), 'E_TRACE', 'unknown decision in requirement')
+        require(all(v in models for v in identifiers(one(f,'圖頁'))), 'E_TRACE', 'unknown diagram in requirement')
+        for ref in identifiers(one(f,'實作'))+identifiers(one(f,'測試')):
+            code_reference(ref,base)
+        for ref in identifiers(one(f,'測試')):
+            require(ref.startswith('tests/'), 'E_TRACE', 'test references must point to test code')
+    for item in open_items.values():
+        f=item['fields']
+        require(one(f,'待辦狀態') in ['open','resolved'], 'E_GOVERNANCE', 'invalid open-item status')
+        for key in ['未知條件','影響','處理方式','責任角色']:
+            one(f,key)
+        if one(f,'待辦狀態') == 'resolved':
+            one(f,'解決證據')
+    for doc in documents:
+        require(all(v in requirements for v in doc['requirements']) and all(v in decisions for v in doc['decisions']), 'E_TRACE', 'diagram has dangling requirement/decision references')
+        for ident in doc['requirements']:
+            require(doc['file'] in identifiers(one(requirements[ident]['fields'],'圖頁')), 'E_TRACE', 'diagram/requirement relationship must be bidirectional')
+    by_file={d['file']:d for d in documents}
+    for requirement in requirements.values():
+        for filename in identifiers(one(requirement['fields'],'圖頁')):
+            require(requirement['id'] in by_file[filename]['requirements'],'E_TRACE','requirement/diagram relationship must be bidirectional')
+    return {'schemaVersion':1,'authority':'Derived from SVG m:source; do not edit this index.',
+            'documents':documents,'stages':list(stages.values()),'requirements':list(requirements.values()),
+            'decisions':list(decisions.values()),'openItems':list(open_items.values()),
+            'coverage':{'requirements':len(requirements),'withAcceptanceAndTestReferences':len(requirements),
+                        'meaning':'Reference coverage only; not proof that requirements pass or that current code was executed.'}}
+
+
+def catalog(directory=DIRECTORY, base=ROOT):
+    models = {}
+    for path in sorted(directory.glob('*.misvg.svg')):
+        models[path.name] = parse_source(read(path.read_bytes())[2])
+    require(models,'E_REFERENCE','no living documents')
+    return engineering_catalog(models,base)
+
+
+def json_bytes(value):
+    return (json.dumps(value,ensure_ascii=False,indent=2)+'\n').encode('utf-8')
+
+
+def git_output(base, *args):
+    result = subprocess.run(['git','-C',str(base),*args],capture_output=True)
+    require(result.returncode == 0,'E_RECORD','Git history is required for archive checks')
+    return result.stdout
+
+
+def verify_record(directory, base=ROOT, history=True):
+    manifests=list(directory.glob('manifest.*.json'))
+    require(len(manifests)==1,'E_RECORD','one sealed manifest required')
+    manifest=manifests[0]
+    require(manifest.name=='manifest.'+digest(manifest.read_bytes())+'.json','E_RECORD','manifest seal differs')
+    values=json.loads(manifest.read_text(encoding='utf-8'))
+    actual={str(p.relative_to(directory)):digest(p.read_bytes()) for p in directory.rglob('*') if p.is_file() and p!=manifest}
+    require(values.get('files')==actual,'E_RECORD','archive contents changed')
+    record=json.loads((directory/'record.json').read_text(encoding='utf-8'))
+    require(record.get('recordId')==directory.name and record.get('kind')=='verification','E_RECORD','record identity/kind mismatch')
+    require(record.get('scope') and record.get('applicability') and record.get('checks'),'E_RECORD','scope, version and checks are required')
+    for check_item in record['checks']:
+        status=check_item.get('status')
+        require(status in ['pass','fail','skipped','not-run'],'E_RECORD','unknown check result')
+        require(check_item.get('command') and check_item.get('reason'),'E_RECORD','each result needs command and scope/reason')
+        if status=='pass':
+            require(check_item.get('exitCode')==0 and check_item.get('evidence') in actual,'E_RECORD','pass requires successful exit and retained evidence')
+        elif status=='not-run':
+            require(check_item.get('exitCode') is None,'E_RECORD','not-run cannot have an exit code')
+    for superseded in record.get('corrects',[]):
+        require((directory.parent/superseded/'record.json').is_file() and superseded!=directory.name,'E_RECORD','correction must reference an existing other record')
+    history_status='not-checked'
+    if history:
+        require(git_output(base,'rev-parse','--is-shallow-repository').strip()==b'false','E_RECORD_HISTORY','full Git history required; do not claim immutability from a shallow checkout')
+        relative=directory.resolve().relative_to(base.resolve()).as_posix()
+        commits=git_output(base,'log','--reverse','--format=%H','--',relative).decode().splitlines()
+        if commits:
+            first=commits[0]
+            names=git_output(base,'ls-tree','-r','--name-only',first,'--',relative).decode().splitlines()
+            initial={str(Path(name).relative_to(relative)):digest(git_output(base,'show',first+':'+name)) for name in names}
+            current=dict(actual);current[manifest.name]=digest(manifest.read_bytes())
+            require(initial==current,'E_RECORD_IMMUTABLE','archive differs from its first committed snapshot; append a correction record')
+            history_status='unchanged-since-first-commit'
+        else:
+            history_status='new-uncommitted-record'
+    return {'recordId':record['recordId'],'integrity':'pass','history':history_status,'scope':record['scope']}
+
+
+def archive_record(destination, record, evidence, base=ROOT):
+    require(re.fullmatch(r'REC-[A-Z0-9-]+',record.get('recordId','')),'E_RECORD','record ID must be REC- followed by uppercase identifiers')
+    require(destination.name==record['recordId'],'E_RECORD','destination and record ID must match')
+    destination.parent.mkdir(parents=True,exist_ok=True)
+    with locked(destination):
+        require(not destination.exists(),'E_RECORD_IMMUTABLE','archive already exists; append a correction record')
+        with tempfile.TemporaryDirectory(dir=destination.parent,prefix='.record-') as temp:
+            staging=Path(temp)/destination.name;staging.mkdir()
+            (staging/'record.json').write_bytes(json_bytes(record))
+            (staging/'evidence').mkdir()
+            for name,source in evidence.items():
+                require(re.fullmatch(r'[A-Za-z0-9._-]+',name),'E_RECORD','evidence names must be bare filenames')
+                shutil.copyfile(source,staging/'evidence'/name)
+            files={str(p.relative_to(staging)):digest(p.read_bytes()) for p in sorted(staging.rglob('*')) if p.is_file()}
+            manifest=json_bytes({'schemaVersion':1,'recordId':record['recordId'],'files':files})
+            (staging/('manifest.'+digest(manifest)+'.json')).write_bytes(manifest)
+            verify_record(staging,base,history=False)
+            os.replace(staging,destination)
+
+
+def check_records(base=ROOT):
+    directory=base/'docs/records'
+    # Also detect an entire archived directory being removed in a later commit.
+    names=git_output(base,'log','--format=','--name-only','--','docs/records').decode().splitlines()
+    recorded={Path(name).parts[2] for name in names if len(Path(name).parts)>2 and Path(name).parts[2].startswith('REC-')}
+    require(all((directory/name).is_dir() for name in recorded),'E_RECORD_IMMUTABLE','a previously committed archive directory was removed')
+    return [verify_record(p,base) for p in sorted(directory.glob('REC-*')) if p.is_dir()]
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='command', required=True)
@@ -606,6 +938,13 @@ def main():
     validate = sub.add_parser('check')
     validate.add_argument('documents', nargs='*', type=Path)
     validate.add_argument('--report', type=Path)
+    index=sub.add_parser('catalog')
+    index.add_argument('--write',action='store_true')
+    index.add_argument('--requirement',help='show only one requirement and its linked diagrams/decisions')
+    archives=sub.add_parser('records-check')
+    seal=sub.add_parser('archive')
+    seal.add_argument('--record',type=Path,required=True)
+    seal.add_argument('--evidence',action='append',default=[],help='bare-name=source-path')
     args = parser.parse_args()
     if args.command == 'extract':
         sys.stdout.buffer.write(read(args.document.read_bytes())[2].encode('utf-8'))
@@ -614,6 +953,30 @@ def main():
     elif args.command in ['create','update']:
         changed = save(args.document, args.source.read_text(encoding='utf-8'), getattr(args,'expected_sha256',None), args.command == 'create')
         print(('Updated ' if changed else 'Unchanged ')+args.document.name)
+    elif args.command=='catalog':
+        value=catalog()
+        if args.requirement:
+            require(not args.write,'E_GOVERNANCE','a filtered view cannot replace the complete derived index')
+            selected=[r for r in value['requirements'] if r['id']==args.requirement]
+            require(selected,'E_TRACE','unknown requirement')
+            chosen=identifiers(one(selected[0]['fields'],'決策'))
+            value={'authority':value['authority'],'requirement':selected[0],
+                   'documents':[d for d in value['documents'] if args.requirement in d['requirements']],
+                   'decisions':[d for d in value['decisions'] if d['id'] in chosen]}
+        if args.write:
+            target=DIRECTORY/'catalog.json'
+            with locked(target):
+                atomic_write(target,json_bytes(value),digest(target.read_bytes()) if target.exists() else None)
+        print(json.dumps(value,ensure_ascii=False,indent=2))
+    elif args.command=='records-check':
+        print(json.dumps({'records':check_records()},ensure_ascii=False,indent=2))
+    elif args.command=='archive':
+        value=json.loads(args.record.read_text(encoding='utf-8'))
+        evidence={}
+        for item in args.evidence:
+            name,path=item.split('=',1);evidence[name]=Path(path)
+        archive_record(ROOT/'docs/records'/value['recordId'],value,evidence)
+        print('Archived '+value['recordId'])
     else:
         files = args.documents or sorted(DIRECTORY.glob('*.misvg.svg'))
         require(files, 'E_REFERENCE', 'no living documents found')
@@ -631,8 +994,17 @@ def main():
                 records.append({'file':path.name,'error':str(error)})
         report = {'specification':'MISVG 0.1 static / Draft 02, revision 0.1.1',
                   'specCommit':SPEC_COMMIT,'scope':'project-authored CommonMark subset and generated native SVG geometry; not a general MISVG certification',
+                  'execution':{'atUtc':datetime.now(timezone.utc).isoformat(),'command':'python3 scripts/living_docs.py check',
+                               'python':platform.python_version(),'platform':platform.system(),'rendererVersion':VERSION},
                   'visualReview':'Run the separate browser review; digest checks never establish visual validity.',
                   'documents':records,'passed':not failed}
+        if not args.documents and not failed:
+            try:
+                value=catalog()
+                require((DIRECTORY/'catalog.json').read_bytes()==json_bytes(value),'E_CATALOG_STALE','regenerate the derived catalog from reviewed SVG sources')
+                report['engineering']={'traceability':'pass','coverage':value['coverage'],'records':check_records()}
+            except (DocumentError,OSError) as error:
+                report['engineering']={'error':str(error)};failed=True;report['passed']=False
         if args.report:
             args.report.parent.mkdir(parents=True,exist_ok=True)
             args.report.write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')

@@ -1,0 +1,1189 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:a="https://github.com/Lian0123/my-c-sharp-templates/ns/living-docs/1" xmlns:m="https://example.org/ns/markdown-in-svg/0.1" version="1.1" width="1440" height="7728" viewBox="0 0 1440 7728">
+  <title>Auth／Account 功能拆分與工作契約</title>
+  <desc>繁體中文 Agent living document。Markdown 是內容權威；UML 關係、資料來源與更新規則以原生靜態 SVG 呈現。</desc>
+  <metadata>
+    <m:document version="0.1" profile="static" doc-id="urn:uuid:2546ddda-4a41-42f3-8323-9bc6d8c202d2" revision="3">
+      <m:source media-type="text/markdown" dialect="commonmark-0.31.2" xml:space="preserve"># Auth／Account 功能拆分與工作契約
+
+視圖：cards
+文件編號：DOC-10
+文件狀態：current
+核准狀態：not-recorded
+維護角色：技術／測試維護角色（待具名確認）
+具名負責人：unassigned
+適用基準：referenced-source-sha256；驗證以紀錄快照為準
+最後審查：2026-11-08
+關聯需求：REQ-AUTH-001,REQ-BOUNDARY-001,REQ-CMS-001,REQ-SYNC-001
+關聯決策：ADR-DATA-001,ADR-SYNC-001,ADR-AUTH-001,ADR-DOC-001
+範圍：功能契約依責任拆分；AuthService／ChatService 仍為共用實作類別，並非宣稱每功能已有獨立 class。變更按單一 FEAT 劃定範圍。
+
+## 節點
+
+### FEAT-AUTH-REGISTER | 註冊與非同步會員初始化
+
+- 需求：REQ-AUTH-001
+- 責任服務：Auth
+- 角色：匿名訪客
+- 目標：註冊與非同步會員初始化
+- 輸入：Email、密碼、初始顯示名稱
+- 輸出：User ID；郵件與 Account／Message 投影稍後完成
+- 權限：匿名端點；輸入驗證與登入前 Email 驗證
+- 資料與交易：User、Challenge、MailJob 與 IdentityChanged Outbox 同次保存
+- 同步與副作用：MailWorker 寄信；RabbitMQ 更新投影；不傳密碼／Token
+- 失敗與重試：Email 唯一鍵處理並行重複；投影未就緒回處理中／Retry-After
+- 邊界：Email 正規化、Unicode 名稱、密碼長度、並行同 Email
+- 不做範圍：不跨服務資料庫；不在本項擴充 社群登入或跨庫交易
+- 修改範圍：src/Services/Auth/Auth.Infrastructure/AuthService.cs 與同服務契約、API、對應測試
+- 契約：src/Services/Auth/Auth.Application/Contracts.cs#IAuthService.Register
+- 實作：src/Services/Auth/Auth.Infrastructure/AuthService.cs#Register
+- 測試：tests/MicroserviceStarter.Tests/AuthEdgeIntegrationTests.cs#ConcurrentRegistrationUsesDatabaseUniquenessRatherThanOnlyAnExistenceCheck
+- 完成條件：Given 新 Email When 並行註冊 Then 僅一個帳號且可追蹤驗證／同步。
+- 回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。
+- 實作狀態：implemented
+- 驗證狀態：historical-pass
+
+### FEAT-AUTH-CHALLENGE | Email 驗證與重寄連結
+
+- 需求：REQ-AUTH-001
+- 責任服務：Auth
+- 角色：未驗證會員／忘記密碼者
+- 目標：Email 驗證與重寄連結
+- 輸入：Email 或單次驗證 Token、purpose
+- 輸出：驗證完成或接受寄信要求
+- 權限：限流；連結用途、雜湊、期限與單次使用
+- 資料與交易：Challenge 鎖定；舊連結作廢；驗證後保存 User 狀態與 Outbox
+- 同步與副作用：加密郵件工作；連結不進同步事件
+- 失敗與重試：SMTP 失敗保留待寄工作；過期／錯用途／重用拒絕
+- 邊界：空／過長 Token、24h 驗證期限、重寄限流
+- 不做範圍：不跨服務資料庫；不在本項擴充 新增郵件通道
+- 修改範圍：src/Services/Auth/Auth.Infrastructure/AuthService.cs 與同服務契約、API、對應測試
+- 契約：src/Services/Auth/Auth.Application/Contracts.cs#IAuthService.SendChallenge,src/Services/Auth/Auth.Application/Contracts.cs#IAuthService.Verify
+- 實作：src/Services/Auth/Auth.Infrastructure/AuthService.cs#Verify
+- 測試：tests/MicroserviceStarter.Tests/AuthIntegrationTests.cs#UnverifiedUsersCannotLoginAndVerificationLinksCannotBeReused
+- 完成條件：Given 未驗證帳號 When 有效連結使用一次 Then 可登入且再次使用失敗。
+- 回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。
+- 實作狀態：implemented
+- 驗證狀態：historical-pass
+
+### FEAT-AUTH-RESET | 重設密碼並撤銷全部登入
+
+- 需求：REQ-AUTH-001
+- 責任服務：Auth
+- 角色：持有重設連結者
+- 目標：重設密碼並撤銷全部登入
+- 輸入：Token、新密碼
+- 輸出：重設完成；既有 Session 不再有效
+- 權限：單次 reset challenge；密碼規則
+- 資料與交易：同交易使用 Challenge、更新 PasswordHash／SecurityVersion、撤銷 Session 與 Outbox
+- 同步與副作用：提交後直接通知 Message 關閉連線；MQ 不決定撤銷生效
+- 失敗與重試：過期、錯用途、重用與無效密碼拒絕；失敗不部分提交
+- 邊界：重設期限 15 分鐘；空值、密碼長度與並行使用
+- 不做範圍：不跨服務資料庫；不在本項擴充 密碼歷史政策
+- 修改範圍：src/Services/Auth/Auth.Infrastructure/AuthService.cs 與同服務契約、API、對應測試
+- 契約：src/Services/Auth/Auth.Application/Contracts.cs#IAuthService.Reset
+- 實作：src/Services/Auth/Auth.Infrastructure/AuthService.cs#Reset
+- 測試：tests/MicroserviceStarter.Tests/AuthIntegrationTests.cs#PasswordResetTokensAreSingleUseAndRevokeEverySession
+- 完成條件：Given 有效 reset 連結與既有 Session When 重設成功 Then 舊 Session 拒絕且連結不得重用。
+- 回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。
+- 實作狀態：implemented
+- 驗證狀態：historical-pass
+
+### FEAT-AUTH-LOGIN | 登入與 Token 簽發
+
+- 需求：REQ-AUTH-001
+- 責任服務：Auth
+- 角色：已驗證有效會員
+- 目標：登入與 Token 簽發
+- 輸入：Email、密碼、來源位址
+- 輸出：五分鐘 RS256 Access Token、七天 Refresh Cookie 與 CSRF
+- 權限：雜湊比對；有效／已驗證狀態；限流及失敗計數
+- 資料與交易：新增 LoginSession；只保存 Refresh／CSRF 雜湊
+- 同步與副作用：Access Token 由前端記憶體持有；Refresh HttpOnly Cookie
+- 失敗與重試：錯誤憑證、停用、未驗證與鎖定回統一錯誤；不洩漏密碼
+- 邊界：空值、密碼上下限、來源／帳號限流、Cookie Secure 正式設定
+- 不做範圍：不跨服務資料庫；不在本項擴充 MFA 或外部 IdP
+- 修改範圍：src/Services/Auth/Auth.Infrastructure/AuthService.cs 與同服務契約、API、對應測試
+- 契約：src/Services/Auth/Auth.Application/Contracts.cs#IAuthService.Login
+- 實作：src/Services/Auth/Auth.Infrastructure/AuthService.cs#Login
+- 測試：tests/MicroserviceStarter.Tests/AuthIntegrationTests.cs#InvalidInputsCsrfExpiredChallengesAndLoginLockoutReturnStructuredErrors
+- 完成條件：Given 已驗證會員 When 密碼正確登入 Then 建立 Session；錯誤或限流不得簽發。
+- 回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。
+- 實作狀態：implemented
+- 驗證狀態：historical-pass
+
+### FEAT-AUTH-REFRESH | Refresh 輪替與重用偵測
+
+- 需求：REQ-AUTH-001
+- 責任服務：Auth
+- 角色：持有 Refresh Cookie 的瀏覽器
+- 目標：Refresh 輪替與重用偵測
+- 輸入：Refresh Token、CSRF
+- 輸出：舊 Session 撤銷、新 Session 同 family、保留原到期時間
+- 權限：CSRF、User Active／Verified、Token 雜湊與期限
+- 資料與交易：FOR UPDATE 舊 Session；輪替與 family 撤銷同交易
+- 同步與副作用：提交後關閉舊 Session 連線；新 Token 才可重新連接
+- 失敗與重試：重用舊 Token 撤銷同 family；CSRF 不符 403；過期 401
+- 邊界：同時 refresh、重用、空值與 128 字元上限
+- 不做範圍：不跨服務資料庫；不在本項擴充 延長原 family 七天期限
+- 修改範圍：src/Services/Auth/Auth.Infrastructure/AuthService.cs 與同服務契約、API、對應測試
+- 契約：src/Services/Auth/Auth.Application/Contracts.cs#IAuthService.Refresh
+- 實作：src/Services/Auth/Auth.Infrastructure/AuthService.cs#Refresh
+- 測試：tests/MicroserviceStarter.Tests/AuthIntegrationTests.cs#RefreshRotatesCookiesAndReusingOldTokenRevokesItsFamily
+- 完成條件：Given 已輪替 Token When 舊 Token 重用 Then 同 family 有效 Session 撤銷。
+- 回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。
+- 實作狀態：implemented
+- 驗證狀態：historical-pass
+
+### FEAT-AUTH-LOGOUT | 登出與權威 Session 查驗
+
+- 需求：REQ-AUTH-001
+- 責任服務：Auth
+- 角色：會員／受信任業務服務
+- 目標：登出與權威 Session 查驗
+- 輸入：Actor、CSRF；內部批次 SessionProbe
+- 輸出：登出完成或逐 Session 有效性結果
+- 權限：內部服務憑證；UserId、SessionId、安全版本必須一致
+- 資料與交易：PostgreSQL 是權威；Redis 只快取已撤銷結果
+- 同步與副作用：直接 revoke 通知既有連線；請求與推送查驗不等 MQ
+- 失敗與重試：Auth 不可查驗時 fail closed；通知失敗靠連線複查
+- 邊界：批次 0／1000／1001、錯所有者、過期、安全版本
+- 不做範圍：不跨服務資料庫；不在本項擴充 JWT-only 授權
+- 修改範圍：src/Services/Auth/Auth.Infrastructure/AuthService.cs 與同服務契約、API、對應測試
+- 契約：src/Services/Auth/Auth.Application/Contracts.cs#IAuthService.Logout
+- 實作：src/Services/Auth/Auth.Infrastructure/AuthService.cs#Logout,src/Services/Auth/Auth.Infrastructure/AuthService.cs#Check
+- 測試：tests/MicroserviceStarter.Tests/AuthEdgeIntegrationTests.cs#SessionIntrospectionRejectsUnknownWrongOwnerStaleVersionsAndOversizedBatches
+- 完成條件：Given 登入已撤銷 When 請求或推送查驗 Then 拒絕授權且不正向快取有效狀態。
+- 回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。
+- 實作狀態：implemented
+- 驗證狀態：historical-pass
+
+### FEAT-AUTH-ADMIN | 帳號、角色與停用管理
+
+- 需求：REQ-CMS-001
+- 責任服務：Auth
+- 角色：Admin
+- 目標：帳號、角色與停用管理
+- 輸入：查詢上限、目標 ID、角色／停用狀態與原因
+- 輸出：帳號列表、權限異動及稽核
+- 權限：Admin；有效最後管理員不可降權或停用
+- 資料與交易：異動鎖定與最後 Admin 保護；SecurityVersion／Session／Audit／Outbox 同保存
+- 同步與副作用：直接撤銷受影響登入；事件更新其他服務身分投影
+- 失敗與重試：無權 403、缺原因驗證錯誤、最後 Admin 409
+- 邊界：角色 enum、並行異動、最後有效 Admin、查詢上限
+- 不做範圍：不跨服務資料庫；不在本項擴充 額外自訂角色系統
+- 修改範圍：src/Services/Auth/Auth.Infrastructure/AuthService.cs 與同服務契約、API、對應測試
+- 契約：src/Services/Auth/Auth.Application/Contracts.cs#IAuthService.Users,src/Services/Auth/Auth.Application/Contracts.cs#IAuthService.Manage
+- 實作：src/Services/Auth/Auth.Infrastructure/AuthService.cs#Manage
+- 測試：tests/MicroserviceStarter.Tests/AuthIntegrationTests.cs#AdminRoleChangesRevokeAccessAndProtectTheLastAdministrator
+- 完成條件：Given 最後有效 Admin When 嘗試降權 Then 409 且角色保持。
+- 回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。
+- 實作狀態：implemented
+- 驗證狀態：historical-pass
+
+### FEAT-ACCOUNT-PROFILE | 個人資料讀取與修改
+
+- 需求：REQ-BOUNDARY-001,REQ-SYNC-001
+- 責任服務：Account
+- 角色：會員；有原因的 Admin
+- 目標：個人資料讀取與修改
+- 輸入：Actor、DisplayName、Bio、管理原因
+- 輸出：ProfileView 或明確初始化中狀態
+- 權限：本人更新；Admin 管理需原因與稽核
+- 資料與交易：Profile 為唯一資料權威；Version 與 ProfileChanged Outbox 同保存
+- 同步與副作用：快取失效；Message 更新必要公開投影
+- 失敗與重試：快取故障／損毀回 PG；初始化未完成可重試；越權拒絕
+- 邊界：名稱 50、Bio 500、Unicode、版本衝突與未初始化
+- 不做範圍：不跨服務資料庫；不在本項擴充 修改 Auth 的 Email／角色
+- 修改範圍：src/Services/Account/Account.Infrastructure/AccountService.cs 與同服務契約、API、對應測試
+- 契約：src/Services/Account/Account.Application/Contracts.cs#IAccountService.Me,src/Services/Account/Account.Application/Contracts.cs#IAccountService.Update
+- 實作：src/Services/Account/Account.Infrastructure/AccountService.cs#Update
+- 測試：tests/MicroserviceStarter.Tests/ServiceIntegrationTests.cs#ProfilesSynchronizeVersionedPublicDataAndEnforceOwnership
+- 完成條件：Given 本人有效資料 When 更新 Then 版本增加並最終同步；越權者不能修改。
+- 回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。
+- 實作狀態：implemented
+- 驗證狀態：historical-pass
+
+### FEAT-ACCOUNT-DIRECTORY | 會員搜尋與管理稽核入口
+
+- 需求：REQ-BOUNDARY-001,REQ-CMS-001
+- 責任服務：Account
+- 角色：已登入會員／Admin
+- 目標：會員搜尋與管理稽核入口
+- 輸入：搜尋字串、分頁上限；Admin Audit 查詢
+- 輸出：最小公開 Profile 列表／該服務稽核
+- 權限：公開會員搜尋需有效 Session；Audit 僅 Admin
+- 資料與交易：只查 Account DB；不跨讀 Auth；查詢不擁有角色資料
+- 同步與副作用：無身分權威副作用；投影延遲以已知公開資料呈現
+- 失敗與重試：無效分頁拒絕；快取／Auth 故障依平台政策處理
+- 邊界：0／超限頁數、空搜尋、Unicode、必要欄位
+- 不做範圍：不跨服務資料庫；不在本項擴充 跨服務聯表或全面歷史分頁
+- 修改範圍：src/Services/Account/Account.Infrastructure/AccountService.cs 與同服務契約、API、對應測試
+- 契約：src/Services/Account/Account.Application/Contracts.cs#IAccountService.Search
+- 實作：src/Services/Account/Account.Infrastructure/AccountService.cs#Search
+- 測試：tests/MicroserviceStarter.Tests/ProjectionAndFailureIntegrationTests.cs#ProfileCacheFailuresAndCorruptionFallBackToPostgresAndOwnershipIsCheckedInTheService
+- 完成條件：Given 有效會員 When 搜尋 Then 只回可公開資料；管理稽核需 Admin。
+- 回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。
+- 實作狀態：implemented
+- 驗證狀態：historical-pass
+
+## 關係
+
+- dependency | FEAT-AUTH-REGISTER | FEAT-AUTH-CHALLENGE | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。
+
+- dependency | FEAT-AUTH-CHALLENGE | FEAT-AUTH-RESET | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。
+
+- dependency | FEAT-AUTH-RESET | FEAT-AUTH-LOGIN | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。
+
+- dependency | FEAT-AUTH-LOGIN | FEAT-AUTH-REFRESH | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。
+
+- dependency | FEAT-AUTH-REFRESH | FEAT-AUTH-LOGOUT | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。
+
+- dependency | FEAT-AUTH-LOGOUT | FEAT-AUTH-ADMIN | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。
+
+- dependency | FEAT-AUTH-ADMIN | FEAT-ACCOUNT-PROFILE | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。
+
+- dependency | FEAT-ACCOUNT-PROFILE | FEAT-ACCOUNT-DIRECTORY | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。
+
+## 準則
+
+- 實作與預期語意有差異時，先記錄缺口再修改；不只刷新來源指紋。
+- 程式與測試參照存在不等於本次已執行；核對限定版本與原始證據。
+
+## 來源
+
+- scripts/development_rules.py
+- src/Services/Account/Account.Application/Contracts.cs
+- src/Services/Account/Account.Infrastructure/AccountService.cs
+- src/Services/Auth/Auth.Application/Contracts.cs
+- src/Services/Auth/Auth.Infrastructure/AuthService.cs
+- tests/MicroserviceStarter.Tests/AuthEdgeIntegrationTests.cs
+- tests/MicroserviceStarter.Tests/AuthIntegrationTests.cs
+- tests/MicroserviceStarter.Tests/ProjectionAndFailureIntegrationTests.cs
+- tests/MicroserviceStarter.Tests/ServiceIntegrationTests.cs
+- tests/Tooling/test_development_rules.py
+</m:source>
+      <m:presentation root-ref="view" source-digest="sha256:71ede9d759a523c71106d18cc5909e833b53fab72895a79425ade70594f4d4bb" renderer="relay-living-docs" renderer-version="1.2.0" />
+      <m:bindings>
+        <m:bind target="document-title" start-line="1" end-line="1" />
+        <m:bind target="intro-3" start-line="3" end-line="3" />
+        <m:bind target="intro-4" start-line="4" end-line="4" />
+        <m:bind target="intro-5" start-line="5" end-line="5" />
+        <m:bind target="intro-6" start-line="6" end-line="6" />
+        <m:bind target="intro-7" start-line="7" end-line="7" />
+        <m:bind target="intro-8" start-line="8" end-line="8" />
+        <m:bind target="intro-9" start-line="9" end-line="9" />
+        <m:bind target="intro-10" start-line="10" end-line="10" />
+        <m:bind target="intro-11" start-line="11" end-line="11" />
+        <m:bind target="intro-12" start-line="12" end-line="12" />
+        <m:bind target="intro-13" start-line="13" end-line="13" />
+        <m:bind target="nodes-heading" start-line="15" end-line="15" />
+        <m:bind target="node-FEAT-AUTH-REGISTER" start-line="17" end-line="38" />
+        <m:bind target="node-FEAT-AUTH-CHALLENGE" start-line="40" end-line="61" />
+        <m:bind target="node-FEAT-AUTH-RESET" start-line="63" end-line="84" />
+        <m:bind target="node-FEAT-AUTH-LOGIN" start-line="86" end-line="107" />
+        <m:bind target="node-FEAT-AUTH-REFRESH" start-line="109" end-line="130" />
+        <m:bind target="node-FEAT-AUTH-LOGOUT" start-line="132" end-line="153" />
+        <m:bind target="node-FEAT-AUTH-ADMIN" start-line="155" end-line="176" />
+        <m:bind target="node-FEAT-ACCOUNT-PROFILE" start-line="178" end-line="199" />
+        <m:bind target="node-FEAT-ACCOUNT-DIRECTORY" start-line="201" end-line="222" />
+        <m:bind target="edges-heading" start-line="224" end-line="224" />
+        <m:bind target="edge-1" start-line="226" end-line="226" />
+        <m:bind target="edge-2" start-line="228" end-line="228" />
+        <m:bind target="edge-3" start-line="230" end-line="230" />
+        <m:bind target="edge-4" start-line="232" end-line="232" />
+        <m:bind target="edge-5" start-line="234" end-line="234" />
+        <m:bind target="edge-6" start-line="236" end-line="236" />
+        <m:bind target="edge-7" start-line="238" end-line="238" />
+        <m:bind target="edge-8" start-line="240" end-line="240" />
+        <m:bind target="section-242" start-line="242" end-line="242" />
+        <m:bind target="line-244" start-line="244" end-line="244" />
+        <m:bind target="line-245" start-line="245" end-line="245" />
+        <m:bind target="section-247" start-line="247" end-line="247" />
+        <m:bind target="line-249" start-line="249" end-line="249" />
+        <m:bind target="line-250" start-line="250" end-line="250" />
+        <m:bind target="line-251" start-line="251" end-line="251" />
+        <m:bind target="line-252" start-line="252" end-line="252" />
+        <m:bind target="line-253" start-line="253" end-line="253" />
+        <m:bind target="line-254" start-line="254" end-line="254" />
+        <m:bind target="line-255" start-line="255" end-line="255" />
+        <m:bind target="line-256" start-line="256" end-line="256" />
+        <m:bind target="line-257" start-line="257" end-line="257" />
+        <m:bind target="line-258" start-line="258" end-line="258" />
+      </m:bindings>
+      <m:extensions>
+        <a:provenance version="1" spec-commit="c7c0d96aa398d650c6bea5588e5d060bc6d60da5">
+          <a:file path="scripts/development_rules.py" sha256="33653cc9c01335ed8937eeaacae6c89e5809cfdc1d77c5ebf7de09f95a58f8bc" />
+          <a:file path="src/Services/Account/Account.Application/Contracts.cs" sha256="097ddf13cc1623eff6bc17b4d42ff7173aa355ceba653430d588eca00a2731e1" />
+          <a:file path="src/Services/Account/Account.Infrastructure/AccountService.cs" sha256="70f0901f1497d1d97d749640daaec7e4a0635e97a154030b68be203dc12ec28a" />
+          <a:file path="src/Services/Auth/Auth.Application/Contracts.cs" sha256="a6f2a7db1b330dbed7f0f3b324b65e4c7670818756e103ed85b3f283deda8499" />
+          <a:file path="src/Services/Auth/Auth.Infrastructure/AuthService.cs" sha256="f16a1fa42782d5166363d6d8e5126e3d8a7c24fc8ffcb91919798a2b206bbb3d" />
+          <a:file path="tests/MicroserviceStarter.Tests/AuthEdgeIntegrationTests.cs" sha256="b5e7462597405eebeadee3fbe42df5456fd40c764a897b311fff13f9dd1e8854" />
+          <a:file path="tests/MicroserviceStarter.Tests/AuthIntegrationTests.cs" sha256="c3a8eac0d0be27726a08b46b33f28173aae508c7f70d90de5ef9dea7cbe1486d" />
+          <a:file path="tests/MicroserviceStarter.Tests/ProjectionAndFailureIntegrationTests.cs" sha256="93b46cd39fb81738c687d0549feca10204344e0841aa8eb1756449e138d50aa6" />
+          <a:file path="tests/MicroserviceStarter.Tests/ServiceIntegrationTests.cs" sha256="4ff8d930a8eddc810b2ed59e81e0590aa857a84185ba0c3389ffb7f5f4d875d4" />
+          <a:file path="tests/Tooling/test_development_rules.py" sha256="4aa932f97faf97ddb7d3d48e5578ac726434904b5d4fde8bbd8114f7760dc550" />
+        </a:provenance>
+      </m:extensions>
+    </m:document>
+  </metadata>
+  <g id="view" font-family="PingFang TC, Noto Sans CJK TC, Microsoft JhengHei, sans-serif" fill="#183048">
+    <rect x="0" y="0" width="1440" height="7728" fill="#FFFFFF" />
+    <rect x="0" y="0" width="1440" height="180" fill="#183048" />
+    <text x="56" y="45" font-size="16" fill="#9EBFE8"><tspan x="56" y="45">RELAY / AGENT LIVING DOCUMENT</tspan></text>
+    <text x="56" y="105" font-size="34" fill="#FFFFFF" font-weight="bold" id="document-title"><tspan x="56" y="105">Auth／Account 功能拆分與工作契約</tspan></text>
+    <g id="intro-3">
+      <text x="56" y="215" font-size="19" fill="#52677C"><tspan x="56" y="215">視圖：cards</tspan></text>
+    </g>
+    <g id="intro-4">
+      <text x="56" y="250" font-size="16" fill="#52677C"><tspan x="56" y="250">文件編號：DOC-10</tspan></text>
+    </g>
+    <g id="intro-5">
+      <text x="734" y="250" font-size="16" fill="#087E7C"><tspan x="734" y="250">文件狀態：current</tspan></text>
+    </g>
+    <g id="intro-6">
+      <text x="56" y="287" font-size="16" fill="#52677C"><tspan x="56" y="287">核准狀態：not-recorded</tspan></text>
+    </g>
+    <g id="intro-7">
+      <text x="734" y="287" font-size="16" fill="#52677C"><tspan x="734" y="287">維護角色：技術／測試維護角色（待具名確認）</tspan></text>
+    </g>
+    <g id="intro-8">
+      <text x="56" y="324" font-size="16" fill="#52677C"><tspan x="56" y="324">具名負責人：unassigned</tspan></text>
+    </g>
+    <g id="intro-9">
+      <text x="734" y="324" font-size="16" fill="#52677C"><tspan x="734" y="324">適用基準：referenced-source-sha256；驗證以紀錄快照為準</tspan></text>
+    </g>
+    <g id="intro-10">
+      <text x="56" y="361" font-size="16" fill="#52677C"><tspan x="56" y="361">最後審查：2026-11-08</tspan></text>
+    </g>
+    <g id="intro-11">
+      <text x="734" y="361" font-size="16" fill="#52677C"><tspan x="734" y="361">關聯需求：REQ-AUTH-001,REQ-BOUNDARY-001,REQ-CMS-001,REQ-SYNC</tspan><tspan x="734" y="386">-001</tspan></text>
+    </g>
+    <g id="intro-12">
+      <text x="56" y="423" font-size="16" fill="#52677C"><tspan x="56" y="423">關聯決策：ADR-DATA-001,ADR-SYNC-001,ADR-AUTH-001,ADR-DOC-001</tspan></text>
+    </g>
+    <g id="intro-13">
+      <text x="56" y="472" font-size="19" fill="#52677C"><tspan x="56" y="472">範圍：功能契約依責任拆分；AuthService／ChatService 仍為共用實作類別，並非宣稱每功能已有獨立 class。變更按單一 FEAT </tspan><tspan x="56" y="500">劃定範圍。</tspan></text>
+    </g>
+    <g id="nodes-heading">
+      <text x="56" y="553" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="553">節點</tspan></text>
+    </g>
+    <g id="node-FEAT-AUTH-REGISTER">
+      <rect x="56" y="587" width="646" height="1068" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="613" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="613">FEAT-AUTH-REGISTER</tspan></text>
+      <text x="78" y="644" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="644">註冊與非同步會員初始化</tspan></text>
+      <line x1="74" y1="666" x2="684" y2="666" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="690" font-size="18" fill="#52677C"><tspan x="78" y="690">需求：REQ-AUTH-001</tspan></text>
+      <text x="78" y="722" font-size="18" fill="#52677C"><tspan x="78" y="722">責任服務：Auth</tspan></text>
+      <text x="78" y="754" font-size="18" fill="#52677C"><tspan x="78" y="754">角色：匿名訪客</tspan></text>
+      <text x="78" y="786" font-size="18" fill="#52677C"><tspan x="78" y="786">目標：註冊與非同步會員初始化</tspan></text>
+      <text x="78" y="818" font-size="18" fill="#52677C"><tspan x="78" y="818">輸入：Email、密碼、初始顯示名稱</tspan></text>
+      <text x="78" y="850" font-size="18" fill="#52677C"><tspan x="78" y="850">輸出：User ID；郵件與 Account／Message 投影稍後完成</tspan></text>
+      <text x="78" y="882" font-size="18" fill="#52677C"><tspan x="78" y="882">權限：匿名端點；輸入驗證與登入前 Email 驗證</tspan></text>
+      <text x="78" y="914" font-size="18" fill="#52677C"><tspan x="78" y="914">資料與交易：User、Challenge、MailJob 與 IdentityChanged </tspan><tspan x="78" y="941">Outbox 同次保存</tspan></text>
+      <text x="78" y="973" font-size="18" fill="#52677C"><tspan x="78" y="973">同步與副作用：MailWorker 寄信；RabbitMQ 更新投影；不傳密</tspan><tspan x="78" y="1000">碼／Token</tspan></text>
+      <text x="78" y="1032" font-size="18" fill="#52677C"><tspan x="78" y="1032">失敗與重試：Email 唯一鍵處理並行重複；投影未就緒回處理中</tspan><tspan x="78" y="1059">／Retry-After</tspan></text>
+      <text x="78" y="1091" font-size="18" fill="#52677C"><tspan x="78" y="1091">邊界：Email 正規化、Unicode 名稱、密碼長度、並行同 Email</tspan></text>
+      <text x="78" y="1123" font-size="18" fill="#52677C"><tspan x="78" y="1123">不做範圍：不跨服務資料庫；不在本項擴充 社群登入或跨庫交</tspan><tspan x="78" y="1150">易</tspan></text>
+      <text x="78" y="1182" font-size="18" fill="#52677C"><tspan x="78" y="1182">修改範圍：src/Services/Auth/Auth.Infrastructure/AuthServ</tspan><tspan x="78" y="1209">ice.cs 與同服務契約、API、對應測試</tspan></text>
+      <text x="78" y="1241" font-size="18" fill="#52677C"><tspan x="78" y="1241">契約：src/Services/Auth/Auth.Application/Contracts.cs#IA</tspan><tspan x="78" y="1268">uthService.Register</tspan></text>
+      <text x="78" y="1300" font-size="18" fill="#52677C"><tspan x="78" y="1300">實作：src/Services/Auth/Auth.Infrastructure/AuthService.</tspan><tspan x="78" y="1327">cs#Register</tspan></text>
+      <text x="78" y="1359" font-size="18" fill="#52677C"><tspan x="78" y="1359">測試：tests/MicroserviceStarter.Tests/AuthEdgeIntegratio</tspan><tspan x="78" y="1386">nTests.cs#ConcurrentRegistrationUsesDatabaseUniquenessRa</tspan><tspan x="78" y="1413">therThanOnlyAnExistenceCheck</tspan></text>
+      <text x="78" y="1445" font-size="18" fill="#52677C"><tspan x="78" y="1445">完成條件：Given 新 Email When 並行註冊 Then 僅一個帳號且</tspan><tspan x="78" y="1472">可追蹤驗證／同步。</tspan></text>
+      <text x="78" y="1504" font-size="18" fill="#52677C"><tspan x="78" y="1504">回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及</tspan><tspan x="78" y="1531"> schema，先驗證遷移與還原，不能只回退映像。</tspan></text>
+      <text x="78" y="1563" font-size="18" fill="#52677C"><tspan x="78" y="1563">實作狀態：implemented</tspan></text>
+      <text x="78" y="1595" font-size="18" fill="#52677C"><tspan x="78" y="1595">驗證狀態：historical-pass</tspan></text>
+    </g>
+    <g id="node-FEAT-AUTH-CHALLENGE">
+      <rect x="734" y="587" width="646" height="1068" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="613" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="613">FEAT-AUTH-CHALLENGE</tspan></text>
+      <text x="756" y="644" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="644">Email 驗證與重寄連結</tspan></text>
+      <line x1="752" y1="666" x2="1362" y2="666" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="690" font-size="18" fill="#52677C"><tspan x="756" y="690">需求：REQ-AUTH-001</tspan></text>
+      <text x="756" y="722" font-size="18" fill="#52677C"><tspan x="756" y="722">責任服務：Auth</tspan></text>
+      <text x="756" y="754" font-size="18" fill="#52677C"><tspan x="756" y="754">角色：未驗證會員／忘記密碼者</tspan></text>
+      <text x="756" y="786" font-size="18" fill="#52677C"><tspan x="756" y="786">目標：Email 驗證與重寄連結</tspan></text>
+      <text x="756" y="818" font-size="18" fill="#52677C"><tspan x="756" y="818">輸入：Email 或單次驗證 Token、purpose</tspan></text>
+      <text x="756" y="850" font-size="18" fill="#52677C"><tspan x="756" y="850">輸出：驗證完成或接受寄信要求</tspan></text>
+      <text x="756" y="882" font-size="18" fill="#52677C"><tspan x="756" y="882">權限：限流；連結用途、雜湊、期限與單次使用</tspan></text>
+      <text x="756" y="914" font-size="18" fill="#52677C"><tspan x="756" y="914">資料與交易：Challenge 鎖定；舊連結作廢；驗證後保存 User </tspan><tspan x="756" y="941">狀態與 Outbox</tspan></text>
+      <text x="756" y="973" font-size="18" fill="#52677C"><tspan x="756" y="973">同步與副作用：加密郵件工作；連結不進同步事件</tspan></text>
+      <text x="756" y="1005" font-size="18" fill="#52677C"><tspan x="756" y="1005">失敗與重試：SMTP 失敗保留待寄工作；過期／錯用途／重用拒</tspan><tspan x="756" y="1032">絕</tspan></text>
+      <text x="756" y="1064" font-size="18" fill="#52677C"><tspan x="756" y="1064">邊界：空／過長 Token、24h 驗證期限、重寄限流</tspan></text>
+      <text x="756" y="1096" font-size="18" fill="#52677C"><tspan x="756" y="1096">不做範圍：不跨服務資料庫；不在本項擴充 新增郵件通道</tspan></text>
+      <text x="756" y="1128" font-size="18" fill="#52677C"><tspan x="756" y="1128">修改範圍：src/Services/Auth/Auth.Infrastructure/AuthServ</tspan><tspan x="756" y="1155">ice.cs 與同服務契約、API、對應測試</tspan></text>
+      <text x="756" y="1187" font-size="18" fill="#52677C"><tspan x="756" y="1187">契約：src/Services/Auth/Auth.Application/Contracts.cs#IA</tspan><tspan x="756" y="1214">uthService.SendChallenge,src/Services/Auth/Auth.Applicat</tspan><tspan x="756" y="1241">ion/Contracts.cs#IAuthService.Verify</tspan></text>
+      <text x="756" y="1273" font-size="18" fill="#52677C"><tspan x="756" y="1273">實作：src/Services/Auth/Auth.Infrastructure/AuthService.</tspan><tspan x="756" y="1300">cs#Verify</tspan></text>
+      <text x="756" y="1332" font-size="18" fill="#52677C"><tspan x="756" y="1332">測試：tests/MicroserviceStarter.Tests/AuthIntegrationTes</tspan><tspan x="756" y="1359">ts.cs#UnverifiedUsersCannotLoginAndVerificationLinksCann</tspan><tspan x="756" y="1386">otBeReused</tspan></text>
+      <text x="756" y="1418" font-size="18" fill="#52677C"><tspan x="756" y="1418">完成條件：Given 未驗證帳號 When 有效連結使用一次 Then 可</tspan><tspan x="756" y="1445">登入且再次使用失敗。</tspan></text>
+      <text x="756" y="1477" font-size="18" fill="#52677C"><tspan x="756" y="1477">回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及</tspan><tspan x="756" y="1504"> schema，先驗證遷移與還原，不能只回退映像。</tspan></text>
+      <text x="756" y="1536" font-size="18" fill="#52677C"><tspan x="756" y="1536">實作狀態：implemented</tspan></text>
+      <text x="756" y="1568" font-size="18" fill="#52677C"><tspan x="756" y="1568">驗證狀態：historical-pass</tspan></text>
+    </g>
+    <g id="node-FEAT-AUTH-RESET">
+      <rect x="56" y="1681" width="646" height="1068" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="1707" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="1707">FEAT-AUTH-RESET</tspan></text>
+      <text x="78" y="1738" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="1738">重設密碼並撤銷全部登入</tspan></text>
+      <line x1="74" y1="1760" x2="684" y2="1760" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="1784" font-size="18" fill="#52677C"><tspan x="78" y="1784">需求：REQ-AUTH-001</tspan></text>
+      <text x="78" y="1816" font-size="18" fill="#52677C"><tspan x="78" y="1816">責任服務：Auth</tspan></text>
+      <text x="78" y="1848" font-size="18" fill="#52677C"><tspan x="78" y="1848">角色：持有重設連結者</tspan></text>
+      <text x="78" y="1880" font-size="18" fill="#52677C"><tspan x="78" y="1880">目標：重設密碼並撤銷全部登入</tspan></text>
+      <text x="78" y="1912" font-size="18" fill="#52677C"><tspan x="78" y="1912">輸入：Token、新密碼</tspan></text>
+      <text x="78" y="1944" font-size="18" fill="#52677C"><tspan x="78" y="1944">輸出：重設完成；既有 Session 不再有效</tspan></text>
+      <text x="78" y="1976" font-size="18" fill="#52677C"><tspan x="78" y="1976">權限：單次 reset challenge；密碼規則</tspan></text>
+      <text x="78" y="2008" font-size="18" fill="#52677C"><tspan x="78" y="2008">資料與交易：同交易使用 Challenge、更新 </tspan><tspan x="78" y="2035">PasswordHash／SecurityVersion、撤銷 Session 與 Outbox</tspan></text>
+      <text x="78" y="2067" font-size="18" fill="#52677C"><tspan x="78" y="2067">同步與副作用：提交後直接通知 Message 關閉連線；MQ 不決定</tspan><tspan x="78" y="2094">撤銷生效</tspan></text>
+      <text x="78" y="2126" font-size="18" fill="#52677C"><tspan x="78" y="2126">失敗與重試：過期、錯用途、重用與無效密碼拒絕；失敗不部分</tspan><tspan x="78" y="2153">提交</tspan></text>
+      <text x="78" y="2185" font-size="18" fill="#52677C"><tspan x="78" y="2185">邊界：重設期限 15 分鐘；空值、密碼長度與並行使用</tspan></text>
+      <text x="78" y="2217" font-size="18" fill="#52677C"><tspan x="78" y="2217">不做範圍：不跨服務資料庫；不在本項擴充 密碼歷史政策</tspan></text>
+      <text x="78" y="2249" font-size="18" fill="#52677C"><tspan x="78" y="2249">修改範圍：src/Services/Auth/Auth.Infrastructure/AuthServ</tspan><tspan x="78" y="2276">ice.cs 與同服務契約、API、對應測試</tspan></text>
+      <text x="78" y="2308" font-size="18" fill="#52677C"><tspan x="78" y="2308">契約：src/Services/Auth/Auth.Application/Contracts.cs#IA</tspan><tspan x="78" y="2335">uthService.Reset</tspan></text>
+      <text x="78" y="2367" font-size="18" fill="#52677C"><tspan x="78" y="2367">實作：src/Services/Auth/Auth.Infrastructure/AuthService.</tspan><tspan x="78" y="2394">cs#Reset</tspan></text>
+      <text x="78" y="2426" font-size="18" fill="#52677C"><tspan x="78" y="2426">測試：tests/MicroserviceStarter.Tests/AuthIntegrationTes</tspan><tspan x="78" y="2453">ts.cs#PasswordResetTokensAreSingleUseAndRevokeEverySessi</tspan><tspan x="78" y="2480">on</tspan></text>
+      <text x="78" y="2512" font-size="18" fill="#52677C"><tspan x="78" y="2512">完成條件：Given 有效 reset 連結與既有 Session When 重設</tspan><tspan x="78" y="2539">成功 Then 舊 Session 拒絕且連結不得重用。</tspan></text>
+      <text x="78" y="2571" font-size="18" fill="#52677C"><tspan x="78" y="2571">回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及</tspan><tspan x="78" y="2598"> schema，先驗證遷移與還原，不能只回退映像。</tspan></text>
+      <text x="78" y="2630" font-size="18" fill="#52677C"><tspan x="78" y="2630">實作狀態：implemented</tspan></text>
+      <text x="78" y="2662" font-size="18" fill="#52677C"><tspan x="78" y="2662">驗證狀態：historical-pass</tspan></text>
+    </g>
+    <g id="node-FEAT-AUTH-LOGIN">
+      <rect x="734" y="1681" width="646" height="1068" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="1707" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="1707">FEAT-AUTH-LOGIN</tspan></text>
+      <text x="756" y="1738" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="1738">登入與 Token 簽發</tspan></text>
+      <line x1="752" y1="1760" x2="1362" y2="1760" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="1784" font-size="18" fill="#52677C"><tspan x="756" y="1784">需求：REQ-AUTH-001</tspan></text>
+      <text x="756" y="1816" font-size="18" fill="#52677C"><tspan x="756" y="1816">責任服務：Auth</tspan></text>
+      <text x="756" y="1848" font-size="18" fill="#52677C"><tspan x="756" y="1848">角色：已驗證有效會員</tspan></text>
+      <text x="756" y="1880" font-size="18" fill="#52677C"><tspan x="756" y="1880">目標：登入與 Token 簽發</tspan></text>
+      <text x="756" y="1912" font-size="18" fill="#52677C"><tspan x="756" y="1912">輸入：Email、密碼、來源位址</tspan></text>
+      <text x="756" y="1944" font-size="18" fill="#52677C"><tspan x="756" y="1944">輸出：五分鐘 RS256 Access Token、七天 Refresh Cookie 與 </tspan><tspan x="756" y="1971">CSRF</tspan></text>
+      <text x="756" y="2003" font-size="18" fill="#52677C"><tspan x="756" y="2003">權限：雜湊比對；有效／已驗證狀態；限流及失敗計數</tspan></text>
+      <text x="756" y="2035" font-size="18" fill="#52677C"><tspan x="756" y="2035">資料與交易：新增 LoginSession；只保存 Refresh／CSRF 雜湊</tspan></text>
+      <text x="756" y="2067" font-size="18" fill="#52677C"><tspan x="756" y="2067">同步與副作用：Access Token 由前端記憶體持有；Refresh </tspan><tspan x="756" y="2094">HttpOnly Cookie</tspan></text>
+      <text x="756" y="2126" font-size="18" fill="#52677C"><tspan x="756" y="2126">失敗與重試：錯誤憑證、停用、未驗證與鎖定回統一錯誤；不洩</tspan><tspan x="756" y="2153">漏密碼</tspan></text>
+      <text x="756" y="2185" font-size="18" fill="#52677C"><tspan x="756" y="2185">邊界：空值、密碼上下限、來源／帳號限流、Cookie Secure 正</tspan><tspan x="756" y="2212">式設定</tspan></text>
+      <text x="756" y="2244" font-size="18" fill="#52677C"><tspan x="756" y="2244">不做範圍：不跨服務資料庫；不在本項擴充 MFA 或外部 IdP</tspan></text>
+      <text x="756" y="2276" font-size="18" fill="#52677C"><tspan x="756" y="2276">修改範圍：src/Services/Auth/Auth.Infrastructure/AuthServ</tspan><tspan x="756" y="2303">ice.cs 與同服務契約、API、對應測試</tspan></text>
+      <text x="756" y="2335" font-size="18" fill="#52677C"><tspan x="756" y="2335">契約：src/Services/Auth/Auth.Application/Contracts.cs#IA</tspan><tspan x="756" y="2362">uthService.Login</tspan></text>
+      <text x="756" y="2394" font-size="18" fill="#52677C"><tspan x="756" y="2394">實作：src/Services/Auth/Auth.Infrastructure/AuthService.</tspan><tspan x="756" y="2421">cs#Login</tspan></text>
+      <text x="756" y="2453" font-size="18" fill="#52677C"><tspan x="756" y="2453">測試：tests/MicroserviceStarter.Tests/AuthIntegrationTes</tspan><tspan x="756" y="2480">ts.cs#InvalidInputsCsrfExpiredChallengesAndLoginLockoutR</tspan><tspan x="756" y="2507">eturnStructuredErrors</tspan></text>
+      <text x="756" y="2539" font-size="18" fill="#52677C"><tspan x="756" y="2539">完成條件：Given 已驗證會員 When 密碼正確登入 Then 建立 </tspan><tspan x="756" y="2566">Session；錯誤或限流不得簽發。</tspan></text>
+      <text x="756" y="2598" font-size="18" fill="#52677C"><tspan x="756" y="2598">回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及</tspan><tspan x="756" y="2625"> schema，先驗證遷移與還原，不能只回退映像。</tspan></text>
+      <text x="756" y="2657" font-size="18" fill="#52677C"><tspan x="756" y="2657">實作狀態：implemented</tspan></text>
+      <text x="756" y="2689" font-size="18" fill="#52677C"><tspan x="756" y="2689">驗證狀態：historical-pass</tspan></text>
+    </g>
+    <g id="node-FEAT-AUTH-REFRESH">
+      <rect x="56" y="2775" width="646" height="1096" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="2801" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="2801">FEAT-AUTH-REFRESH</tspan></text>
+      <text x="78" y="2832" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="2832">Refresh 輪替與重用偵測</tspan></text>
+      <line x1="74" y1="2854" x2="684" y2="2854" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="2878" font-size="18" fill="#52677C"><tspan x="78" y="2878">需求：REQ-AUTH-001</tspan></text>
+      <text x="78" y="2910" font-size="18" fill="#52677C"><tspan x="78" y="2910">責任服務：Auth</tspan></text>
+      <text x="78" y="2942" font-size="18" fill="#52677C"><tspan x="78" y="2942">角色：持有 Refresh Cookie 的瀏覽器</tspan></text>
+      <text x="78" y="2974" font-size="18" fill="#52677C"><tspan x="78" y="2974">目標：Refresh 輪替與重用偵測</tspan></text>
+      <text x="78" y="3006" font-size="18" fill="#52677C"><tspan x="78" y="3006">輸入：Refresh Token、CSRF</tspan></text>
+      <text x="78" y="3038" font-size="18" fill="#52677C"><tspan x="78" y="3038">輸出：舊 Session 撤銷、新 Session 同 family、保留原到期</tspan><tspan x="78" y="3065">時間</tspan></text>
+      <text x="78" y="3097" font-size="18" fill="#52677C"><tspan x="78" y="3097">權限：CSRF、User Active／Verified、Token 雜湊與期限</tspan></text>
+      <text x="78" y="3129" font-size="18" fill="#52677C"><tspan x="78" y="3129">資料與交易：FOR UPDATE 舊 Session；輪替與 family 撤銷同</tspan><tspan x="78" y="3156">交易</tspan></text>
+      <text x="78" y="3188" font-size="18" fill="#52677C"><tspan x="78" y="3188">同步與副作用：提交後關閉舊 Session 連線；新 Token 才可重</tspan><tspan x="78" y="3215">新連接</tspan></text>
+      <text x="78" y="3247" font-size="18" fill="#52677C"><tspan x="78" y="3247">失敗與重試：重用舊 Token 撤銷同 family；CSRF 不符 403；</tspan><tspan x="78" y="3274">過期 401</tspan></text>
+      <text x="78" y="3306" font-size="18" fill="#52677C"><tspan x="78" y="3306">邊界：同時 refresh、重用、空值與 128 字元上限</tspan></text>
+      <text x="78" y="3338" font-size="18" fill="#52677C"><tspan x="78" y="3338">不做範圍：不跨服務資料庫；不在本項擴充 延長原 family 七</tspan><tspan x="78" y="3365">天期限</tspan></text>
+      <text x="78" y="3397" font-size="18" fill="#52677C"><tspan x="78" y="3397">修改範圍：src/Services/Auth/Auth.Infrastructure/AuthServ</tspan><tspan x="78" y="3424">ice.cs 與同服務契約、API、對應測試</tspan></text>
+      <text x="78" y="3456" font-size="18" fill="#52677C"><tspan x="78" y="3456">契約：src/Services/Auth/Auth.Application/Contracts.cs#IA</tspan><tspan x="78" y="3483">uthService.Refresh</tspan></text>
+      <text x="78" y="3515" font-size="18" fill="#52677C"><tspan x="78" y="3515">實作：src/Services/Auth/Auth.Infrastructure/AuthService.</tspan><tspan x="78" y="3542">cs#Refresh</tspan></text>
+      <text x="78" y="3574" font-size="18" fill="#52677C"><tspan x="78" y="3574">測試：tests/MicroserviceStarter.Tests/AuthIntegrationTes</tspan><tspan x="78" y="3601">ts.cs#RefreshRotatesCookiesAndReusingOldTokenRevokesItsF</tspan><tspan x="78" y="3628">amily</tspan></text>
+      <text x="78" y="3660" font-size="18" fill="#52677C"><tspan x="78" y="3660">完成條件：Given 已輪替 Token When 舊 Token 重用 Then 同 </tspan><tspan x="78" y="3687">family 有效 Session 撤銷。</tspan></text>
+      <text x="78" y="3719" font-size="18" fill="#52677C"><tspan x="78" y="3719">回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及</tspan><tspan x="78" y="3746"> schema，先驗證遷移與還原，不能只回退映像。</tspan></text>
+      <text x="78" y="3778" font-size="18" fill="#52677C"><tspan x="78" y="3778">實作狀態：implemented</tspan></text>
+      <text x="78" y="3810" font-size="18" fill="#52677C"><tspan x="78" y="3810">驗證狀態：historical-pass</tspan></text>
+    </g>
+    <g id="node-FEAT-AUTH-LOGOUT">
+      <rect x="734" y="2775" width="646" height="1096" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="2801" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="2801">FEAT-AUTH-LOGOUT</tspan></text>
+      <text x="756" y="2832" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="2832">登出與權威 Session 查驗</tspan></text>
+      <line x1="752" y1="2854" x2="1362" y2="2854" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="2878" font-size="18" fill="#52677C"><tspan x="756" y="2878">需求：REQ-AUTH-001</tspan></text>
+      <text x="756" y="2910" font-size="18" fill="#52677C"><tspan x="756" y="2910">責任服務：Auth</tspan></text>
+      <text x="756" y="2942" font-size="18" fill="#52677C"><tspan x="756" y="2942">角色：會員／受信任業務服務</tspan></text>
+      <text x="756" y="2974" font-size="18" fill="#52677C"><tspan x="756" y="2974">目標：登出與權威 Session 查驗</tspan></text>
+      <text x="756" y="3006" font-size="18" fill="#52677C"><tspan x="756" y="3006">輸入：Actor、CSRF；內部批次 SessionProbe</tspan></text>
+      <text x="756" y="3038" font-size="18" fill="#52677C"><tspan x="756" y="3038">輸出：登出完成或逐 Session 有效性結果</tspan></text>
+      <text x="756" y="3070" font-size="18" fill="#52677C"><tspan x="756" y="3070">權限：內部服務憑證；UserId、SessionId、安全版本必須一致</tspan></text>
+      <text x="756" y="3102" font-size="18" fill="#52677C"><tspan x="756" y="3102">資料與交易：PostgreSQL 是權威；Redis 只快取已撤銷結果</tspan></text>
+      <text x="756" y="3134" font-size="18" fill="#52677C"><tspan x="756" y="3134">同步與副作用：直接 revoke 通知既有連線；請求與推送查驗不</tspan><tspan x="756" y="3161">等 MQ</tspan></text>
+      <text x="756" y="3193" font-size="18" fill="#52677C"><tspan x="756" y="3193">失敗與重試：Auth 不可查驗時 fail closed；通知失敗靠連線</tspan><tspan x="756" y="3220">複查</tspan></text>
+      <text x="756" y="3252" font-size="18" fill="#52677C"><tspan x="756" y="3252">邊界：批次 0／1000／1001、錯所有者、過期、安全版本</tspan></text>
+      <text x="756" y="3284" font-size="18" fill="#52677C"><tspan x="756" y="3284">不做範圍：不跨服務資料庫；不在本項擴充 JWT-only 授權</tspan></text>
+      <text x="756" y="3316" font-size="18" fill="#52677C"><tspan x="756" y="3316">修改範圍：src/Services/Auth/Auth.Infrastructure/AuthServ</tspan><tspan x="756" y="3343">ice.cs 與同服務契約、API、對應測試</tspan></text>
+      <text x="756" y="3375" font-size="18" fill="#52677C"><tspan x="756" y="3375">契約：src/Services/Auth/Auth.Application/Contracts.cs#IA</tspan><tspan x="756" y="3402">uthService.Logout</tspan></text>
+      <text x="756" y="3434" font-size="18" fill="#52677C"><tspan x="756" y="3434">實作：src/Services/Auth/Auth.Infrastructure/AuthService.</tspan><tspan x="756" y="3461">cs#Logout,src/Services/Auth/Auth.Infrastructure/AuthServ</tspan><tspan x="756" y="3488">ice.cs#Check</tspan></text>
+      <text x="756" y="3520" font-size="18" fill="#52677C"><tspan x="756" y="3520">測試：tests/MicroserviceStarter.Tests/AuthEdgeIntegratio</tspan><tspan x="756" y="3547">nTests.cs#SessionIntrospectionRejectsUnknownWrongOwnerSt</tspan><tspan x="756" y="3574">aleVersionsAndOversizedBatches</tspan></text>
+      <text x="756" y="3606" font-size="18" fill="#52677C"><tspan x="756" y="3606">完成條件：Given 登入已撤銷 When 請求或推送查驗 Then 拒絕</tspan><tspan x="756" y="3633">授權且不正向快取有效狀態。</tspan></text>
+      <text x="756" y="3665" font-size="18" fill="#52677C"><tspan x="756" y="3665">回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及</tspan><tspan x="756" y="3692"> schema，先驗證遷移與還原，不能只回退映像。</tspan></text>
+      <text x="756" y="3724" font-size="18" fill="#52677C"><tspan x="756" y="3724">實作狀態：implemented</tspan></text>
+      <text x="756" y="3756" font-size="18" fill="#52677C"><tspan x="756" y="3756">驗證狀態：historical-pass</tspan></text>
+    </g>
+    <g id="node-FEAT-AUTH-ADMIN">
+      <rect x="56" y="3897" width="646" height="1068" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="3923" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="3923">FEAT-AUTH-ADMIN</tspan></text>
+      <text x="78" y="3954" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="3954">帳號、角色與停用管理</tspan></text>
+      <line x1="74" y1="3976" x2="684" y2="3976" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="4000" font-size="18" fill="#52677C"><tspan x="78" y="4000">需求：REQ-CMS-001</tspan></text>
+      <text x="78" y="4032" font-size="18" fill="#52677C"><tspan x="78" y="4032">責任服務：Auth</tspan></text>
+      <text x="78" y="4064" font-size="18" fill="#52677C"><tspan x="78" y="4064">角色：Admin</tspan></text>
+      <text x="78" y="4096" font-size="18" fill="#52677C"><tspan x="78" y="4096">目標：帳號、角色與停用管理</tspan></text>
+      <text x="78" y="4128" font-size="18" fill="#52677C"><tspan x="78" y="4128">輸入：查詢上限、目標 ID、角色／停用狀態與原因</tspan></text>
+      <text x="78" y="4160" font-size="18" fill="#52677C"><tspan x="78" y="4160">輸出：帳號列表、權限異動及稽核</tspan></text>
+      <text x="78" y="4192" font-size="18" fill="#52677C"><tspan x="78" y="4192">權限：Admin；有效最後管理員不可降權或停用</tspan></text>
+      <text x="78" y="4224" font-size="18" fill="#52677C"><tspan x="78" y="4224">資料與交易：異動鎖定與最後 Admin 保護；SecurityVersion／</tspan><tspan x="78" y="4251">Session／Audit／Outbox 同保存</tspan></text>
+      <text x="78" y="4283" font-size="18" fill="#52677C"><tspan x="78" y="4283">同步與副作用：直接撤銷受影響登入；事件更新其他服務身分投</tspan><tspan x="78" y="4310">影</tspan></text>
+      <text x="78" y="4342" font-size="18" fill="#52677C"><tspan x="78" y="4342">失敗與重試：無權 403、缺原因驗證錯誤、最後 Admin 409</tspan></text>
+      <text x="78" y="4374" font-size="18" fill="#52677C"><tspan x="78" y="4374">邊界：角色 enum、並行異動、最後有效 Admin、查詢上限</tspan></text>
+      <text x="78" y="4406" font-size="18" fill="#52677C"><tspan x="78" y="4406">不做範圍：不跨服務資料庫；不在本項擴充 額外自訂角色系統</tspan></text>
+      <text x="78" y="4438" font-size="18" fill="#52677C"><tspan x="78" y="4438">修改範圍：src/Services/Auth/Auth.Infrastructure/AuthServ</tspan><tspan x="78" y="4465">ice.cs 與同服務契約、API、對應測試</tspan></text>
+      <text x="78" y="4497" font-size="18" fill="#52677C"><tspan x="78" y="4497">契約：src/Services/Auth/Auth.Application/Contracts.cs#IA</tspan><tspan x="78" y="4524">uthService.Users,src/Services/Auth/Auth.Application/Cont</tspan><tspan x="78" y="4551">racts.cs#IAuthService.Manage</tspan></text>
+      <text x="78" y="4583" font-size="18" fill="#52677C"><tspan x="78" y="4583">實作：src/Services/Auth/Auth.Infrastructure/AuthService.</tspan><tspan x="78" y="4610">cs#Manage</tspan></text>
+      <text x="78" y="4642" font-size="18" fill="#52677C"><tspan x="78" y="4642">測試：tests/MicroserviceStarter.Tests/AuthIntegrationTes</tspan><tspan x="78" y="4669">ts.cs#AdminRoleChangesRevokeAccessAndProtectTheLastAdmin</tspan><tspan x="78" y="4696">istrator</tspan></text>
+      <text x="78" y="4728" font-size="18" fill="#52677C"><tspan x="78" y="4728">完成條件：Given 最後有效 Admin When 嘗試降權 Then 409 且</tspan><tspan x="78" y="4755">角色保持。</tspan></text>
+      <text x="78" y="4787" font-size="18" fill="#52677C"><tspan x="78" y="4787">回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及</tspan><tspan x="78" y="4814"> schema，先驗證遷移與還原，不能只回退映像。</tspan></text>
+      <text x="78" y="4846" font-size="18" fill="#52677C"><tspan x="78" y="4846">實作狀態：implemented</tspan></text>
+      <text x="78" y="4878" font-size="18" fill="#52677C"><tspan x="78" y="4878">驗證狀態：historical-pass</tspan></text>
+    </g>
+    <g id="node-FEAT-ACCOUNT-PROFILE">
+      <rect x="734" y="3897" width="646" height="1068" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="3923" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="3923">FEAT-ACCOUNT-PROFILE</tspan></text>
+      <text x="756" y="3954" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="3954">個人資料讀取與修改</tspan></text>
+      <line x1="752" y1="3976" x2="1362" y2="3976" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="4000" font-size="18" fill="#52677C"><tspan x="756" y="4000">需求：REQ-BOUNDARY-001,REQ-SYNC-001</tspan></text>
+      <text x="756" y="4032" font-size="18" fill="#52677C"><tspan x="756" y="4032">責任服務：Account</tspan></text>
+      <text x="756" y="4064" font-size="18" fill="#52677C"><tspan x="756" y="4064">角色：會員；有原因的 Admin</tspan></text>
+      <text x="756" y="4096" font-size="18" fill="#52677C"><tspan x="756" y="4096">目標：個人資料讀取與修改</tspan></text>
+      <text x="756" y="4128" font-size="18" fill="#52677C"><tspan x="756" y="4128">輸入：Actor、DisplayName、Bio、管理原因</tspan></text>
+      <text x="756" y="4160" font-size="18" fill="#52677C"><tspan x="756" y="4160">輸出：ProfileView 或明確初始化中狀態</tspan></text>
+      <text x="756" y="4192" font-size="18" fill="#52677C"><tspan x="756" y="4192">權限：本人更新；Admin 管理需原因與稽核</tspan></text>
+      <text x="756" y="4224" font-size="18" fill="#52677C"><tspan x="756" y="4224">資料與交易：Profile 為唯一資料權威；Version 與 </tspan><tspan x="756" y="4251">ProfileChanged Outbox 同保存</tspan></text>
+      <text x="756" y="4283" font-size="18" fill="#52677C"><tspan x="756" y="4283">同步與副作用：快取失效；Message 更新必要公開投影</tspan></text>
+      <text x="756" y="4315" font-size="18" fill="#52677C"><tspan x="756" y="4315">失敗與重試：快取故障／損毀回 PG；初始化未完成可重試；越</tspan><tspan x="756" y="4342">權拒絕</tspan></text>
+      <text x="756" y="4374" font-size="18" fill="#52677C"><tspan x="756" y="4374">邊界：名稱 50、Bio 500、Unicode、版本衝突與未初始化</tspan></text>
+      <text x="756" y="4406" font-size="18" fill="#52677C"><tspan x="756" y="4406">不做範圍：不跨服務資料庫；不在本項擴充 修改 Auth 的 </tspan><tspan x="756" y="4433">Email／角色</tspan></text>
+      <text x="756" y="4465" font-size="18" fill="#52677C"><tspan x="756" y="4465">修改範圍：src/Services/Account/Account.Infrastructure/Ac</tspan><tspan x="756" y="4492">countService.cs 與同服務契約、API、對應測試</tspan></text>
+      <text x="756" y="4524" font-size="18" fill="#52677C"><tspan x="756" y="4524">契約：src/Services/Account/Account.Application/Contracts</tspan><tspan x="756" y="4551">.cs#IAccountService.Me,src/Services/Account/Account.Appl</tspan><tspan x="756" y="4578">ication/Contracts.cs#IAccountService.Update</tspan></text>
+      <text x="756" y="4610" font-size="18" fill="#52677C"><tspan x="756" y="4610">實作：src/Services/Account/Account.Infrastructure/Accoun</tspan><tspan x="756" y="4637">tService.cs#Update</tspan></text>
+      <text x="756" y="4669" font-size="18" fill="#52677C"><tspan x="756" y="4669">測試：tests/MicroserviceStarter.Tests/ServiceIntegration</tspan><tspan x="756" y="4696">Tests.cs#ProfilesSynchronizeVersionedPublicDataAndEnforc</tspan><tspan x="756" y="4723">eOwnership</tspan></text>
+      <text x="756" y="4755" font-size="18" fill="#52677C"><tspan x="756" y="4755">完成條件：Given 本人有效資料 When 更新 Then 版本增加並最</tspan><tspan x="756" y="4782">終同步；越權者不能修改。</tspan></text>
+      <text x="756" y="4814" font-size="18" fill="#52677C"><tspan x="756" y="4814">回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及</tspan><tspan x="756" y="4841"> schema，先驗證遷移與還原，不能只回退映像。</tspan></text>
+      <text x="756" y="4873" font-size="18" fill="#52677C"><tspan x="756" y="4873">實作狀態：implemented</tspan></text>
+      <text x="756" y="4905" font-size="18" fill="#52677C"><tspan x="756" y="4905">驗證狀態：historical-pass</tspan></text>
+    </g>
+    <g id="node-FEAT-ACCOUNT-DIRECTORY">
+      <rect x="56" y="4991" width="646" height="1040" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="5017" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="5017">FEAT-ACCOUNT-DIRECTORY</tspan></text>
+      <text x="78" y="5048" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="5048">會員搜尋與管理稽核入口</tspan></text>
+      <line x1="74" y1="5070" x2="684" y2="5070" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="5094" font-size="18" fill="#52677C"><tspan x="78" y="5094">需求：REQ-BOUNDARY-001,REQ-CMS-001</tspan></text>
+      <text x="78" y="5126" font-size="18" fill="#52677C"><tspan x="78" y="5126">責任服務：Account</tspan></text>
+      <text x="78" y="5158" font-size="18" fill="#52677C"><tspan x="78" y="5158">角色：已登入會員／Admin</tspan></text>
+      <text x="78" y="5190" font-size="18" fill="#52677C"><tspan x="78" y="5190">目標：會員搜尋與管理稽核入口</tspan></text>
+      <text x="78" y="5222" font-size="18" fill="#52677C"><tspan x="78" y="5222">輸入：搜尋字串、分頁上限；Admin Audit 查詢</tspan></text>
+      <text x="78" y="5254" font-size="18" fill="#52677C"><tspan x="78" y="5254">輸出：最小公開 Profile 列表／該服務稽核</tspan></text>
+      <text x="78" y="5286" font-size="18" fill="#52677C"><tspan x="78" y="5286">權限：公開會員搜尋需有效 Session；Audit 僅 Admin</tspan></text>
+      <text x="78" y="5318" font-size="18" fill="#52677C"><tspan x="78" y="5318">資料與交易：只查 Account DB；不跨讀 Auth；查詢不擁有角色</tspan><tspan x="78" y="5345">資料</tspan></text>
+      <text x="78" y="5377" font-size="18" fill="#52677C"><tspan x="78" y="5377">同步與副作用：無身分權威副作用；投影延遲以已知公開資料呈</tspan><tspan x="78" y="5404">現</tspan></text>
+      <text x="78" y="5436" font-size="18" fill="#52677C"><tspan x="78" y="5436">失敗與重試：無效分頁拒絕；快取／Auth 故障依平台政策處理</tspan></text>
+      <text x="78" y="5468" font-size="18" fill="#52677C"><tspan x="78" y="5468">邊界：0／超限頁數、空搜尋、Unicode、必要欄位</tspan></text>
+      <text x="78" y="5500" font-size="18" fill="#52677C"><tspan x="78" y="5500">不做範圍：不跨服務資料庫；不在本項擴充 跨服務聯表或全面</tspan><tspan x="78" y="5527">歷史分頁</tspan></text>
+      <text x="78" y="5559" font-size="18" fill="#52677C"><tspan x="78" y="5559">修改範圍：src/Services/Account/Account.Infrastructure/Ac</tspan><tspan x="78" y="5586">countService.cs 與同服務契約、API、對應測試</tspan></text>
+      <text x="78" y="5618" font-size="18" fill="#52677C"><tspan x="78" y="5618">契約：src/Services/Account/Account.Application/Contracts</tspan><tspan x="78" y="5645">.cs#IAccountService.Search</tspan></text>
+      <text x="78" y="5677" font-size="18" fill="#52677C"><tspan x="78" y="5677">實作：src/Services/Account/Account.Infrastructure/Accoun</tspan><tspan x="78" y="5704">tService.cs#Search</tspan></text>
+      <text x="78" y="5736" font-size="18" fill="#52677C"><tspan x="78" y="5736">測試：tests/MicroserviceStarter.Tests/ProjectionAndFailu</tspan><tspan x="78" y="5763">reIntegrationTests.cs#ProfileCacheFailuresAndCorruptionF</tspan><tspan x="78" y="5790">allBackToPostgresAndOwnershipIsCheckedInTheService</tspan></text>
+      <text x="78" y="5822" font-size="18" fill="#52677C"><tspan x="78" y="5822">完成條件：Given 有效會員 When 搜尋 Then 只回可公開資料；</tspan><tspan x="78" y="5849">管理稽核需 Admin。</tspan></text>
+      <text x="78" y="5881" font-size="18" fill="#52677C"><tspan x="78" y="5881">回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及</tspan><tspan x="78" y="5908"> schema，先驗證遷移與還原，不能只回退映像。</tspan></text>
+      <text x="78" y="5940" font-size="18" fill="#52677C"><tspan x="78" y="5940">實作狀態：implemented</tspan></text>
+      <text x="78" y="5972" font-size="18" fill="#52677C"><tspan x="78" y="5972">驗證狀態：historical-pass</tspan></text>
+    </g>
+    <g id="edges-heading">
+      <text x="56" y="6072" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="6072">關係</tspan></text>
+    </g>
+    <g id="edge-1">
+      <rect x="56" y="6107" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="6134" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="6134">FEAT-AUTH-REGISTER</tspan></text>
+      <text x="76" y="6164" font-size="17" fill="#183048"><tspan x="76" y="6164">註冊與非同步會員初始化</tspan></text>
+      <text x="1155" y="6134" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="6134">FEAT-AUTH-CHALLENGE</tspan></text>
+      <text x="1155" y="6164" font-size="17" fill="#183048"><tspan x="1155" y="6164">Email 驗證與重寄連結</tspan></text>
+      <text x="325" y="6134" font-size="17" fill="#183048"><tspan x="325" y="6134">01 dependency | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。</tspan></text>
+      <line x1="325.0" y1="6191.0" x2="332.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="6191.0" x2="346.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="6191.0" x2="360.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="6191.0" x2="374.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="6191.0" x2="388.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="6191.0" x2="402.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="6191.0" x2="416.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="6191.0" x2="430.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="6191.0" x2="444.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="6191.0" x2="458.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="6191.0" x2="472.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="6191.0" x2="486.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="6191.0" x2="500.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="6191.0" x2="514.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="6191.0" x2="528.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="6191.0" x2="542.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="6191.0" x2="556.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="6191.0" x2="570.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="6191.0" x2="584.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="6191.0" x2="598.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="6191.0" x2="612.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="6191.0" x2="626.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="6191.0" x2="640.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="6191.0" x2="654.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="6191.0" x2="668.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="6191.0" x2="682.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="6191.0" x2="696.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="6191.0" x2="710.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="6191.0" x2="724.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="6191.0" x2="738.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="6191.0" x2="752.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="6191.0" x2="766.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="6191.0" x2="780.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="6191.0" x2="794.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="6191.0" x2="808.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="6191.0" x2="822.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="6191.0" x2="836.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="6191.0" x2="850.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="6191.0" x2="864.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="6191.0" x2="878.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="6191.0" x2="892.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="6191.0" x2="906.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="6191.0" x2="920.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="6191.0" x2="934.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="6191.0" x2="948.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="6191.0" x2="962.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="6191.0" x2="976.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="6191.0" x2="990.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="6191.0" x2="1004.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="6191.0" x2="1018.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="6191.0" x2="1032.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="6191.0" x2="1046.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="6191.0" x2="1060.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="6191.0" x2="1074.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="6191.0" x2="1088.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="6191.0" x2="1102.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="6191.0" x2="1116.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="6191.0" x2="1125.0" y2="6191.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,6184 1125,6191 1113,6198" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-2">
+      <rect x="56" y="6223" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="6250" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="6250">FEAT-AUTH-CHALLENGE</tspan></text>
+      <text x="76" y="6280" font-size="17" fill="#183048"><tspan x="76" y="6280">Email 驗證與重寄連結</tspan></text>
+      <text x="1155" y="6250" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="6250">FEAT-AUTH-RESET</tspan></text>
+      <text x="1155" y="6280" font-size="17" fill="#183048"><tspan x="1155" y="6280">重設密碼並撤銷全部登入</tspan></text>
+      <text x="325" y="6250" font-size="17" fill="#183048"><tspan x="325" y="6250">02 dependency | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。</tspan></text>
+      <line x1="325.0" y1="6307.0" x2="332.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="6307.0" x2="346.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="6307.0" x2="360.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="6307.0" x2="374.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="6307.0" x2="388.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="6307.0" x2="402.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="6307.0" x2="416.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="6307.0" x2="430.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="6307.0" x2="444.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="6307.0" x2="458.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="6307.0" x2="472.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="6307.0" x2="486.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="6307.0" x2="500.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="6307.0" x2="514.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="6307.0" x2="528.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="6307.0" x2="542.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="6307.0" x2="556.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="6307.0" x2="570.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="6307.0" x2="584.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="6307.0" x2="598.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="6307.0" x2="612.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="6307.0" x2="626.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="6307.0" x2="640.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="6307.0" x2="654.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="6307.0" x2="668.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="6307.0" x2="682.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="6307.0" x2="696.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="6307.0" x2="710.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="6307.0" x2="724.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="6307.0" x2="738.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="6307.0" x2="752.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="6307.0" x2="766.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="6307.0" x2="780.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="6307.0" x2="794.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="6307.0" x2="808.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="6307.0" x2="822.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="6307.0" x2="836.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="6307.0" x2="850.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="6307.0" x2="864.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="6307.0" x2="878.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="6307.0" x2="892.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="6307.0" x2="906.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="6307.0" x2="920.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="6307.0" x2="934.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="6307.0" x2="948.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="6307.0" x2="962.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="6307.0" x2="976.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="6307.0" x2="990.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="6307.0" x2="1004.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="6307.0" x2="1018.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="6307.0" x2="1032.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="6307.0" x2="1046.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="6307.0" x2="1060.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="6307.0" x2="1074.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="6307.0" x2="1088.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="6307.0" x2="1102.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="6307.0" x2="1116.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="6307.0" x2="1125.0" y2="6307.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,6300 1125,6307 1113,6314" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-3">
+      <rect x="56" y="6339" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="6366" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="6366">FEAT-AUTH-RESET</tspan></text>
+      <text x="76" y="6396" font-size="17" fill="#183048"><tspan x="76" y="6396">重設密碼並撤銷全部登入</tspan></text>
+      <text x="1155" y="6366" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="6366">FEAT-AUTH-LOGIN</tspan></text>
+      <text x="1155" y="6396" font-size="17" fill="#183048"><tspan x="1155" y="6396">登入與 Token 簽發</tspan></text>
+      <text x="325" y="6366" font-size="17" fill="#183048"><tspan x="325" y="6366">03 dependency | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。</tspan></text>
+      <line x1="325.0" y1="6423.0" x2="332.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="6423.0" x2="346.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="6423.0" x2="360.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="6423.0" x2="374.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="6423.0" x2="388.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="6423.0" x2="402.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="6423.0" x2="416.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="6423.0" x2="430.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="6423.0" x2="444.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="6423.0" x2="458.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="6423.0" x2="472.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="6423.0" x2="486.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="6423.0" x2="500.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="6423.0" x2="514.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="6423.0" x2="528.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="6423.0" x2="542.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="6423.0" x2="556.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="6423.0" x2="570.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="6423.0" x2="584.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="6423.0" x2="598.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="6423.0" x2="612.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="6423.0" x2="626.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="6423.0" x2="640.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="6423.0" x2="654.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="6423.0" x2="668.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="6423.0" x2="682.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="6423.0" x2="696.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="6423.0" x2="710.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="6423.0" x2="724.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="6423.0" x2="738.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="6423.0" x2="752.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="6423.0" x2="766.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="6423.0" x2="780.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="6423.0" x2="794.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="6423.0" x2="808.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="6423.0" x2="822.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="6423.0" x2="836.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="6423.0" x2="850.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="6423.0" x2="864.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="6423.0" x2="878.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="6423.0" x2="892.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="6423.0" x2="906.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="6423.0" x2="920.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="6423.0" x2="934.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="6423.0" x2="948.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="6423.0" x2="962.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="6423.0" x2="976.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="6423.0" x2="990.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="6423.0" x2="1004.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="6423.0" x2="1018.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="6423.0" x2="1032.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="6423.0" x2="1046.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="6423.0" x2="1060.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="6423.0" x2="1074.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="6423.0" x2="1088.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="6423.0" x2="1102.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="6423.0" x2="1116.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="6423.0" x2="1125.0" y2="6423.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,6416 1125,6423 1113,6430" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-4">
+      <rect x="56" y="6455" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="6482" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="6482">FEAT-AUTH-LOGIN</tspan></text>
+      <text x="76" y="6512" font-size="17" fill="#183048"><tspan x="76" y="6512">登入與 Token 簽發</tspan></text>
+      <text x="1155" y="6482" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="6482">FEAT-AUTH-REFRESH</tspan></text>
+      <text x="1155" y="6512" font-size="17" fill="#183048"><tspan x="1155" y="6512">Refresh 輪替與重用偵測</tspan></text>
+      <text x="325" y="6482" font-size="17" fill="#183048"><tspan x="325" y="6482">04 dependency | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。</tspan></text>
+      <line x1="325.0" y1="6539.0" x2="332.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="6539.0" x2="346.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="6539.0" x2="360.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="6539.0" x2="374.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="6539.0" x2="388.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="6539.0" x2="402.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="6539.0" x2="416.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="6539.0" x2="430.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="6539.0" x2="444.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="6539.0" x2="458.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="6539.0" x2="472.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="6539.0" x2="486.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="6539.0" x2="500.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="6539.0" x2="514.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="6539.0" x2="528.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="6539.0" x2="542.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="6539.0" x2="556.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="6539.0" x2="570.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="6539.0" x2="584.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="6539.0" x2="598.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="6539.0" x2="612.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="6539.0" x2="626.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="6539.0" x2="640.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="6539.0" x2="654.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="6539.0" x2="668.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="6539.0" x2="682.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="6539.0" x2="696.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="6539.0" x2="710.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="6539.0" x2="724.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="6539.0" x2="738.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="6539.0" x2="752.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="6539.0" x2="766.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="6539.0" x2="780.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="6539.0" x2="794.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="6539.0" x2="808.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="6539.0" x2="822.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="6539.0" x2="836.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="6539.0" x2="850.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="6539.0" x2="864.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="6539.0" x2="878.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="6539.0" x2="892.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="6539.0" x2="906.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="6539.0" x2="920.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="6539.0" x2="934.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="6539.0" x2="948.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="6539.0" x2="962.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="6539.0" x2="976.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="6539.0" x2="990.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="6539.0" x2="1004.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="6539.0" x2="1018.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="6539.0" x2="1032.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="6539.0" x2="1046.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="6539.0" x2="1060.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="6539.0" x2="1074.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="6539.0" x2="1088.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="6539.0" x2="1102.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="6539.0" x2="1116.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="6539.0" x2="1125.0" y2="6539.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,6532 1125,6539 1113,6546" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-5">
+      <rect x="56" y="6571" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="6598" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="6598">FEAT-AUTH-REFRESH</tspan></text>
+      <text x="76" y="6628" font-size="17" fill="#183048"><tspan x="76" y="6628">Refresh 輪替與重用偵測</tspan></text>
+      <text x="1155" y="6598" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="6598">FEAT-AUTH-LOGOUT</tspan></text>
+      <text x="1155" y="6628" font-size="17" fill="#183048"><tspan x="1155" y="6628">登出與權威 Session 查驗</tspan></text>
+      <text x="325" y="6598" font-size="17" fill="#183048"><tspan x="325" y="6598">05 dependency | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。</tspan></text>
+      <line x1="325.0" y1="6655.0" x2="332.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="6655.0" x2="346.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="6655.0" x2="360.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="6655.0" x2="374.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="6655.0" x2="388.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="6655.0" x2="402.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="6655.0" x2="416.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="6655.0" x2="430.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="6655.0" x2="444.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="6655.0" x2="458.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="6655.0" x2="472.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="6655.0" x2="486.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="6655.0" x2="500.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="6655.0" x2="514.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="6655.0" x2="528.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="6655.0" x2="542.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="6655.0" x2="556.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="6655.0" x2="570.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="6655.0" x2="584.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="6655.0" x2="598.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="6655.0" x2="612.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="6655.0" x2="626.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="6655.0" x2="640.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="6655.0" x2="654.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="6655.0" x2="668.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="6655.0" x2="682.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="6655.0" x2="696.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="6655.0" x2="710.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="6655.0" x2="724.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="6655.0" x2="738.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="6655.0" x2="752.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="6655.0" x2="766.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="6655.0" x2="780.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="6655.0" x2="794.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="6655.0" x2="808.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="6655.0" x2="822.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="6655.0" x2="836.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="6655.0" x2="850.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="6655.0" x2="864.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="6655.0" x2="878.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="6655.0" x2="892.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="6655.0" x2="906.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="6655.0" x2="920.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="6655.0" x2="934.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="6655.0" x2="948.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="6655.0" x2="962.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="6655.0" x2="976.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="6655.0" x2="990.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="6655.0" x2="1004.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="6655.0" x2="1018.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="6655.0" x2="1032.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="6655.0" x2="1046.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="6655.0" x2="1060.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="6655.0" x2="1074.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="6655.0" x2="1088.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="6655.0" x2="1102.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="6655.0" x2="1116.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="6655.0" x2="1125.0" y2="6655.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,6648 1125,6655 1113,6662" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-6">
+      <rect x="56" y="6687" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="6714" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="6714">FEAT-AUTH-LOGOUT</tspan></text>
+      <text x="76" y="6744" font-size="17" fill="#183048"><tspan x="76" y="6744">登出與權威 Session 查驗</tspan></text>
+      <text x="1155" y="6714" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="6714">FEAT-AUTH-ADMIN</tspan></text>
+      <text x="1155" y="6744" font-size="17" fill="#183048"><tspan x="1155" y="6744">帳號、角色與停用管理</tspan></text>
+      <text x="325" y="6714" font-size="17" fill="#183048"><tspan x="325" y="6714">06 dependency | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。</tspan></text>
+      <line x1="325.0" y1="6771.0" x2="332.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="6771.0" x2="346.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="6771.0" x2="360.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="6771.0" x2="374.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="6771.0" x2="388.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="6771.0" x2="402.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="6771.0" x2="416.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="6771.0" x2="430.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="6771.0" x2="444.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="6771.0" x2="458.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="6771.0" x2="472.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="6771.0" x2="486.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="6771.0" x2="500.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="6771.0" x2="514.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="6771.0" x2="528.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="6771.0" x2="542.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="6771.0" x2="556.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="6771.0" x2="570.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="6771.0" x2="584.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="6771.0" x2="598.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="6771.0" x2="612.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="6771.0" x2="626.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="6771.0" x2="640.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="6771.0" x2="654.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="6771.0" x2="668.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="6771.0" x2="682.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="6771.0" x2="696.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="6771.0" x2="710.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="6771.0" x2="724.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="6771.0" x2="738.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="6771.0" x2="752.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="6771.0" x2="766.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="6771.0" x2="780.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="6771.0" x2="794.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="6771.0" x2="808.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="6771.0" x2="822.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="6771.0" x2="836.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="6771.0" x2="850.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="6771.0" x2="864.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="6771.0" x2="878.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="6771.0" x2="892.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="6771.0" x2="906.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="6771.0" x2="920.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="6771.0" x2="934.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="6771.0" x2="948.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="6771.0" x2="962.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="6771.0" x2="976.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="6771.0" x2="990.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="6771.0" x2="1004.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="6771.0" x2="1018.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="6771.0" x2="1032.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="6771.0" x2="1046.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="6771.0" x2="1060.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="6771.0" x2="1074.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="6771.0" x2="1088.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="6771.0" x2="1102.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="6771.0" x2="1116.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="6771.0" x2="1125.0" y2="6771.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,6764 1125,6771 1113,6778" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-7">
+      <rect x="56" y="6803" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="6830" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="6830">FEAT-AUTH-ADMIN</tspan></text>
+      <text x="76" y="6860" font-size="17" fill="#183048"><tspan x="76" y="6860">帳號、角色與停用管理</tspan></text>
+      <text x="1155" y="6830" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="6830">FEAT-ACCOUNT-PROFILE</tspan></text>
+      <text x="1155" y="6860" font-size="17" fill="#183048"><tspan x="1155" y="6860">個人資料讀取與修改</tspan></text>
+      <text x="325" y="6830" font-size="17" fill="#183048"><tspan x="325" y="6830">07 dependency | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。</tspan></text>
+      <line x1="325.0" y1="6887.0" x2="332.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="6887.0" x2="346.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="6887.0" x2="360.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="6887.0" x2="374.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="6887.0" x2="388.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="6887.0" x2="402.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="6887.0" x2="416.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="6887.0" x2="430.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="6887.0" x2="444.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="6887.0" x2="458.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="6887.0" x2="472.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="6887.0" x2="486.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="6887.0" x2="500.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="6887.0" x2="514.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="6887.0" x2="528.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="6887.0" x2="542.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="6887.0" x2="556.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="6887.0" x2="570.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="6887.0" x2="584.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="6887.0" x2="598.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="6887.0" x2="612.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="6887.0" x2="626.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="6887.0" x2="640.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="6887.0" x2="654.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="6887.0" x2="668.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="6887.0" x2="682.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="6887.0" x2="696.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="6887.0" x2="710.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="6887.0" x2="724.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="6887.0" x2="738.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="6887.0" x2="752.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="6887.0" x2="766.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="6887.0" x2="780.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="6887.0" x2="794.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="6887.0" x2="808.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="6887.0" x2="822.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="6887.0" x2="836.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="6887.0" x2="850.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="6887.0" x2="864.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="6887.0" x2="878.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="6887.0" x2="892.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="6887.0" x2="906.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="6887.0" x2="920.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="6887.0" x2="934.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="6887.0" x2="948.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="6887.0" x2="962.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="6887.0" x2="976.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="6887.0" x2="990.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="6887.0" x2="1004.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="6887.0" x2="1018.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="6887.0" x2="1032.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="6887.0" x2="1046.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="6887.0" x2="1060.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="6887.0" x2="1074.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="6887.0" x2="1088.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="6887.0" x2="1102.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="6887.0" x2="1116.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="6887.0" x2="1125.0" y2="6887.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,6880 1125,6887 1113,6894" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-8">
+      <rect x="56" y="6919" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="6946" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="6946">FEAT-ACCOUNT-PROFILE</tspan></text>
+      <text x="76" y="6976" font-size="17" fill="#183048"><tspan x="76" y="6976">個人資料讀取與修改</tspan></text>
+      <text x="1155" y="6946" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="6946">FEAT-ACCOUNT-DIRECTORY</tspan></text>
+      <text x="1155" y="6976" font-size="17" fill="#183048"><tspan x="1155" y="6976">會員搜尋與管理稽核入口</tspan></text>
+      <text x="325" y="6946" font-size="17" fill="#183048"><tspan x="325" y="6946">08 dependency | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。</tspan></text>
+      <line x1="325.0" y1="7003.0" x2="332.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="7003.0" x2="346.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="7003.0" x2="360.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="7003.0" x2="374.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="7003.0" x2="388.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="7003.0" x2="402.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="7003.0" x2="416.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="7003.0" x2="430.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="7003.0" x2="444.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="7003.0" x2="458.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="7003.0" x2="472.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="7003.0" x2="486.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="7003.0" x2="500.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="7003.0" x2="514.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="7003.0" x2="528.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="7003.0" x2="542.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="7003.0" x2="556.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="7003.0" x2="570.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="7003.0" x2="584.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="7003.0" x2="598.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="7003.0" x2="612.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="7003.0" x2="626.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="7003.0" x2="640.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="7003.0" x2="654.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="7003.0" x2="668.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="7003.0" x2="682.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="7003.0" x2="696.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="7003.0" x2="710.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="7003.0" x2="724.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="7003.0" x2="738.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="7003.0" x2="752.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="7003.0" x2="766.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="7003.0" x2="780.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="7003.0" x2="794.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="7003.0" x2="808.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="7003.0" x2="822.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="7003.0" x2="836.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="7003.0" x2="850.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="7003.0" x2="864.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="7003.0" x2="878.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="7003.0" x2="892.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="7003.0" x2="906.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="7003.0" x2="920.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="7003.0" x2="934.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="7003.0" x2="948.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="7003.0" x2="962.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="7003.0" x2="976.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="7003.0" x2="990.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="7003.0" x2="1004.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="7003.0" x2="1018.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="7003.0" x2="1032.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="7003.0" x2="1046.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="7003.0" x2="1060.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="7003.0" x2="1074.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="7003.0" x2="1088.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="7003.0" x2="1102.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="7003.0" x2="1116.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="7003.0" x2="1125.0" y2="7003.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,6996 1125,7003 1113,7010" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="section-242">
+      <text x="56" y="7069" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="7069">準則</tspan></text>
+    </g>
+    <g id="line-244">
+      <text x="70" y="7111" font-size="18" fill="#52677C"><tspan x="70" y="7111">實作與預期語意有差異時，先記錄缺口再修改；不只刷新來源指紋。</tspan></text>
+    </g>
+    <g id="line-245">
+      <text x="70" y="7153" font-size="18" fill="#52677C"><tspan x="70" y="7153">程式與測試參照存在不等於本次已執行；核對限定版本與原始證據。</tspan></text>
+    </g>
+    <g id="section-247">
+      <text x="56" y="7218" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="7218">來源</tspan></text>
+    </g>
+    <g id="line-249">
+      <text x="70" y="7260" font-size="15" fill="#52677C"><tspan x="70" y="7260">scripts/development_rules.py</tspan></text>
+    </g>
+    <g id="line-250">
+      <text x="70" y="7299" font-size="15" fill="#52677C"><tspan x="70" y="7299">src/Services/Account/Account.Application/Contracts.cs</tspan></text>
+    </g>
+    <g id="line-251">
+      <text x="70" y="7338" font-size="15" fill="#52677C"><tspan x="70" y="7338">src/Services/Account/Account.Infrastructure/AccountService.cs</tspan></text>
+    </g>
+    <g id="line-252">
+      <text x="70" y="7377" font-size="15" fill="#52677C"><tspan x="70" y="7377">src/Services/Auth/Auth.Application/Contracts.cs</tspan></text>
+    </g>
+    <g id="line-253">
+      <text x="70" y="7416" font-size="15" fill="#52677C"><tspan x="70" y="7416">src/Services/Auth/Auth.Infrastructure/AuthService.cs</tspan></text>
+    </g>
+    <g id="line-254">
+      <text x="70" y="7455" font-size="15" fill="#52677C"><tspan x="70" y="7455">tests/MicroserviceStarter.Tests/AuthEdgeIntegrationTests.cs</tspan></text>
+    </g>
+    <g id="line-255">
+      <text x="70" y="7494" font-size="15" fill="#52677C"><tspan x="70" y="7494">tests/MicroserviceStarter.Tests/AuthIntegrationTests.cs</tspan></text>
+    </g>
+    <g id="line-256">
+      <text x="70" y="7533" font-size="15" fill="#52677C"><tspan x="70" y="7533">tests/MicroserviceStarter.Tests/ProjectionAndFailureIntegrationTests.cs</tspan></text>
+    </g>
+    <g id="line-257">
+      <text x="70" y="7572" font-size="15" fill="#52677C"><tspan x="70" y="7572">tests/MicroserviceStarter.Tests/ServiceIntegrationTests.cs</tspan></text>
+    </g>
+    <g id="line-258">
+      <text x="70" y="7611" font-size="15" fill="#52677C"><tspan x="70" y="7611">tests/Tooling/test_development_rules.py</tspan></text>
+    </g>
+    <line x1="56" y1="7680" x2="1384" y2="7680" stroke="#CEDAE8" stroke-width="2" />
+    <text x="56" y="7706" font-size="12" fill="#52677C"><tspan x="56" y="7706">RELAY / STATIC SVG / MARKDOWN IS THE CONTENT AUTHORITY</tspan></text>
+  </g>
+</svg>

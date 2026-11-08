@@ -1,0 +1,629 @@
+{
+  "schemaVersion": 1,
+  "recordId": "REC-DOCS-20261108-002",
+  "kind": "verification",
+  "scope": "功能／工作契約拆分、原生 UML 使用案例／活動／狀態／部署視圖與可執行開發規則；不包含業務實作類別全面重構或本次應用重新驗收。",
+  "createdAtUtc": "2026-11-08T14:42:24.144566+00:00",
+  "outcome": "Final documentation/tooling checks pass; intermediate failures and unexecuted acceptance are retained explicitly.",
+  "applicability": {
+    "baseCommit": "17ea35a378bb42763fc17fd7acdd45e2dd0cbccc",
+    "branch": "docs/svg-document",
+    "workingTree": "Existing staged user snapshot retained; this task adds unstaged/untracked changes. Use exact fingerprints rather than base commit alone.",
+    "filesSha256": {
+      ".editorconfig": "5a20effc0fe2985b0241d47768abe93ba4b24e0ef6bd6da5f2bc1174d1d42aa0",
+      ".github/workflows/ci.yml": "7e373adee14baf35637a76230d3e9b9308e268f9fcdbebc8056929df9db259b1",
+      "AGENTS.md": "037d1133f37436d3eba0a2c4e1f4e059967b21283b12a8db8469da7aa319d476",
+      "Directory.Build.props": "12ab6075015ec12aa01def50136a6b8e3ea0c025e3788d8da7a99949365133f8",
+      "Dockerfile": "32c001026764aeb410a541835fa1a601c5ed918b7b30abd432dbcd1e33d38cea",
+      "README.md": "2c56545d6ee45f1112fed66f37af2f3e0f9e63623867eeda933dcc425dea07fd",
+      "coverage.runsettings": "0e03c5bcc2cb04150edf8d3b9a6be437a4289adc0ec8a7fd7d69b7b0afcb5628",
+      "docker-compose.yml": "7953269800e8c1a4032a11a374208e6c92c8ef0299724710d61420238564c5f3",
+      "docs/living/00-system-overview.misvg.svg": "0cef0732879e7a13c2bbd8c2f7d74553ad1d42b3e6017a2223dc1883ff499aaf",
+      "docs/living/01-layer-and-class.misvg.svg": "acf8426b14d99519fec32c791e83bf9573789b5f301bb636239a2155a52e2cfc",
+      "docs/living/02-auth-data.misvg.svg": "3ce660825f53f682638271b4eba0be97bee7d5bbded8adbed94320760dafb188",
+      "docs/living/03-account-projections.misvg.svg": "ea42ae97433f21404e65111fa30ebcfe822119e6d3adf85ba09e430d0352386d",
+      "docs/living/04-message-data.misvg.svg": "61ef8f991b8f85c6bfdb4cb10808cb1ffbd9ec42de03c0b80e4e7f9ac1284468",
+      "docs/living/05-event-synchronization.misvg.svg": "e44a07da73a504a4f45789fda20993afb5df6319d3412d0a07d31a98dad3a752",
+      "docs/living/06-auth-revocation.misvg.svg": "9bb3f05e26f1a701a379dd0242b99b4c2643cecd0d2a5c66c0d47bc408208bfb",
+      "docs/living/07-chat-sequence.misvg.svg": "0b7694162cfb867d6fc07f8c711ad686ddef982b54381c1442e6ea03079349b4",
+      "docs/living/08-attachment-lifecycle.misvg.svg": "b25c6e458052b625dfd3ef857daf4323ea191865a9f46d1464ceaff422a77e38",
+      "docs/living/09-agent-maintenance.misvg.svg": "f167582428c116a56b2c19211db13ef5bb57280714325ea1b5ececeee405db4d",
+      "docs/living/10-feature-identity.misvg.svg": "1a0a4a7382dc839adf1477da70b79e467293ee8c7e5609d8bcf321d1e6e42c6f",
+      "docs/living/11-feature-chat.misvg.svg": "4364ff1e8c75f8bfcc2f946671431cd629a5a975e0d0e1f3a41643f742d57253",
+      "docs/living/12-feature-platform.misvg.svg": "c93583b2f310e0e25071075521204ffa47dd428d0976deb1c395129996278ac9",
+      "docs/living/13-use-cases.misvg.svg": "0382434573d410e765ba7cbaf787402b1eb2c6efe41f0d13b85f70c888b5af1a",
+      "docs/living/14-registration-activity.misvg.svg": "1abefa66453759b290683678221e0ac84cda55faa023f9cc48d930159ac6570d",
+      "docs/living/15-session-state.misvg.svg": "52fc1c7507300d343352565f204c0ad8e49d585c05b602fe9e559708742408fd",
+      "docs/living/16-deployment.misvg.svg": "69d8807a94be68715adfd4965d824fc18ccae6cf34e6c5af1d4bdb78b0489d34",
+      "docs/living/17-development-rules.misvg.svg": "7c2c2771be340e3fee98d2d3b3453a7bf6508e42d13e89ed19edf22082382343",
+      "docs/living/README.md": "d08883e39d12d585f4893c36c7ad94eb2b213328c45b375aaa49b9052fae5491",
+      "docs/living/catalog.json": "4871643c90d929fcd786763caf0a495c20791fa2506395911cd85dbed5db2e5d",
+      "docs/living/features.json": "3bf11ad4ca1c28cbfc8f4bb7cef545262a7d6b0e0e2c4901445f0991d41aa2c3",
+      "docs/operations.md": "6406b8b05dc29e1b3db832f41d6d300f9102b4842d5b432a6406e6ae6794cc1a",
+      "docs/records/README.md": "99e7c08cd4a03785207bc0485ff6b2f4093ba70bafb9413e0b1e4bf03efcf3a8",
+      "scripts/backup.py": "bd199104d6acf386d6db0c3d016930b5004a20ceb0ec4941dfb2787d85dcb7d5",
+      "scripts/check-coverage.py": "d5a0019b2fdb4d4c0846fc9685e1f63fed45fed1c2a40cc04dfc9ded259e9ddc",
+      "scripts/development_rules.py": "33653cc9c01335ed8937eeaacae6c89e5809cfdc1d77c5ebf7de09f95a58f8bc",
+      "scripts/init.sh": "f6880e2e55b37b25c25903a44d6a45f19baf83438257cf0002bfc8b76cc03723",
+      "scripts/living_docs.py": "664286ba5e350b65649878689055d56678514b9bd1b50e74b53dac89f9057579",
+      "scripts/test-e2e.sh": "bf1152def8b81f62528d5ec50247ecb118159bedce27903d0d95a2387879bfbd",
+      "scripts/test.sh": "563a7c8693f4cea02aea5fd7407e99276c2136476cccd4e3008b4501f5f375f8",
+      "scripts/wait-containers.py": "e627d6f6e556418044e329ad6f2982b19bf6a35f544178e2b97d51951028ee1d",
+      "src/Gateway/Program.cs": "e1bafd6851d53c7e5e2e488c883d56d527862ddcee314e70ea2d025eac91f1e2",
+      "src/Gateway/appsettings.json": "9563f5d327ef56d4359729153db3127fde260b3ba2a55645cb1abcad8b7db412",
+      "src/Services/Account/Account.Api/Program.cs": "e359461925b2ab6fabb368505e554e16ff23920be124ffdaf1de379fb9f836cc",
+      "src/Services/Account/Account.Application/Contracts.cs": "097ddf13cc1623eff6bc17b4d42ff7173aa355ceba653430d588eca00a2731e1",
+      "src/Services/Account/Account.Domain/Profile.cs": "6c2166af3f61c4a9ced69b358c8728e282c8400305c0b79a788cfbf840b76d45",
+      "src/Services/Account/Account.Infrastructure/AccountDbContext.cs": "18a2c3f14c464a631359578d0a7eead933fc43aa5c924923fa6467df9ff3686c",
+      "src/Services/Account/Account.Infrastructure/AccountService.cs": "70f0901f1497d1d97d749640daaec7e4a0635e97a154030b68be203dc12ec28a",
+      "src/Services/Auth/Auth.Api/Auth.Api.csproj": "34377fdde16dbb4e08f8287ed66779368238c6b6184c319c96173d49c83bf88f",
+      "src/Services/Auth/Auth.Api/Program.cs": "426599b4543d862fe6245fa4691575cba98a6e9e50a1afb6410028119798f351",
+      "src/Services/Auth/Auth.Application/Auth.Application.csproj": "5d90bf6b9dcbe897a88fac158b30066010de4bf5a1a794033e43090d83f2e842",
+      "src/Services/Auth/Auth.Application/Contracts.cs": "a6f2a7db1b330dbed7f0f3b324b65e4c7670818756e103ed85b3f283deda8499",
+      "src/Services/Auth/Auth.Domain/Auth.Domain.csproj": "67472b2d08b7a9fed27b2c0fb53db42367fb919154136295eedd8928f9625ab6",
+      "src/Services/Auth/Auth.Domain/Identity.cs": "899a8dd006bc8e6b647f1a0b14798418ab727ceff9c3a702bab40dc0500217d9",
+      "src/Services/Auth/Auth.Infrastructure/Auth.Infrastructure.csproj": "f422be0d866fb71551a39ccc658cd627181774f7a10115366484433b5def6038",
+      "src/Services/Auth/Auth.Infrastructure/AuthDbContext.cs": "d5530cde8611862e376cb55b2339acd3ce48a4cbb5ace84205921eef907a320d",
+      "src/Services/Auth/Auth.Infrastructure/AuthService.cs": "f16a1fa42782d5166363d6d8e5126e3d8a7c24fc8ffcb91919798a2b206bbb3d",
+      "src/Services/Auth/Auth.Infrastructure/MailWorker.cs": "f334afc1c7982da02514651d4d513d64692677de6dab416988caa3ce4d2285c2",
+      "src/Services/Message/Message.Api/Program.cs": "f0795251e23d37530ab0ad963ffb67d01c1d4034be0962f257b334726196cc9a",
+      "src/Services/Message/Message.Api/Realtime.cs": "dbc70d5baa076960343b4f400c3ebb340bd5f0f73a79536aff722b96c8c2ddaf",
+      "src/Services/Message/Message.Application/Contracts.cs": "0f630734e2c57f13b399b437a5b309f5bb734f7183f442ab8555dce7324ed71c",
+      "src/Services/Message/Message.Domain/Chat.cs": "f98dc830ad3b415711ad4f6a93938bec9150db4edf180abd028375252a4545ed",
+      "src/Services/Message/Message.Infrastructure/AttachmentCleanup.cs": "6fef65b0b264d6e227f41a893c3accf360f78aa0a4f1232b4b4004da8ad6fa0a",
+      "src/Services/Message/Message.Infrastructure/ChatService.cs": "4d75f819d654b076e0e3d68af28839996c4ab9a8d598610eca81ad2d793fd633",
+      "src/Services/Message/Message.Infrastructure/MessageDbContext.cs": "cb0170df781cea95cdfb827a11dda7d093046eb19f75068d35d2e888100456a3",
+      "src/Services/Message/Message.Infrastructure/MessageIntegrationHandler.cs": "da2224f113f6756b6cc877cb5f41d87357e1fbd10986f4fec2384c46b873683c",
+      "src/Services/Message/Message.Infrastructure/ObjectStorage.cs": "76e1d8cbabcfe971a89068c850b3cb81be179d111d7d83d2f57e4ad3de92f91c",
+      "src/Shared/BuildingBlocks/Persistence.cs": "7c9ce71824ac063b130e2644a0a0cc53747a854bd4506a2bae91bd39acb7ff49",
+      "src/Shared/BuildingBlocks/Platform.cs": "ca543f13c01f69881544f94d233ec22181e98c11397903fc0a439ad36a41c5f1",
+      "src/Shared/BuildingBlocks/RabbitWorkers.cs": "7f613b9afeb2a50d6ca8faa1d71e79f6b69174b20b738531f12dcb3129de91d2",
+      "src/Shared/Contracts/IntegrationEvents.cs": "cce8c726f046d844bbcfdd1392298ff03532cb829d2c6e6b3eeaa68b42792a62",
+      "src/Web/Dockerfile": "0e0b174c8b40d1200daadb68831354b69fddeec5e9e0fb07e2c39b307e48b2d7",
+      "src/Web/e2e/workspace.spec.ts": "74f39f971966d8c465212098f0ccf9c2b95cbf63f8413c6c14a6446d4839b7e1",
+      "src/Web/scripts/check-living-docs.mjs": "f063794c5af83b3a308d55086bb7f18386d216d20368419173e4a3a5ee5e8093",
+      "src/Web/src/AdminPage.test.tsx": "593843b7cfee52aa6bbb37bb5beeedf83035dc8d72ac8985982289e44bf0a963",
+      "src/Web/src/AdminPage.tsx": "9848f011658265e936ceffc7473017fc771f30f3b24b0c041c1105f7d7fa8988",
+      "src/Web/src/App.tsx": "5dfedeb03e42c16af4867bb7af788bd9b74ca80a1e9deab42eaa46e3b5088776",
+      "src/Web/src/AuthPage.test.tsx": "eab00337d235ee81b49cecd22894f010f5e3d9cfb58c7e79e3c0bb9a69e14f77",
+      "src/Web/src/AuthPage.tsx": "a50ac4ac60962385b7e485005f933ab0255513ba02552edd88557292df5950cd",
+      "src/Web/src/ChatPage.test.tsx": "92762d34f7862cbf39cd052dd19b1aa48101a4cdf5a9cf04bb6906c138d54483",
+      "src/Web/src/ChatPage.tsx": "4d0650a4ac48438e5d01c484fc5a44799ed5592ddf1f7695a336e83373d16758",
+      "src/Web/src/api/client.ts": "307b7f2c30a54de42f1be21c8094a354e792b61cdb1d529da346aa481f74c946",
+      "tests/MicroserviceStarter.Tests/ArchitectureTests.cs": "3fcd0ef7091b181d3f56436a7c5a60900f3bd89dbe624f2586b3a7a76f4422ec",
+      "tests/MicroserviceStarter.Tests/AuthEdgeIntegrationTests.cs": "b5e7462597405eebeadee3fbe42df5456fd40c764a897b311fff13f9dd1e8854",
+      "tests/MicroserviceStarter.Tests/AuthIntegrationTests.cs": "c3a8eac0d0be27726a08b46b33f28173aae508c7f70d90de5ef9dea7cbe1486d",
+      "tests/MicroserviceStarter.Tests/ChatEdgeIntegrationTests.cs": "3a3de6d652e4e731d0a6a9a790bfec13a12da6f779f52ad96277a01e64a881af",
+      "tests/MicroserviceStarter.Tests/GatewayIntegrationTests.cs": "7ddf1127cd1bfe10283fd15300aeee6e3f81972f6f5557b70651501800ba30cb",
+      "tests/MicroserviceStarter.Tests/PlatformTests.cs": "184a09e3899395f8fc985c8af3021be12f01a99e006c343c6e4d42b67f91677c",
+      "tests/MicroserviceStarter.Tests/ProjectionAndFailureIntegrationTests.cs": "93b46cd39fb81738c687d0549feca10204344e0841aa8eb1756449e138d50aa6",
+      "tests/MicroserviceStarter.Tests/RealtimeIntegrationTests.cs": "a2185a5c61ea779627871dbe9d0e3e5350606c7033845578e67daab57cd4fcc5",
+      "tests/MicroserviceStarter.Tests/ServiceIntegrationTests.cs": "4ff8d930a8eddc810b2ed59e81e0590aa857a84185ba0c3389ffb7f5f4d875d4",
+      "tests/MicroserviceStarter.Tests/WorkerIntegrationTests.cs": "b78c7cf18532a2ff0c638aa9cab833908a09395a3e354cad294806a00a60e786",
+      "tests/Tooling/test_development_rules.py": "4aa932f97faf97ddb7d3d48e5578ac726434904b5d4fde8bbd8114f7760dc550",
+      "tests/Tooling/test_engineering_docs.py": "6c58a2099f1ffb18e84b5bac1d55d354d6e9ff5eae9eb77488100f7604eb0864",
+      "tests/Tooling/test_living_docs.py": "6d5bf24a793f039d9eff890fdc46aba60d79e069f28db7bf0647fdad3cfa3aca",
+      "tools/Operations/deadletter.mjs": "9c05d095ac041f786e7d026f31fa8815b13f2c86ee0f8fdba068ed4a4fc2739c"
+    },
+    "exclusion": "New archive is sealed separately; previous immutable REC-DOCS-20261108-001 was not rewritten."
+  },
+  "environment": {
+    "os": "macOS-26.5.1-x86_64-i386-64bit",
+    "python": "3.8.2",
+    "node": "v26.5.0",
+    "chromium": "156.0.8078.4",
+    "renderer": "relay-living-docs 1.2.0",
+    "misvgSpecCommit": "c7c0d96aa398d650c6bea5588e5d060bc6d60da5"
+  },
+  "relatedRecords": [
+    "REC-DOCS-20261108-001"
+  ],
+  "changeContract": {
+    "goals": [
+      "Bound each feature by input/output/authorization/transaction/side effect/retry/boundary/non-goal/edit scope/acceptance/rollback.",
+      "Map all three business interfaces operations exactly once.",
+      "Provide useful native UML views and executable development-boundary checks."
+    ],
+    "changedAreas": [
+      "SVG sources and derived indexes",
+      "Documentation tooling/tests",
+      "AGENTS/README",
+      "CI and early test.sh static gates"
+    ],
+    "nonGoals": [
+      "No service/API/DB schema changes",
+      "No assertion of one class per feature",
+      "No general UML/MISVG certification",
+      "No fabricated product acceptance or independent review"
+    ],
+    "implementationReality": "AuthService and ChatService remain shared implementation classes; existing service/layer/worker boundaries are documented and checked, not relabeled as a completed handler-per-feature refactor."
+  },
+  "metrics": {
+    "svgDocuments": 18,
+    "newSvgDocuments": 8,
+    "features": 26,
+    "publicBusinessOperations": 25,
+    "mappedOperations": 25,
+    "toolingTests": 88,
+    "newToolingTests": 25,
+    "automaticRules": 4,
+    "reviewRequiredRules": 6,
+    "canvasOverflow": 0,
+    "cardOverflow": 0,
+    "textOverlaps": 0,
+    "meaning": "Reference/static completeness, not executed product acceptance."
+  },
+  "manualReview": {
+    "reviewer": "Implementing agent; no independent human/model approval",
+    "scope": "All eight added page-header/feature/rule samples; native usecase/activity/state/deployment samples and revised transition/retry semantics. All text elements are covered by automatic bounds checks."
+  },
+  "checks": [
+    {
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests/Tooling",
+        "-p",
+        "test_*.py",
+        "-v"
+      ],
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/verification-summary.md",
+      "execution": {
+        "startedAtUtc": "2026-11-08T14:38:58.365597+00:00",
+        "completedAtUtc": "2026-11-08T14:39:09.661912+00:00",
+        "argv": [
+          "python3",
+          "-m",
+          "unittest",
+          "discover",
+          "-s",
+          "tests/Tooling",
+          "-p",
+          "test_*.py",
+          "-v"
+        ],
+        "exitCode": 0
+      },
+      "rawEvidence": "artifacts/living-docs/REC-DOCS-20261108-002/tooling.txt",
+      "reason": "88 tests pass, including 25 new feature/dependency/Gateway/UML checks."
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/living_docs.py",
+        "check",
+        "--report",
+        "artifacts/living-docs/functional-run/source-report.json"
+      ],
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/verification-summary.md",
+      "execution": {
+        "startedAtUtc": "2026-11-08T14:39:09.662407+00:00",
+        "completedAtUtc": "2026-11-08T14:39:11.114418+00:00",
+        "argv": [
+          "python3",
+          "scripts/living_docs.py",
+          "check",
+          "--report",
+          "artifacts/living-docs/functional-run/source-report.json"
+        ],
+        "exitCode": 0
+      },
+      "rawEvidence": "artifacts/living-docs/REC-DOCS-20261108-002/source.txt",
+      "reason": "All 18 MISVG source/view/provenance files and bidirectional REQ links pass; pre-seal collection check."
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/development_rules.py",
+        "check",
+        "--report",
+        "artifacts/living-docs/functional-run/rules-report.json"
+      ],
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/verification-summary.md",
+      "execution": {
+        "startedAtUtc": "2026-11-08T14:39:11.114927+00:00",
+        "completedAtUtc": "2026-11-08T14:39:12.576491+00:00",
+        "argv": [
+          "python3",
+          "scripts/development_rules.py",
+          "check",
+          "--report",
+          "artifacts/living-docs/functional-run/rules-report.json"
+        ],
+        "exitCode": 0
+      },
+      "rawEvidence": "artifacts/living-docs/REC-DOCS-20261108-002/rules.txt",
+      "reason": "26 FEAT contracts map all 25 public business operations exactly once; four executable RULE checks pass; six remain review-required."
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/development_rules.py",
+        "show",
+        "--feature",
+        "FEAT-CHAT-SEND"
+      ],
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/verification-summary.md",
+      "execution": {
+        "startedAtUtc": "2026-11-08T14:34:55.072353+00:00",
+        "completedAtUtc": "2026-11-08T14:34:55.623406+00:00",
+        "argv": [
+          "python3",
+          "scripts/development_rules.py",
+          "show",
+          "--feature",
+          "FEAT-CHAT-SEND"
+        ],
+        "exitCode": 0
+      },
+      "rawEvidence": "artifacts/living-docs/REC-DOCS-20261108-002/feature.txt",
+      "reason": "FEAT-CHAT-SEND command resolves its complete bounded task contract."
+    },
+    {
+      "command": [
+        "npm",
+        "--prefix",
+        "src/Web",
+        "run",
+        "lint"
+      ],
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/verification-summary.md",
+      "execution": {
+        "startedAtUtc": "2026-11-08T14:33:25.459206+00:00",
+        "completedAtUtc": "2026-11-08T14:33:29.189922+00:00",
+        "argv": [
+          "npm",
+          "--prefix",
+          "src/Web",
+          "run",
+          "lint"
+        ],
+        "exitCode": 0
+      },
+      "rawEvidence": "artifacts/living-docs/REC-DOCS-20261108-002/lint.txt",
+      "reason": "ESLint passes including modified browser checker."
+    },
+    {
+      "command": [
+        "sh",
+        "-n",
+        "scripts/test.sh"
+      ],
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/verification-summary.md",
+      "execution": {
+        "startedAtUtc": "2026-11-08T14:38:07.376872+00:00",
+        "completedAtUtc": "2026-11-08T14:38:07.391925+00:00",
+        "argv": [
+          "sh",
+          "-n",
+          "scripts/test.sh"
+        ],
+        "exitCode": 0
+      },
+      "rawEvidence": "artifacts/living-docs/REC-DOCS-20261108-002/shell.txt",
+      "reason": "scripts/test.sh shell syntax passes; full Docker test.sh was not executed."
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/verification-summary.md",
+      "execution": {
+        "startedAtUtc": "2026-11-08T14:39:12.576819+00:00",
+        "completedAtUtc": "2026-11-08T14:39:12.618727+00:00",
+        "argv": [
+          "git",
+          "diff",
+          "--check"
+        ],
+        "exitCode": 0
+      },
+      "rawEvidence": "artifacts/living-docs/REC-DOCS-20261108-002/diff.txt",
+      "reason": "Tracked working diff whitespace check passes."
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--cached",
+        "--check"
+      ],
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/verification-summary.md",
+      "execution": {
+        "startedAtUtc": "2026-11-08T14:34:55.663357+00:00",
+        "completedAtUtc": "2026-11-08T14:34:55.705669+00:00",
+        "argv": [
+          "git",
+          "diff",
+          "--cached",
+          "--check"
+        ],
+        "exitCode": 0
+      },
+      "rawEvidence": "artifacts/living-docs/REC-DOCS-20261108-002/staged-diff.txt",
+      "reason": "Previously staged diff whitespace check passes; index was preserved."
+    },
+    {
+      "command": "node src/Web/scripts/check-living-docs.mjs",
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/verification-summary.md",
+      "execution": {
+        "startedAtUtc": "2026-11-08T14:41:03.529Z",
+        "completedAtUtc": "2026-11-08T14:41:17.163Z",
+        "command": "node src/Web/scripts/check-living-docs.mjs",
+        "node": "v26.5.0",
+        "platform": "darwin"
+      },
+      "rawEvidence": "artifacts/living-docs/REC-DOCS-20261108-002/visual-report.json",
+      "reason": "Chromium renders all 18 final SVGs; zero canvas/card overflow and zero pairwise text overlap; hashes match source verification."
+    },
+    {
+      "command": "Intermediate browser review after adding transition numbers",
+      "status": "fail",
+      "exitCode": 1,
+      "evidence": "evidence/verification-summary.md",
+      "rawEvidence": "artifacts/living-docs/REC-DOCS-20261108-002/visual-label-overlap-fail.json",
+      "reason": "One state-diagram edge-number overlap was detected. Fixed label placement and added a dedicated regression test; final 18-page review passes."
+    },
+    {
+      "command": "Initial development-rule fixture run",
+      "status": "fail",
+      "exitCode": 1,
+      "evidence": "evidence/verification-summary.md",
+      "reason": "Fixture initially omitted referenced scripts/tests and failed to mutate a self-closing csproj. Fixed fixture completeness/XML mutation; final checks verify intended failure codes. Original terminal output was not retained as a local raw artifact."
+    },
+    {
+      "command": "Full backend/frontend application tests and coverage",
+      "status": "not-run",
+      "exitCode": null,
+      "reason": "No runtime service/React behavior was modified; application suites/95%-90% measurements were not rerun."
+    },
+    {
+      "command": "./scripts/test-e2e.sh",
+      "status": "not-run",
+      "exitCode": null,
+      "reason": "Application Docker/browser acceptance not rerun for documentation/tooling changes."
+    },
+    {
+      "command": "Six review-required behavioral/operational rules",
+      "status": "not-run",
+      "exitCode": null,
+      "reason": "Defined with concrete review actions and existing test/CI gates, but this static run does not execute their full acceptance."
+    },
+    {
+      "command": "Independent human/model review or recovery/load drill",
+      "status": "not-run",
+      "exitCode": null,
+      "reason": "Not performed; OPEN-PERF-001 and OPEN-OPS-001 remain open."
+    },
+    {
+      "command": "GitHub Actions for this working snapshot",
+      "status": "not-run",
+      "exitCode": null,
+      "reason": "CI was configured locally; changes were not committed/pushed and no new remote CI result is claimed."
+    }
+  ],
+  "rawArtifacts": [
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/diff-execution.json",
+      "sha256": "828c73676c33db3b4640cea26bb6e63614cb566327cb738a3face887e5285aa8",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/diff.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/feature-execution.json",
+      "sha256": "71864d54b37acfd7f30e254132ef7d37d7876dcad14a2236945da53153c615de",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/feature.txt",
+      "sha256": "f46761892a6efb31c508c3298d5ae4d43a5f9adfe3b0e262ef0aec9788b244e3",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/lint-execution.json",
+      "sha256": "f008bfab7b350e3141046cb256013dc152b96b1db3711eb5581feb190a286d18",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/lint.txt",
+      "sha256": "d7b3d6601c60e7ddf000a88e972360fd40fe32f014821a528ed00d288e56f43d",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/rules-execution.json",
+      "sha256": "ed722f65ddbb22d7ab0d2f5b3e9ed9d973300b8b3c92fff47e1f15fd063a298d",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/rules-report.json",
+      "sha256": "0a0191909e635c25801816eadecfad3589ff281de8c11db59f9ab684d849e65d",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/rules.txt",
+      "sha256": "0a0191909e635c25801816eadecfad3589ff281de8c11db59f9ab684d849e65d",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/screenshots/00-system-overview.png",
+      "sha256": "f0315a9fd9678ba6c245ec811f203103155439789e8b192bd47ee2295e6636ec",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/screenshots/01-layer-and-class.png",
+      "sha256": "90639162b5c1b86e6b1bdf316539e1af9cec2fe57ccfea54ecc8eaa2d9f5a9ce",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/screenshots/02-auth-data.png",
+      "sha256": "186a2138b31ed4b6928812c49f58fbf84a532c2038495fb3a2bc619434df3118",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/screenshots/03-account-projections.png",
+      "sha256": "bb4d563ecc746daa51622c7fac6d5dae351ff0147f4323d675cc218493918ada",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/screenshots/04-message-data.png",
+      "sha256": "099f0aeebbea9b1428a1eadfc37592d74eed94b695d0614a787c058521e6f956",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/screenshots/05-event-synchronization.png",
+      "sha256": "001cc07d8c454bfc54f90671739007029a6976aecf65b1ce530115a4724d92fc",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/screenshots/06-auth-revocation.png",
+      "sha256": "a281df3103f36e506a7fe20363baf70e612141919cfaadb9d77e91d2a4bac6b3",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/screenshots/07-chat-sequence.png",
+      "sha256": "f8277e5f119362bf5659e9f99188667fa73b5758e05ace7e92cc6d5e7a0d82a5",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/screenshots/08-attachment-lifecycle.png",
+      "sha256": "5522385f50ac1224c7f096919346e94f9f687170dc089ae9b20f28b7465a905d",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/screenshots/09-agent-maintenance.png",
+      "sha256": "afc8594a654c3b61e6fba12e783052e84807e0cf550712a98e8e6ced9878108a",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/screenshots/10-feature-identity.png",
+      "sha256": "89abc5495520d1a9eb38bc2278830b16d290a76ef54d2c1ad5ed371878935395",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/screenshots/11-feature-chat.png",
+      "sha256": "00f49f09675ba9e58b08314ac674f78cfbb22df710a589cc7fbef91fa4110ab7",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/screenshots/12-feature-platform.png",
+      "sha256": "4175ec29320d7e19d624730bbbb6d662d516e311b180550ee2b32b64ef943abc",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/screenshots/13-use-cases.png",
+      "sha256": "b010e02b623684226d08ce0c367c2dd9b20e64c01bf3b6987cb992fc19199943",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/screenshots/14-registration-activity.png",
+      "sha256": "a1bc2aaf90e960ee9c6610488e6d1b508d67657fcdb58cc85e378b2519913094",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/screenshots/15-session-state.png",
+      "sha256": "bda9c98b885e4d55a6e02e792d5392d48e45d9cdcbe5a3421992384f8c936795",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/screenshots/16-deployment.png",
+      "sha256": "624f99c54c5088130391b5546a9ab38c0feb1d49c2ffd694f16ea069fb4be87a",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/screenshots/17-development-rules.png",
+      "sha256": "463217c50befd4ff6b045932b99706c469a5605a515d92319ca0f5d4e85fb28b",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/shell-execution.json",
+      "sha256": "a9cc266cf2d4fb45a8d65dce18afc985ad965af4495540b413bb05ad48763fa3",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/shell.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/source-execution.json",
+      "sha256": "efed22e6246687c7fa469c09730ad4afcff36d69342701644de5a464f5db0967",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/source-report.json",
+      "sha256": "776804071bf14ebbf24a721e0b66a34f86a59a0d79fbc184e54e4a17c6a51042",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/source.txt",
+      "sha256": "776804071bf14ebbf24a721e0b66a34f86a59a0d79fbc184e54e4a17c6a51042",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/staged-diff-execution.json",
+      "sha256": "e5c63070d1c48603a390c433f3568b12f7db852701fdf496594d55d4802e72b9",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/staged-diff.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/tooling-execution.json",
+      "sha256": "4aaa017831f051c92bb18cb46c36448747055050cb6c6bf6954822ecbb8a1108",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/tooling.txt",
+      "sha256": "f1609dd4c98c023200fd2b5228a95c405fb199b6afb84a528ae32890bcc3b4c5",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/visual-label-overlap-fail.json",
+      "sha256": "2222f9cb63951fcc174ca954f9f6b346a2925c14c7ffee0850bc42544954d5c8",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    },
+    {
+      "path": "artifacts/living-docs/REC-DOCS-20261108-002/visual-report.json",
+      "sha256": "9920927fd66593d82720802f5814d4b60e9e332e7aa0dbda6c37f1caf67c0134",
+      "retention": "ignored local evidence; deliver separately; not committed to Git"
+    }
+  ],
+  "retention": "Curated record/summary only in docs/records; raw evidence frozen under ignored artifacts/living-docs/REC-DOCS-20261108-002. Deliver raw artifacts separately. Hashes cannot reconstruct missing evidence.",
+  "historicalApplicationEvidence": {
+    "commit": "46fb1e21eae8d40d59309cc405b3d77ae5d0b190",
+    "url": "https://github.com/Lian0123/my-c-sharp-templates/actions/runs/42389347629",
+    "attempt": 1,
+    "scope": "Historical application execution for that commit only; not promoted to current acceptance."
+  },
+  "approvals": [],
+  "corrects": []
+}

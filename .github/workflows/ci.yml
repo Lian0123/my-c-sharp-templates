@@ -13,6 +13,8 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
       - uses: actions/setup-dotnet@v6.1.0
         with:
           global-json-file: global.json
@@ -25,6 +27,8 @@ jobs:
         run: ./scripts/init.sh
       - name: Verify living architecture documents
         run: python3 scripts/living_docs.py check --report artifacts/living-docs/source-report.json
+      - name: Enforce feature contracts and development boundaries
+        run: python3 scripts/development_rules.py check --report artifacts/living-docs/development-rules.json
       - name: Unit, architecture, integration and frontend quality gates
         run: ./scripts/test.sh
       - name: Verify C# formatting

@@ -1,0 +1,258 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:a="https://github.com/Lian0123/my-c-sharp-templates/ns/living-docs/1" xmlns:m="https://example.org/ns/markdown-in-svg/0.1" version="1.1" width="1440" height="2548" viewBox="0 0 1440 2548">
+  <title>UML Session 與 Refresh family 狀態</title>
+  <desc>繁體中文 Agent living document。Markdown 是內容權威；UML 關係、資料來源與更新規則以原生靜態 SVG 呈現。</desc>
+  <metadata>
+    <m:document version="0.1" profile="static" doc-id="urn:uuid:74e3208f-569c-48bd-9664-abea27ef00f6" revision="6">
+      <m:source media-type="text/markdown" dialect="commonmark-0.31.2" xml:space="preserve"># UML Session 與 Refresh family 狀態
+
+視圖：state
+文件編號：DOC-15
+文件狀態：current
+核准狀態：not-recorded
+維護角色：技術／測試維護角色（待具名確認）
+具名負責人：unassigned
+適用基準：referenced-source-sha256；驗證以紀錄快照為準
+最後審查：2026-11-08
+關聯需求：REQ-AUTH-001,REQ-CMS-001
+關聯決策：ADR-AUTH-001
+範圍：依現有實作說明功能與關聯；不冒認本次已執行業務驗收。
+
+## 節點
+
+### initial | «initial» 尚未建立 Session
+
+### valid | «state» 有效且未撤銷 Session
+
+- 進入：Login 或另一個 Session 的 Refresh 產生新 Session。
+- 有效條件：User Active、Verified、安全版本相符；未撤銷且未過期。
+- 不變條件：一個 Session Id 的生命週期；輪替新 ID 是另一個實例。
+
+### revoked | «state» 已撤銷 Session
+
+- 判定：RevokedAt 非 null；涵蓋輪替、登出、密碼與管理異動。
+- 不變條件：原 Session 不會恢復；舊 Refresh 重用可影響同 family 其他 Session。
+- 限制：原因是流程語意，資料表沒有獨立狀態或撤銷原因 enum。
+
+### expired | «state» 未撤銷但已過期
+
+- 判定：RevokedAt 為 null 且 ExpiresAt &lt;= Now。
+- 不變條件：Refresh 不延長該 Session 原期限；過期 Session 不再授權。
+- 限制：JWT 本身期限另行驗證；不以 JWT 過期改寫資料列。
+
+## 關係
+
+- transition | initial | valid | Login [有效且已驗證] 或另一個 Session 的合法 Refresh / CreateSession。
+- transition | valid | revoked | Refresh 成功／Logout／Reset／管理異動 [提交成功] / 設定 RevokedAt；Refresh 另建新 Session，不是恢復舊實例。
+- transition | valid | expired | 時間推進 [RevokedAt 為 null 且 ExpiresAt &lt;= Now] / 後續查驗拒絕。
+- transition | revoked | revoked | 舊 Refresh 重用 [原期限未到且 CSRF 合法] / 撤銷同 family 的其他有效 Session；本列仍撤銷。
+- transition | expired | expired | Refresh [已過期] / 401；不另觸發 family 重用分支。
+
+## 準則
+
+- 圖表示單一 Session Id 的生命週期；Refresh 的新 ID 是另一個實例，不畫出原 Session 復活。
+- Auth 無法查驗時回 503 是請求結果，不是持久化 Session 狀態；恢復後仍須完整權威查驗。
+- revoked 與 expired 分類依上面 guard；狀態由欄位推導，不宣稱程式存在 enum。
+- JWT 五分鐘期限與 Session 七天上限分開驗證；Redis 只快取撤銷結果，MQ 不決定授權。
+
+## 來源
+
+- src/Services/Auth/Auth.Domain/Identity.cs
+- src/Services/Auth/Auth.Infrastructure/AuthService.cs
+- src/Shared/BuildingBlocks/Platform.cs
+</m:source>
+      <m:presentation root-ref="view" source-digest="sha256:1ce3b79f891ca74352ef958fdf657d31583e5145560830ca4050e814b48527b0" renderer="relay-living-docs" renderer-version="1.2.0" />
+      <m:bindings>
+        <m:bind target="document-title" start-line="1" end-line="1" />
+        <m:bind target="intro-3" start-line="3" end-line="3" />
+        <m:bind target="intro-4" start-line="4" end-line="4" />
+        <m:bind target="intro-5" start-line="5" end-line="5" />
+        <m:bind target="intro-6" start-line="6" end-line="6" />
+        <m:bind target="intro-7" start-line="7" end-line="7" />
+        <m:bind target="intro-8" start-line="8" end-line="8" />
+        <m:bind target="intro-9" start-line="9" end-line="9" />
+        <m:bind target="intro-10" start-line="10" end-line="10" />
+        <m:bind target="intro-11" start-line="11" end-line="11" />
+        <m:bind target="intro-12" start-line="12" end-line="12" />
+        <m:bind target="intro-13" start-line="13" end-line="13" />
+        <m:bind target="nodes-heading" start-line="15" end-line="15" />
+        <m:bind target="node-initial" start-line="17" end-line="17" />
+        <m:bind target="node-valid" start-line="19" end-line="23" />
+        <m:bind target="node-revoked" start-line="25" end-line="29" />
+        <m:bind target="node-expired" start-line="31" end-line="35" />
+        <m:bind target="uml-link-0" start-line="39" end-line="39" />
+        <m:bind target="uml-link-1" start-line="40" end-line="40" />
+        <m:bind target="uml-link-2" start-line="41" end-line="41" />
+        <m:bind target="uml-link-3" start-line="42" end-line="42" />
+        <m:bind target="uml-link-4" start-line="43" end-line="43" />
+        <m:bind target="uml-edges" start-line="37" end-line="37" />
+        <m:bind target="edge-1" start-line="39" end-line="39" />
+        <m:bind target="edge-2" start-line="40" end-line="40" />
+        <m:bind target="edge-3" start-line="41" end-line="41" />
+        <m:bind target="edge-4" start-line="42" end-line="42" />
+        <m:bind target="edge-5" start-line="43" end-line="43" />
+        <m:bind target="section-45" start-line="45" end-line="45" />
+        <m:bind target="line-47" start-line="47" end-line="47" />
+        <m:bind target="line-48" start-line="48" end-line="48" />
+        <m:bind target="line-49" start-line="49" end-line="49" />
+        <m:bind target="line-50" start-line="50" end-line="50" />
+        <m:bind target="section-52" start-line="52" end-line="52" />
+        <m:bind target="line-54" start-line="54" end-line="54" />
+        <m:bind target="line-55" start-line="55" end-line="55" />
+        <m:bind target="line-56" start-line="56" end-line="56" />
+      </m:bindings>
+      <m:extensions>
+        <a:provenance version="1" spec-commit="c7c0d96aa398d650c6bea5588e5d060bc6d60da5">
+          <a:file path="src/Services/Auth/Auth.Domain/Identity.cs" sha256="899a8dd006bc8e6b647f1a0b14798418ab727ceff9c3a702bab40dc0500217d9" />
+          <a:file path="src/Services/Auth/Auth.Infrastructure/AuthService.cs" sha256="f16a1fa42782d5166363d6d8e5126e3d8a7c24fc8ffcb91919798a2b206bbb3d" />
+          <a:file path="src/Shared/BuildingBlocks/Platform.cs" sha256="ca543f13c01f69881544f94d233ec22181e98c11397903fc0a439ad36a41c5f1" />
+        </a:provenance>
+      </m:extensions>
+    </m:document>
+  </metadata>
+  <g id="view" font-family="PingFang TC, Noto Sans CJK TC, Microsoft JhengHei, sans-serif" fill="#183048">
+    <rect x="0" y="0" width="1440" height="2548" fill="#FFFFFF" />
+    <rect x="0" y="0" width="1440" height="180" fill="#183048" />
+    <text x="56" y="45" font-size="16" fill="#9EBFE8"><tspan x="56" y="45">RELAY / AGENT LIVING DOCUMENT</tspan></text>
+    <text x="56" y="105" font-size="34" fill="#FFFFFF" font-weight="bold" id="document-title"><tspan x="56" y="105">UML Session 與 Refresh family 狀態</tspan></text>
+    <g id="intro-3">
+      <text x="56" y="215" font-size="19" fill="#52677C"><tspan x="56" y="215">視圖：state</tspan></text>
+    </g>
+    <g id="intro-4">
+      <text x="56" y="250" font-size="16" fill="#52677C"><tspan x="56" y="250">文件編號：DOC-15</tspan></text>
+    </g>
+    <g id="intro-5">
+      <text x="734" y="250" font-size="16" fill="#087E7C"><tspan x="734" y="250">文件狀態：current</tspan></text>
+    </g>
+    <g id="intro-6">
+      <text x="56" y="287" font-size="16" fill="#52677C"><tspan x="56" y="287">核准狀態：not-recorded</tspan></text>
+    </g>
+    <g id="intro-7">
+      <text x="734" y="287" font-size="16" fill="#52677C"><tspan x="734" y="287">維護角色：技術／測試維護角色（待具名確認）</tspan></text>
+    </g>
+    <g id="intro-8">
+      <text x="56" y="324" font-size="16" fill="#52677C"><tspan x="56" y="324">具名負責人：unassigned</tspan></text>
+    </g>
+    <g id="intro-9">
+      <text x="734" y="324" font-size="16" fill="#52677C"><tspan x="734" y="324">適用基準：referenced-source-sha256；驗證以紀錄快照為準</tspan></text>
+    </g>
+    <g id="intro-10">
+      <text x="56" y="361" font-size="16" fill="#52677C"><tspan x="56" y="361">最後審查：2026-11-08</tspan></text>
+    </g>
+    <g id="intro-11">
+      <text x="734" y="361" font-size="16" fill="#52677C"><tspan x="734" y="361">關聯需求：REQ-AUTH-001,REQ-CMS-001</tspan></text>
+    </g>
+    <g id="intro-12">
+      <text x="56" y="398" font-size="16" fill="#52677C"><tspan x="56" y="398">關聯決策：ADR-AUTH-001</tspan></text>
+    </g>
+    <g id="intro-13">
+      <text x="56" y="447" font-size="19" fill="#52677C"><tspan x="56" y="447">範圍：依現有實作說明功能與關聯；不冒認本次已執行業務驗收。</tspan></text>
+    </g>
+    <g id="nodes-heading">
+      <text x="56" y="500" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="500">節點</tspan></text>
+    </g>
+    <g id="node-initial">
+      <circle cx="705" cy="599.0" r="18" fill="#183048" stroke="#183048" stroke-width="2" />
+      <text x="770" y="605.0" font-size="16" fill="#183048"><tspan x="770" y="605.0">initial «initial» 尚未建立 Session</tspan></text>
+    </g>
+    <g id="node-valid">
+      <rect x="430" y="729" width="550" height="265" rx="12" fill="#FFFFFF" stroke="#2863D8" stroke-width="2" />
+      <text x="450" y="754" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="450" y="754">valid</tspan></text>
+      <text x="450" y="784" font-size="20" fill="#183048" font-weight="bold"><tspan x="450" y="784">«state» 有效且未撤銷 Session</tspan></text>
+      <text x="450" y="820" font-size="16" fill="#52677C"><tspan x="450" y="820">進入：Login 或另一個 Session 的 Refresh 產生新 </tspan><tspan x="450" y="845">Session。</tspan></text>
+      <text x="450" y="875" font-size="16" fill="#52677C"><tspan x="450" y="875">有效條件：User Active、Verified、安全版本相符；</tspan><tspan x="450" y="900">未撤銷且未過期。</tspan></text>
+      <text x="450" y="930" font-size="16" fill="#52677C"><tspan x="450" y="930">不變條件：一個 Session Id 的生命週期；輪替新 ID </tspan><tspan x="450" y="955">是另一個實例。</tspan></text>
+    </g>
+    <g id="node-revoked">
+      <rect x="430" y="1059" width="550" height="265" rx="12" fill="#FFFFFF" stroke="#2863D8" stroke-width="2" />
+      <text x="450" y="1084" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="450" y="1084">revoked</tspan></text>
+      <text x="450" y="1114" font-size="20" fill="#183048" font-weight="bold"><tspan x="450" y="1114">«state» 已撤銷 Session</tspan></text>
+      <text x="450" y="1150" font-size="16" fill="#52677C"><tspan x="450" y="1150">判定：RevokedAt 非 null；涵蓋輪替、登出、密碼與</tspan><tspan x="450" y="1175">管理異動。</tspan></text>
+      <text x="450" y="1205" font-size="16" fill="#52677C"><tspan x="450" y="1205">不變條件：原 Session 不會恢復；舊 Refresh 重用可</tspan><tspan x="450" y="1230">影響同 family 其他 Session。</tspan></text>
+      <text x="450" y="1260" font-size="16" fill="#52677C"><tspan x="450" y="1260">限制：原因是流程語意，資料表沒有獨立狀態或撤銷原</tspan><tspan x="450" y="1285">因 enum。</tspan></text>
+    </g>
+    <g id="node-expired">
+      <rect x="430" y="1389" width="550" height="240" rx="12" fill="#FFFFFF" stroke="#2863D8" stroke-width="2" />
+      <text x="450" y="1414" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="450" y="1414">expired</tspan></text>
+      <text x="450" y="1444" font-size="20" fill="#183048" font-weight="bold"><tspan x="450" y="1444">«state» 未撤銷但已過期</tspan></text>
+      <text x="450" y="1480" font-size="16" fill="#52677C"><tspan x="450" y="1480">判定：RevokedAt 為 null 且 ExpiresAt &lt;= Now。</tspan></text>
+      <text x="450" y="1510" font-size="16" fill="#52677C"><tspan x="450" y="1510">不變條件：Refresh 不延長該 Session 原期限；過期 </tspan><tspan x="450" y="1535">Session 不再授權。</tspan></text>
+      <text x="450" y="1565" font-size="16" fill="#52677C"><tspan x="450" y="1565">限制：JWT 本身期限另行驗證；不以 JWT 過期改寫資</tspan><tspan x="450" y="1590">料列。</tspan></text>
+    </g>
+    <g id="uml-link-0">
+      <line x1="705" y1="617.0" x2="705" y2="729" stroke="#087E7C" stroke-width="2" />
+      <polyline points="698,717 705,729 712,717" fill="none" stroke="#087E7C" stroke-width="2" />
+      <text x="725" y="678.0" font-size="14" fill="#2863D8"><tspan x="725" y="678.0">01</tspan></text>
+    </g>
+    <g id="uml-link-1">
+      <line x1="705" y1="994" x2="705" y2="1059" stroke="#087E7C" stroke-width="2" />
+      <polyline points="698,1047 705,1059 712,1047" fill="none" stroke="#087E7C" stroke-width="2" />
+      <text x="725" y="1031.5" font-size="14" fill="#2863D8"><tspan x="725" y="1031.5">02</tspan></text>
+    </g>
+    <g id="uml-link-2">
+      <polyline points="430,861.5 76,861.5 76,1509.0 418,1509.0" fill="none" stroke="#087E7C" stroke-width="2" />
+      <line x1="418" y1="1509.0" x2="430" y2="1509.0" stroke="#087E7C" stroke-width="2" />
+      <polyline points="418,1502.0 430,1509.0 418,1516.0" fill="none" stroke="#087E7C" stroke-width="2" />
+      <text x="86" y="1028.375" font-size="14" fill="#2863D8"><tspan x="86" y="1028.375">03</tspan></text>
+    </g>
+    <g id="uml-link-3">
+      <polyline points="430,1211.5 84,1211.5 84,1171.5 418,1171.5" fill="none" stroke="#087E7C" stroke-width="2" />
+      <line x1="418" y1="1171.5" x2="430" y2="1171.5" stroke="#087E7C" stroke-width="2" />
+      <polyline points="418,1164.5 430,1171.5 418,1178.5" fill="none" stroke="#087E7C" stroke-width="2" />
+      <text x="32" y="1196.5" font-size="14" fill="#2863D8"><tspan x="32" y="1196.5">04</tspan></text>
+    </g>
+    <g id="uml-link-4">
+      <polyline points="430,1529.0 92,1529.0 92,1489.0 418,1489.0" fill="none" stroke="#087E7C" stroke-width="2" />
+      <line x1="418" y1="1489.0" x2="430" y2="1489.0" stroke="#087E7C" stroke-width="2" />
+      <polyline points="418,1482.0 430,1489.0 418,1496.0" fill="none" stroke="#087E7C" stroke-width="2" />
+      <text x="32" y="1514.0" font-size="14" fill="#2863D8"><tspan x="32" y="1514.0">05</tspan></text>
+    </g>
+    <g id="uml-edges">
+      <text x="56" y="1719" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="1719">關係／條件目錄</tspan></text>
+    </g>
+    <g id="edge-1">
+      <text x="70" y="1757" font-size="17" fill="#183048"><tspan x="70" y="1757">01 initial → valid | transition | Login [有效且已驗證] 或另一個 Session 的合法 Refresh / CreateSession。</tspan></text>
+    </g>
+    <g id="edge-2">
+      <text x="70" y="1800" font-size="17" fill="#183048"><tspan x="70" y="1800">02 valid → revoked | transition | Refresh 成功／Logout／Reset／管理異動 [提交成功] / 設定 RevokedAt；Refresh 另建新 Session</tspan><tspan x="70" y="1826">，不是恢復舊實例。</tspan></text>
+    </g>
+    <g id="edge-3">
+      <text x="70" y="1869" font-size="17" fill="#183048"><tspan x="70" y="1869">03 valid → expired | transition | 時間推進 [RevokedAt 為 null 且 ExpiresAt &lt;= Now] / 後續查驗拒絕。</tspan></text>
+    </g>
+    <g id="edge-4">
+      <text x="70" y="1912" font-size="17" fill="#183048"><tspan x="70" y="1912">04 revoked → revoked | transition | 舊 Refresh 重用 [原期限未到且 CSRF 合法] / 撤銷同 family 的其他有效 Session；本列仍撤銷</tspan><tspan x="70" y="1938">。</tspan></text>
+    </g>
+    <g id="edge-5">
+      <text x="70" y="1981" font-size="17" fill="#183048"><tspan x="70" y="1981">05 expired → expired | transition | Refresh [已過期] / 401；不另觸發 family 重用分支。</tspan></text>
+    </g>
+    <g id="section-45">
+      <text x="56" y="2078" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="2078">準則</tspan></text>
+    </g>
+    <g id="line-47">
+      <text x="70" y="2120" font-size="18" fill="#52677C"><tspan x="70" y="2120">圖表示單一 Session Id 的生命週期；Refresh 的新 ID 是另一個實例，不畫出原 Session 復活。</tspan></text>
+    </g>
+    <g id="line-48">
+      <text x="70" y="2162" font-size="18" fill="#52677C"><tspan x="70" y="2162">Auth 無法查驗時回 503 是請求結果，不是持久化 Session 狀態；恢復後仍須完整權威查驗。</tspan></text>
+    </g>
+    <g id="line-49">
+      <text x="70" y="2204" font-size="18" fill="#52677C"><tspan x="70" y="2204">revoked 與 expired 分類依上面 guard；狀態由欄位推導，不宣稱程式存在 enum。</tspan></text>
+    </g>
+    <g id="line-50">
+      <text x="70" y="2246" font-size="18" fill="#52677C"><tspan x="70" y="2246">JWT 五分鐘期限與 Session 七天上限分開驗證；Redis 只快取撤銷結果，MQ 不決定授權。</tspan></text>
+    </g>
+    <g id="section-52">
+      <text x="56" y="2311" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="2311">來源</tspan></text>
+    </g>
+    <g id="line-54">
+      <text x="70" y="2353" font-size="15" fill="#52677C"><tspan x="70" y="2353">src/Services/Auth/Auth.Domain/Identity.cs</tspan></text>
+    </g>
+    <g id="line-55">
+      <text x="70" y="2392" font-size="15" fill="#52677C"><tspan x="70" y="2392">src/Services/Auth/Auth.Infrastructure/AuthService.cs</tspan></text>
+    </g>
+    <g id="line-56">
+      <text x="70" y="2431" font-size="15" fill="#52677C"><tspan x="70" y="2431">src/Shared/BuildingBlocks/Platform.cs</tspan></text>
+    </g>
+    <line x1="56" y1="2500" x2="1384" y2="2500" stroke="#CEDAE8" stroke-width="2" />
+    <text x="56" y="2526" font-size="12" fill="#52677C"><tspan x="56" y="2526">RELAY / STATIC SVG / MARKDOWN IS THE CONTENT AUTHORITY</tspan></text>
+  </g>
+</svg>

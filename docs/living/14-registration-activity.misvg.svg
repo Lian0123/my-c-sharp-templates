@@ -1,0 +1,370 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:a="https://github.com/Lian0123/my-c-sharp-templates/ns/living-docs/1" xmlns:m="https://example.org/ns/markdown-in-svg/0.1" version="1.1" width="1440" height="3423" viewBox="0 0 1440 3423">
+  <title>UML 註冊、提交與同步活動</title>
+  <desc>繁體中文 Agent living document。Markdown 是內容權威；UML 關係、資料來源與更新規則以原生靜態 SVG 呈現。</desc>
+  <metadata>
+    <m:document version="0.1" profile="static" doc-id="urn:uuid:31f47d7d-323e-4cd4-8b93-31ba588adef9" revision="5">
+      <m:source media-type="text/markdown" dialect="commonmark-0.31.2" xml:space="preserve"># UML 註冊、提交與同步活動
+
+視圖：activity
+文件編號：DOC-14
+文件狀態：current
+核准狀態：not-recorded
+維護角色：技術／測試維護角色（待具名確認）
+具名負責人：unassigned
+適用基準：referenced-source-sha256；驗證以紀錄快照為準
+最後審查：2026-11-08
+關聯需求：REQ-AUTH-001,REQ-SYNC-001
+關聯決策：ADR-DATA-001,ADR-SYNC-001,ADR-AUTH-001,ADR-DOC-001
+範圍：依現有實作說明功能與關聯；不冒認本次已執行業務驗收。
+
+## 節點
+
+### start | «initial» 輸入請求
+
+
+### validate | «action» 驗證輸入／Email 唯一性
+
+- 執行者：Auth；密碼／名稱／正規化規則
+
+### accepted | «decision» 是否有效？
+
+
+### commit | «action» 本庫交易提交
+
+- 資料：User＋Challenge＋加密 MailJob＋Outbox
+- 成功語意：完成 Auth 儲存，不表示投影或寄信完成
+
+### deliver | «action» 背景寄信／發布事件
+
+- 分工：MailWorker→SMTP；OutboxPublisher→RabbitMQ
+- 失敗：待送資料保留；重試不回滾已提交註冊
+
+### project | «action» Inbox／版本更新投影
+
+- 分工：Account／Message 各自本庫
+- 重複：Inbox 去重；舊版本不覆寫新版本
+
+### ready | «action» 會員可讀取資料
+
+- UI：未就緒時顯示等待；依 Retry-After 重試
+- 限制：登入仍需要有效驗證連結與 Session
+
+### reject | «action» 統一錯誤與拒絕提交
+
+- 結果：無效／重複請求不產生第二個帳號
+
+### end | «final» 該次處理結束
+
+
+## 關係
+
+- transition | start | validate | 收到註冊請求。
+
+- transition | validate | accepted | 完成輸入驗證及資料庫唯一性判定。
+
+- transition | accepted | commit | [有效且唯一] 保存交易。
+
+- transition | accepted | reject | [無效／重複] 統一 Problem Details。
+
+- transition | commit | deliver | [commit 成功] 由獨立工作處理副作用。
+
+- transition | deliver | deliver | [SMTP／MQ 失敗] 保留待送並重試；不重新註冊。
+
+- transition | deliver | project | [事件成功投遞] 消費並套用投影。
+
+- transition | project | ready | [投影已建立] 會員查詢可用。
+
+- transition | ready | end | 本次初始化可觀察結果。
+
+- transition | reject | end | 錯誤處理完成。
+
+## 準則
+
+- 圓點為初始、雙圈為結束、圓角為活動、菱形為判斷；左側導線與關係目錄一起閱讀。
+- 分支條件寫在關係目錄；異步副作用是兩個獨立工作，並非同一個分散式交易。
+- 驗證實際路由、Transaction 與 Worker；圖是受控 UML 視圖，不宣稱完整工具互通認證。
+
+## 來源
+
+- src/Services/Account/Account.Infrastructure/AccountService.cs
+- src/Services/Auth/Auth.Infrastructure/AuthService.cs
+- src/Services/Auth/Auth.Infrastructure/MailWorker.cs
+- src/Shared/BuildingBlocks/RabbitWorkers.cs
+</m:source>
+      <m:presentation root-ref="view" source-digest="sha256:148922d8d8d5a6380a5baecf0388a9b992d349956dc332d1c31834dd5c17eebf" renderer="relay-living-docs" renderer-version="1.2.0" />
+      <m:bindings>
+        <m:bind target="document-title" start-line="1" end-line="1" />
+        <m:bind target="intro-3" start-line="3" end-line="3" />
+        <m:bind target="intro-4" start-line="4" end-line="4" />
+        <m:bind target="intro-5" start-line="5" end-line="5" />
+        <m:bind target="intro-6" start-line="6" end-line="6" />
+        <m:bind target="intro-7" start-line="7" end-line="7" />
+        <m:bind target="intro-8" start-line="8" end-line="8" />
+        <m:bind target="intro-9" start-line="9" end-line="9" />
+        <m:bind target="intro-10" start-line="10" end-line="10" />
+        <m:bind target="intro-11" start-line="11" end-line="11" />
+        <m:bind target="intro-12" start-line="12" end-line="12" />
+        <m:bind target="intro-13" start-line="13" end-line="13" />
+        <m:bind target="nodes-heading" start-line="15" end-line="15" />
+        <m:bind target="node-start" start-line="17" end-line="17" />
+        <m:bind target="node-validate" start-line="20" end-line="22" />
+        <m:bind target="node-accepted" start-line="24" end-line="24" />
+        <m:bind target="node-commit" start-line="27" end-line="30" />
+        <m:bind target="node-deliver" start-line="32" end-line="35" />
+        <m:bind target="node-project" start-line="37" end-line="40" />
+        <m:bind target="node-ready" start-line="42" end-line="45" />
+        <m:bind target="node-reject" start-line="47" end-line="49" />
+        <m:bind target="node-end" start-line="51" end-line="51" />
+        <m:bind target="uml-link-0" start-line="56" end-line="56" />
+        <m:bind target="uml-link-1" start-line="58" end-line="58" />
+        <m:bind target="uml-link-2" start-line="60" end-line="60" />
+        <m:bind target="uml-link-3" start-line="62" end-line="62" />
+        <m:bind target="uml-link-4" start-line="64" end-line="64" />
+        <m:bind target="uml-link-5" start-line="66" end-line="66" />
+        <m:bind target="uml-link-6" start-line="68" end-line="68" />
+        <m:bind target="uml-link-7" start-line="70" end-line="70" />
+        <m:bind target="uml-link-8" start-line="72" end-line="72" />
+        <m:bind target="uml-link-9" start-line="74" end-line="74" />
+        <m:bind target="uml-edges" start-line="54" end-line="54" />
+        <m:bind target="edge-1" start-line="56" end-line="56" />
+        <m:bind target="edge-2" start-line="58" end-line="58" />
+        <m:bind target="edge-3" start-line="60" end-line="60" />
+        <m:bind target="edge-4" start-line="62" end-line="62" />
+        <m:bind target="edge-5" start-line="64" end-line="64" />
+        <m:bind target="edge-6" start-line="66" end-line="66" />
+        <m:bind target="edge-7" start-line="68" end-line="68" />
+        <m:bind target="edge-8" start-line="70" end-line="70" />
+        <m:bind target="edge-9" start-line="72" end-line="72" />
+        <m:bind target="edge-10" start-line="74" end-line="74" />
+        <m:bind target="section-76" start-line="76" end-line="76" />
+        <m:bind target="line-78" start-line="78" end-line="78" />
+        <m:bind target="line-79" start-line="79" end-line="79" />
+        <m:bind target="line-80" start-line="80" end-line="80" />
+        <m:bind target="section-82" start-line="82" end-line="82" />
+        <m:bind target="line-84" start-line="84" end-line="84" />
+        <m:bind target="line-85" start-line="85" end-line="85" />
+        <m:bind target="line-86" start-line="86" end-line="86" />
+        <m:bind target="line-87" start-line="87" end-line="87" />
+      </m:bindings>
+      <m:extensions>
+        <a:provenance version="1" spec-commit="c7c0d96aa398d650c6bea5588e5d060bc6d60da5">
+          <a:file path="src/Services/Account/Account.Infrastructure/AccountService.cs" sha256="70f0901f1497d1d97d749640daaec7e4a0635e97a154030b68be203dc12ec28a" />
+          <a:file path="src/Services/Auth/Auth.Infrastructure/AuthService.cs" sha256="f16a1fa42782d5166363d6d8e5126e3d8a7c24fc8ffcb91919798a2b206bbb3d" />
+          <a:file path="src/Services/Auth/Auth.Infrastructure/MailWorker.cs" sha256="f334afc1c7982da02514651d4d513d64692677de6dab416988caa3ce4d2285c2" />
+          <a:file path="src/Shared/BuildingBlocks/RabbitWorkers.cs" sha256="7f613b9afeb2a50d6ca8faa1d71e79f6b69174b20b738531f12dcb3129de91d2" />
+        </a:provenance>
+      </m:extensions>
+    </m:document>
+  </metadata>
+  <g id="view" font-family="PingFang TC, Noto Sans CJK TC, Microsoft JhengHei, sans-serif" fill="#183048">
+    <rect x="0" y="0" width="1440" height="3423" fill="#FFFFFF" />
+    <rect x="0" y="0" width="1440" height="180" fill="#183048" />
+    <text x="56" y="45" font-size="16" fill="#9EBFE8"><tspan x="56" y="45">RELAY / AGENT LIVING DOCUMENT</tspan></text>
+    <text x="56" y="105" font-size="34" fill="#FFFFFF" font-weight="bold" id="document-title"><tspan x="56" y="105">UML 註冊、提交與同步活動</tspan></text>
+    <g id="intro-3">
+      <text x="56" y="215" font-size="19" fill="#52677C"><tspan x="56" y="215">視圖：activity</tspan></text>
+    </g>
+    <g id="intro-4">
+      <text x="56" y="250" font-size="16" fill="#52677C"><tspan x="56" y="250">文件編號：DOC-14</tspan></text>
+    </g>
+    <g id="intro-5">
+      <text x="734" y="250" font-size="16" fill="#087E7C"><tspan x="734" y="250">文件狀態：current</tspan></text>
+    </g>
+    <g id="intro-6">
+      <text x="56" y="287" font-size="16" fill="#52677C"><tspan x="56" y="287">核准狀態：not-recorded</tspan></text>
+    </g>
+    <g id="intro-7">
+      <text x="734" y="287" font-size="16" fill="#52677C"><tspan x="734" y="287">維護角色：技術／測試維護角色（待具名確認）</tspan></text>
+    </g>
+    <g id="intro-8">
+      <text x="56" y="324" font-size="16" fill="#52677C"><tspan x="56" y="324">具名負責人：unassigned</tspan></text>
+    </g>
+    <g id="intro-9">
+      <text x="734" y="324" font-size="16" fill="#52677C"><tspan x="734" y="324">適用基準：referenced-source-sha256；驗證以紀錄快照為準</tspan></text>
+    </g>
+    <g id="intro-10">
+      <text x="56" y="361" font-size="16" fill="#52677C"><tspan x="56" y="361">最後審查：2026-11-08</tspan></text>
+    </g>
+    <g id="intro-11">
+      <text x="734" y="361" font-size="16" fill="#52677C"><tspan x="734" y="361">關聯需求：REQ-AUTH-001,REQ-SYNC-001</tspan></text>
+    </g>
+    <g id="intro-12">
+      <text x="56" y="398" font-size="16" fill="#52677C"><tspan x="56" y="398">關聯決策：ADR-DATA-001,ADR-SYNC-001,ADR-AUTH-001,ADR-DOC-001</tspan></text>
+    </g>
+    <g id="intro-13">
+      <text x="56" y="447" font-size="19" fill="#52677C"><tspan x="56" y="447">範圍：依現有實作說明功能與關聯；不冒認本次已執行業務驗收。</tspan></text>
+    </g>
+    <g id="nodes-heading">
+      <text x="56" y="500" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="500">節點</tspan></text>
+    </g>
+    <g id="node-start">
+      <circle cx="705" cy="599.0" r="18" fill="#183048" stroke="#183048" stroke-width="2" />
+      <text x="770" y="605.0" font-size="16" fill="#183048"><tspan x="770" y="605.0">start «initial» 輸入請求</tspan></text>
+    </g>
+    <g id="node-validate">
+      <rect x="430" y="729" width="550" height="130" rx="28" fill="#FFFFFF" stroke="#2863D8" stroke-width="2" />
+      <text x="450" y="754" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="450" y="754">validate</tspan></text>
+      <text x="450" y="784" font-size="20" fill="#183048" font-weight="bold"><tspan x="450" y="784">«action» 驗證輸入／Email 唯一性</tspan></text>
+      <text x="450" y="820" font-size="16" fill="#52677C"><tspan x="450" y="820">執行者：Auth；密碼／名稱／正規化規則</tspan></text>
+    </g>
+    <g id="node-accepted">
+      <polygon points="705,924 955,989.0 705,1054 455,989.0" fill="#F2F6FC" stroke="#2863D8" stroke-width="2" />
+      <text x="550" y="994.0" font-size="16" fill="#183048" font-weight="bold"><tspan x="550" y="994.0">accepted «decision» 是否有效？</tspan></text>
+    </g>
+    <g id="node-commit">
+      <rect x="430" y="1119" width="550" height="160" rx="28" fill="#FFFFFF" stroke="#2863D8" stroke-width="2" />
+      <text x="450" y="1144" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="450" y="1144">commit</tspan></text>
+      <text x="450" y="1174" font-size="20" fill="#183048" font-weight="bold"><tspan x="450" y="1174">«action» 本庫交易提交</tspan></text>
+      <text x="450" y="1210" font-size="16" fill="#52677C"><tspan x="450" y="1210">資料：User＋Challenge＋加密 MailJob＋Outbox</tspan></text>
+      <text x="450" y="1240" font-size="16" fill="#52677C"><tspan x="450" y="1240">成功語意：完成 Auth 儲存，不表示投影或寄信完成</tspan></text>
+    </g>
+    <g id="node-deliver">
+      <rect x="430" y="1344" width="550" height="160" rx="28" fill="#FFFFFF" stroke="#2863D8" stroke-width="2" />
+      <text x="450" y="1369" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="450" y="1369">deliver</tspan></text>
+      <text x="450" y="1399" font-size="20" fill="#183048" font-weight="bold"><tspan x="450" y="1399">«action» 背景寄信／發布事件</tspan></text>
+      <text x="450" y="1435" font-size="16" fill="#52677C"><tspan x="450" y="1435">分工：MailWorker→SMTP；OutboxPublisher→RabbitMQ</tspan></text>
+      <text x="450" y="1465" font-size="16" fill="#52677C"><tspan x="450" y="1465">失敗：待送資料保留；重試不回滾已提交註冊</tspan></text>
+    </g>
+    <g id="node-project">
+      <rect x="430" y="1569" width="550" height="160" rx="28" fill="#FFFFFF" stroke="#2863D8" stroke-width="2" />
+      <text x="450" y="1594" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="450" y="1594">project</tspan></text>
+      <text x="450" y="1624" font-size="20" fill="#183048" font-weight="bold"><tspan x="450" y="1624">«action» Inbox／版本更新投影</tspan></text>
+      <text x="450" y="1660" font-size="16" fill="#52677C"><tspan x="450" y="1660">分工：Account／Message 各自本庫</tspan></text>
+      <text x="450" y="1690" font-size="16" fill="#52677C"><tspan x="450" y="1690">重複：Inbox 去重；舊版本不覆寫新版本</tspan></text>
+    </g>
+    <g id="node-ready">
+      <rect x="430" y="1794" width="550" height="160" rx="28" fill="#FFFFFF" stroke="#2863D8" stroke-width="2" />
+      <text x="450" y="1819" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="450" y="1819">ready</tspan></text>
+      <text x="450" y="1849" font-size="20" fill="#183048" font-weight="bold"><tspan x="450" y="1849">«action» 會員可讀取資料</tspan></text>
+      <text x="450" y="1885" font-size="16" fill="#52677C"><tspan x="450" y="1885">UI：未就緒時顯示等待；依 Retry-After 重試</tspan></text>
+      <text x="450" y="1915" font-size="16" fill="#52677C"><tspan x="450" y="1915">限制：登入仍需要有效驗證連結與 Session</tspan></text>
+    </g>
+    <g id="node-reject">
+      <rect x="430" y="2019" width="550" height="130" rx="28" fill="#FFFFFF" stroke="#2863D8" stroke-width="2" />
+      <text x="450" y="2044" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="450" y="2044">reject</tspan></text>
+      <text x="450" y="2074" font-size="20" fill="#183048" font-weight="bold"><tspan x="450" y="2074">«action» 統一錯誤與拒絕提交</tspan></text>
+      <text x="450" y="2110" font-size="16" fill="#52677C"><tspan x="450" y="2110">結果：無效／重複請求不產生第二個帳號</tspan></text>
+    </g>
+    <g id="node-end">
+      <circle cx="705" cy="2279.0" r="18" fill="#183048" stroke="#183048" stroke-width="2" />
+      <circle cx="705" cy="2279.0" r="25" fill="none" stroke="#183048" stroke-width="2" />
+      <text x="770" y="2285.0" font-size="16" fill="#183048"><tspan x="770" y="2285.0">end «final» 該次處理結束</tspan></text>
+    </g>
+    <g id="uml-link-0">
+      <line x1="705" y1="617.0" x2="705" y2="729" stroke="#087E7C" stroke-width="2" />
+      <polyline points="698,717 705,729 712,717" fill="none" stroke="#087E7C" stroke-width="2" />
+      <text x="725" y="678.0" font-size="14" fill="#2863D8"><tspan x="725" y="678.0">01</tspan></text>
+    </g>
+    <g id="uml-link-1">
+      <line x1="705" y1="859" x2="705" y2="924" stroke="#087E7C" stroke-width="2" />
+      <polyline points="698,912 705,924 712,912" fill="none" stroke="#087E7C" stroke-width="2" />
+      <text x="725" y="896.5" font-size="14" fill="#2863D8"><tspan x="725" y="896.5">02</tspan></text>
+    </g>
+    <g id="uml-link-2">
+      <line x1="705" y1="1054" x2="705" y2="1119" stroke="#087E7C" stroke-width="2" />
+      <polyline points="698,1107 705,1119 712,1107" fill="none" stroke="#087E7C" stroke-width="2" />
+      <text x="725" y="1091.5" font-size="14" fill="#2863D8"><tspan x="725" y="1091.5">03</tspan></text>
+    </g>
+    <g id="uml-link-3">
+      <polyline points="455,989.0 84,989.0 84,2084.0 418,2084.0" fill="none" stroke="#087E7C" stroke-width="2" />
+      <line x1="418" y1="2084.0" x2="430" y2="2084.0" stroke="#087E7C" stroke-width="2" />
+      <polyline points="418,2077.0 430,2084.0 418,2091.0" fill="none" stroke="#087E7C" stroke-width="2" />
+      <text x="94" y="1267.75" font-size="14" fill="#2863D8"><tspan x="94" y="1267.75">04</tspan></text>
+    </g>
+    <g id="uml-link-4">
+      <line x1="705" y1="1279" x2="705" y2="1344" stroke="#087E7C" stroke-width="2" />
+      <polyline points="698,1332 705,1344 712,1332" fill="none" stroke="#087E7C" stroke-width="2" />
+      <text x="725" y="1316.5" font-size="14" fill="#2863D8"><tspan x="725" y="1316.5">05</tspan></text>
+    </g>
+    <g id="uml-link-5">
+      <polyline points="430,1444.0 100,1444.0 100,1404.0 418,1404.0" fill="none" stroke="#087E7C" stroke-width="2" />
+      <line x1="418" y1="1404.0" x2="430" y2="1404.0" stroke="#087E7C" stroke-width="2" />
+      <polyline points="418,1397.0 430,1404.0 418,1411.0" fill="none" stroke="#087E7C" stroke-width="2" />
+      <text x="32" y="1429.0" font-size="14" fill="#2863D8"><tspan x="32" y="1429.0">06</tspan></text>
+    </g>
+    <g id="uml-link-6">
+      <line x1="705" y1="1504" x2="705" y2="1569" stroke="#087E7C" stroke-width="2" />
+      <polyline points="698,1557 705,1569 712,1557" fill="none" stroke="#087E7C" stroke-width="2" />
+      <text x="725" y="1541.5" font-size="14" fill="#2863D8"><tspan x="725" y="1541.5">07</tspan></text>
+    </g>
+    <g id="uml-link-7">
+      <line x1="705" y1="1729" x2="705" y2="1794" stroke="#087E7C" stroke-width="2" />
+      <polyline points="698,1782 705,1794 712,1782" fill="none" stroke="#087E7C" stroke-width="2" />
+      <text x="725" y="1766.5" font-size="14" fill="#2863D8"><tspan x="725" y="1766.5">08</tspan></text>
+    </g>
+    <g id="uml-link-8">
+      <polyline points="430,1874.0 124,1874.0 124,2279.0 668,2279.0" fill="none" stroke="#087E7C" stroke-width="2" />
+      <line x1="668" y1="2279.0" x2="680" y2="2279.0" stroke="#087E7C" stroke-width="2" />
+      <polyline points="668,2272.0 680,2279.0 668,2286.0" fill="none" stroke="#087E7C" stroke-width="2" />
+      <text x="134" y="1980.25" font-size="14" fill="#2863D8"><tspan x="134" y="1980.25">09</tspan></text>
+    </g>
+    <g id="uml-link-9">
+      <line x1="705" y1="2149" x2="705" y2="2254.0" stroke="#087E7C" stroke-width="2" />
+      <polyline points="698,2242.0 705,2254.0 712,2242.0" fill="none" stroke="#087E7C" stroke-width="2" />
+      <text x="725" y="2206.5" font-size="14" fill="#2863D8"><tspan x="725" y="2206.5">10</tspan></text>
+    </g>
+    <g id="uml-edges">
+      <text x="56" y="2434" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="2434">關係／條件目錄</tspan></text>
+    </g>
+    <g id="edge-1">
+      <text x="70" y="2472" font-size="17" fill="#183048"><tspan x="70" y="2472">01 start → validate | transition | 收到註冊請求。</tspan></text>
+    </g>
+    <g id="edge-2">
+      <text x="70" y="2515" font-size="17" fill="#183048"><tspan x="70" y="2515">02 validate → accepted | transition | 完成輸入驗證及資料庫唯一性判定。</tspan></text>
+    </g>
+    <g id="edge-3">
+      <text x="70" y="2558" font-size="17" fill="#183048"><tspan x="70" y="2558">03 accepted → commit | transition | [有效且唯一] 保存交易。</tspan></text>
+    </g>
+    <g id="edge-4">
+      <text x="70" y="2601" font-size="17" fill="#183048"><tspan x="70" y="2601">04 accepted → reject | transition | [無效／重複] 統一 Problem Details。</tspan></text>
+    </g>
+    <g id="edge-5">
+      <text x="70" y="2644" font-size="17" fill="#183048"><tspan x="70" y="2644">05 commit → deliver | transition | [commit 成功] 由獨立工作處理副作用。</tspan></text>
+    </g>
+    <g id="edge-6">
+      <text x="70" y="2687" font-size="17" fill="#183048"><tspan x="70" y="2687">06 deliver → deliver | transition | [SMTP／MQ 失敗] 保留待送並重試；不重新註冊。</tspan></text>
+    </g>
+    <g id="edge-7">
+      <text x="70" y="2730" font-size="17" fill="#183048"><tspan x="70" y="2730">07 deliver → project | transition | [事件成功投遞] 消費並套用投影。</tspan></text>
+    </g>
+    <g id="edge-8">
+      <text x="70" y="2773" font-size="17" fill="#183048"><tspan x="70" y="2773">08 project → ready | transition | [投影已建立] 會員查詢可用。</tspan></text>
+    </g>
+    <g id="edge-9">
+      <text x="70" y="2816" font-size="17" fill="#183048"><tspan x="70" y="2816">09 ready → end | transition | 本次初始化可觀察結果。</tspan></text>
+    </g>
+    <g id="edge-10">
+      <text x="70" y="2859" font-size="17" fill="#183048"><tspan x="70" y="2859">10 reject → end | transition | 錯誤處理完成。</tspan></text>
+    </g>
+    <g id="section-76">
+      <text x="56" y="2956" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="2956">準則</tspan></text>
+    </g>
+    <g id="line-78">
+      <text x="70" y="2998" font-size="18" fill="#52677C"><tspan x="70" y="2998">圓點為初始、雙圈為結束、圓角為活動、菱形為判斷；左側導線與關係目錄一起閱讀。</tspan></text>
+    </g>
+    <g id="line-79">
+      <text x="70" y="3040" font-size="18" fill="#52677C"><tspan x="70" y="3040">分支條件寫在關係目錄；異步副作用是兩個獨立工作，並非同一個分散式交易。</tspan></text>
+    </g>
+    <g id="line-80">
+      <text x="70" y="3082" font-size="18" fill="#52677C"><tspan x="70" y="3082">驗證實際路由、Transaction 與 Worker；圖是受控 UML 視圖，不宣稱完整工具互通認證。</tspan></text>
+    </g>
+    <g id="section-82">
+      <text x="56" y="3147" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="3147">來源</tspan></text>
+    </g>
+    <g id="line-84">
+      <text x="70" y="3189" font-size="15" fill="#52677C"><tspan x="70" y="3189">src/Services/Account/Account.Infrastructure/AccountService.cs</tspan></text>
+    </g>
+    <g id="line-85">
+      <text x="70" y="3228" font-size="15" fill="#52677C"><tspan x="70" y="3228">src/Services/Auth/Auth.Infrastructure/AuthService.cs</tspan></text>
+    </g>
+    <g id="line-86">
+      <text x="70" y="3267" font-size="15" fill="#52677C"><tspan x="70" y="3267">src/Services/Auth/Auth.Infrastructure/MailWorker.cs</tspan></text>
+    </g>
+    <g id="line-87">
+      <text x="70" y="3306" font-size="15" fill="#52677C"><tspan x="70" y="3306">src/Shared/BuildingBlocks/RabbitWorkers.cs</tspan></text>
+    </g>
+    <line x1="56" y1="3375" x2="1384" y2="3375" stroke="#CEDAE8" stroke-width="2" />
+    <text x="56" y="3401" font-size="12" fill="#52677C"><tspan x="56" y="3401">RELAY / STATIC SVG / MARKDOWN IS THE CONTENT AUTHORITY</tspan></text>
+  </g>
+</svg>
