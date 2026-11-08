@@ -1,0 +1,333 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:a="https://github.com/Lian0123/my-c-sharp-templates/ns/living-docs/1" xmlns:m="https://example.org/ns/markdown-in-svg/0.1" version="1.1" width="1440" height="2572" viewBox="0 0 1440 2572">
+  <title>附件狀態、私有儲存與清理流程</title>
+  <desc>繁體中文 Agent living document。Markdown 是內容權威；UML 關係、資料來源與更新規則以原生靜態 SVG 呈現。</desc>
+  <metadata>
+    <m:document version="0.1" profile="static" doc-id="urn:uuid:c9b961e4-a538-467e-9109-a2dfa853a66f" revision="5">
+      <m:source media-type="text/markdown" dialect="commonmark-0.31.2" xml:space="preserve"># 附件狀態、私有儲存與清理流程
+
+視圖：cards
+文件編號：DOC-08
+文件狀態：current
+核准狀態：not-recorded
+維護角色：附件／儲存維護角色（待具名確認）
+具名負責人：unassigned
+適用基準：referenced-source-sha256；歷史測試僅適用其紀錄版本
+最後審查：2026-11-08
+關聯需求：REQ-FILE-001,REQ-DOC-001
+關聯決策：ADR-DATA-001,ADR-DOC-001
+範圍：以 Attachment.Ready／MessageId 推導的狀態；程式沒有獨立 AttachmentState enum。
+讀圖：transition 為有條件的生命週期轉移；association 為資料或存取關聯。
+
+## 節點
+
+### pending | «state» Pending
+
+- 資料庫已有 Attachment 列；Ready = false
+- MessageId = null；已先保存 ObjectKey
+- 此時 S3 寫入可能尚未成功，不可綁定訊息
+
+### ready | «state» Ready／Unbound
+
+- Garage Put 成功後保存 Ready = true
+- MessageId = null；檔案尚未綁定
+- 未滿 24 小時且權限符合時才可綁定
+
+### bound | «state» Bound
+
+- Ready = true；MessageId != null
+- 在 Send 交易內與 ChatMessage 綁定
+- 每則最多五個；同一附件不可重複或再次綁定
+
+### removed | «state» Expired／Removed
+
+- 未綁定且 CreatedAt 早於 24 小時
+- Cleanup 每 10 分鐘取最多 100 筆並列鎖
+- 先刪 Garage 物件，再刪 DB 列；失敗稍後重試
+
+### garage | «storage» Garage S3
+
+- 私有 attachments bucket
+- ObjectKey = uploads/{attachmentId:N}
+- 只由 Message 持有 S3 存取設定；不公開物件網址
+
+### download | «operation» Authorized Download
+
+- GET /api/v1/chat/attachments/{id}
+- 每次驗證 Session 與房間／管理員權限
+- 綁定訊息已刪除時，一般會員不可下載
+
+## 關係
+
+- transition | pending | ready | S3 Put 成功並保存 Ready；若進程中斷則保留 Pending 供清理
+- transition | ready | bound | Send 鎖房間並檢查 owner、room、Ready、未綁定與未逾時
+- transition | pending | removed | MessageId 為 null 且已超過 24 小時；清理可回收上傳中斷紀錄
+- transition | ready | removed | MessageId 為 null 且已超過 24 小時；清理未使用物件
+- association | pending | garage | 先保存 DB 待完成紀錄，再寫入物件，降低無法追蹤的孤兒檔案
+- call | download | garage | Message 授權後串流下載；不發出可繞過撤銷的公開下載網址
+
+## 準則
+
+- 每檔最多 20 MiB；允許 JPEG、PNG、WebP、PDF 與 UTF-8 文字；空檔、格式偽造及危險檔名須拒絕。
+- 圖片單邊最多 8192 像素且總量最多 1600 萬像素；使用解碼檢查，不只信任 MIME 或副檔名。
+- 已綁定附件不由未綁定清理流程刪除；訊息刪除採軟刪除與稽核，不應畫成即刻刪除 S3。
+- Attachment.MessageId、OwnerId 是邏輯參照；RoomId 才是這個模型已設定的資料庫 FK。
+
+## 來源
+
+- src/Services/Message/Message.Domain/Chat.cs
+- src/Services/Message/Message.Infrastructure/ChatService.cs
+- src/Services/Message/Message.Infrastructure/ObjectStorage.cs
+- src/Services/Message/Message.Infrastructure/AttachmentCleanup.cs
+- src/Services/Message/Message.Infrastructure/MessageDbContext.cs
+</m:source>
+      <m:presentation root-ref="view" source-digest="sha256:3cfd430bf0f4c86c05b0ae09f176bd3c7aa6b84c10bf1bf9d947567f488d3a3f" renderer="relay-living-docs" renderer-version="1.2.0" />
+      <m:bindings>
+        <m:bind target="document-title" start-line="1" end-line="1" />
+        <m:bind target="intro-3" start-line="3" end-line="3" />
+        <m:bind target="intro-4" start-line="4" end-line="4" />
+        <m:bind target="intro-5" start-line="5" end-line="5" />
+        <m:bind target="intro-6" start-line="6" end-line="6" />
+        <m:bind target="intro-7" start-line="7" end-line="7" />
+        <m:bind target="intro-8" start-line="8" end-line="8" />
+        <m:bind target="intro-9" start-line="9" end-line="9" />
+        <m:bind target="intro-10" start-line="10" end-line="10" />
+        <m:bind target="intro-11" start-line="11" end-line="11" />
+        <m:bind target="intro-12" start-line="12" end-line="12" />
+        <m:bind target="intro-13" start-line="13" end-line="13" />
+        <m:bind target="intro-14" start-line="14" end-line="14" />
+        <m:bind target="nodes-heading" start-line="16" end-line="16" />
+        <m:bind target="node-pending" start-line="18" end-line="22" />
+        <m:bind target="node-ready" start-line="24" end-line="28" />
+        <m:bind target="node-bound" start-line="30" end-line="34" />
+        <m:bind target="node-removed" start-line="36" end-line="40" />
+        <m:bind target="node-garage" start-line="42" end-line="46" />
+        <m:bind target="node-download" start-line="48" end-line="52" />
+        <m:bind target="edges-heading" start-line="54" end-line="54" />
+        <m:bind target="edge-1" start-line="56" end-line="56" />
+        <m:bind target="edge-2" start-line="57" end-line="57" />
+        <m:bind target="edge-3" start-line="58" end-line="58" />
+        <m:bind target="edge-4" start-line="59" end-line="59" />
+        <m:bind target="edge-5" start-line="60" end-line="60" />
+        <m:bind target="edge-6" start-line="61" end-line="61" />
+        <m:bind target="section-63" start-line="63" end-line="63" />
+        <m:bind target="line-65" start-line="65" end-line="65" />
+        <m:bind target="line-66" start-line="66" end-line="66" />
+        <m:bind target="line-67" start-line="67" end-line="67" />
+        <m:bind target="line-68" start-line="68" end-line="68" />
+        <m:bind target="section-70" start-line="70" end-line="70" />
+        <m:bind target="line-72" start-line="72" end-line="72" />
+        <m:bind target="line-73" start-line="73" end-line="73" />
+        <m:bind target="line-74" start-line="74" end-line="74" />
+        <m:bind target="line-75" start-line="75" end-line="75" />
+        <m:bind target="line-76" start-line="76" end-line="76" />
+      </m:bindings>
+      <m:extensions>
+        <a:provenance version="1" spec-commit="c7c0d96aa398d650c6bea5588e5d060bc6d60da5">
+          <a:file path="src/Services/Message/Message.Domain/Chat.cs" sha256="f98dc830ad3b415711ad4f6a93938bec9150db4edf180abd028375252a4545ed" />
+          <a:file path="src/Services/Message/Message.Infrastructure/ChatService.cs" sha256="4d75f819d654b076e0e3d68af28839996c4ab9a8d598610eca81ad2d793fd633" />
+          <a:file path="src/Services/Message/Message.Infrastructure/ObjectStorage.cs" sha256="76e1d8cbabcfe971a89068c850b3cb81be179d111d7d83d2f57e4ad3de92f91c" />
+          <a:file path="src/Services/Message/Message.Infrastructure/AttachmentCleanup.cs" sha256="6fef65b0b264d6e227f41a893c3accf360f78aa0a4f1232b4b4004da8ad6fa0a" />
+          <a:file path="src/Services/Message/Message.Infrastructure/MessageDbContext.cs" sha256="cb0170df781cea95cdfb827a11dda7d093046eb19f75068d35d2e888100456a3" />
+        </a:provenance>
+      </m:extensions>
+    </m:document>
+  </metadata>
+  <g id="view" font-family="PingFang TC, Noto Sans CJK TC, Microsoft JhengHei, sans-serif" fill="#183048">
+    <rect x="0" y="0" width="1440" height="2572" fill="#FFFFFF" />
+    <rect x="0" y="0" width="1440" height="180" fill="#183048" />
+    <text x="56" y="45" font-size="16" fill="#9EBFE8"><tspan x="56" y="45">RELAY / AGENT LIVING DOCUMENT</tspan></text>
+    <text x="56" y="105" font-size="34" fill="#FFFFFF" font-weight="bold" id="document-title"><tspan x="56" y="105">附件狀態、私有儲存與清理流程</tspan></text>
+    <g id="intro-3">
+      <text x="56" y="215" font-size="19" fill="#52677C"><tspan x="56" y="215">視圖：cards</tspan></text>
+    </g>
+    <g id="intro-4">
+      <text x="56" y="250" font-size="16" fill="#52677C"><tspan x="56" y="250">文件編號：DOC-08</tspan></text>
+    </g>
+    <g id="intro-5">
+      <text x="734" y="250" font-size="16" fill="#087E7C"><tspan x="734" y="250">文件狀態：current</tspan></text>
+    </g>
+    <g id="intro-6">
+      <text x="56" y="287" font-size="16" fill="#52677C"><tspan x="56" y="287">核准狀態：not-recorded</tspan></text>
+    </g>
+    <g id="intro-7">
+      <text x="734" y="287" font-size="16" fill="#52677C"><tspan x="734" y="287">維護角色：附件／儲存維護角色（待具名確認）</tspan></text>
+    </g>
+    <g id="intro-8">
+      <text x="56" y="324" font-size="16" fill="#52677C"><tspan x="56" y="324">具名負責人：unassigned</tspan></text>
+    </g>
+    <g id="intro-9">
+      <text x="734" y="324" font-size="16" fill="#52677C"><tspan x="734" y="324">適用基準：referenced-source-sha256；歷史測試僅適用其紀錄版本</tspan></text>
+    </g>
+    <g id="intro-10">
+      <text x="56" y="361" font-size="16" fill="#52677C"><tspan x="56" y="361">最後審查：2026-11-08</tspan></text>
+    </g>
+    <g id="intro-11">
+      <text x="734" y="361" font-size="16" fill="#52677C"><tspan x="734" y="361">關聯需求：REQ-FILE-001,REQ-DOC-001</tspan></text>
+    </g>
+    <g id="intro-12">
+      <text x="56" y="398" font-size="16" fill="#52677C"><tspan x="56" y="398">關聯決策：ADR-DATA-001,ADR-DOC-001</tspan></text>
+    </g>
+    <g id="intro-13">
+      <text x="56" y="447" font-size="19" fill="#52677C"><tspan x="56" y="447">範圍：以 Attachment.Ready／MessageId 推導的狀態；程式沒有獨立 AttachmentState enum。</tspan></text>
+    </g>
+    <g id="intro-14">
+      <text x="56" y="482" font-size="19" fill="#52677C"><tspan x="56" y="482">讀圖：transition 為有條件的生命週期轉移；association 為資料或存取關聯。</tspan></text>
+    </g>
+    <g id="nodes-heading">
+      <text x="56" y="535" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="535">節點</tspan></text>
+    </g>
+    <g id="node-pending">
+      <rect x="56" y="569" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="595" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="595">pending</tspan></text>
+      <text x="78" y="626" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="626">«state» Pending</tspan></text>
+      <line x1="74" y1="648" x2="684" y2="648" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="672" font-size="18" fill="#52677C"><tspan x="78" y="672">資料庫已有 Attachment 列；Ready = false</tspan></text>
+      <text x="78" y="704" font-size="18" fill="#52677C"><tspan x="78" y="704">MessageId = null；已先保存 ObjectKey</tspan></text>
+      <text x="78" y="736" font-size="18" fill="#52677C"><tspan x="78" y="736">此時 S3 寫入可能尚未成功，不可綁定訊息</tspan></text>
+    </g>
+    <g id="node-ready">
+      <rect x="734" y="569" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="595" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="595">ready</tspan></text>
+      <text x="756" y="626" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="626">«state» Ready／Unbound</tspan></text>
+      <line x1="752" y1="648" x2="1362" y2="648" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="672" font-size="18" fill="#52677C"><tspan x="756" y="672">Garage Put 成功後保存 Ready = true</tspan></text>
+      <text x="756" y="704" font-size="18" fill="#52677C"><tspan x="756" y="704">MessageId = null；檔案尚未綁定</tspan></text>
+      <text x="756" y="736" font-size="18" fill="#52677C"><tspan x="756" y="736">未滿 24 小時且權限符合時才可綁定</tspan></text>
+    </g>
+    <g id="node-bound">
+      <rect x="56" y="794" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="820" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="820">bound</tspan></text>
+      <text x="78" y="851" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="851">«state» Bound</tspan></text>
+      <line x1="74" y1="873" x2="684" y2="873" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="897" font-size="18" fill="#52677C"><tspan x="78" y="897">Ready = true；MessageId != null</tspan></text>
+      <text x="78" y="929" font-size="18" fill="#52677C"><tspan x="78" y="929">在 Send 交易內與 ChatMessage 綁定</tspan></text>
+      <text x="78" y="961" font-size="18" fill="#52677C"><tspan x="78" y="961">每則最多五個；同一附件不可重複或再次綁定</tspan></text>
+    </g>
+    <g id="node-removed">
+      <rect x="734" y="794" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="820" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="820">removed</tspan></text>
+      <text x="756" y="851" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="851">«state» Expired／Removed</tspan></text>
+      <line x1="752" y1="873" x2="1362" y2="873" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="897" font-size="18" fill="#52677C"><tspan x="756" y="897">未綁定且 CreatedAt 早於 24 小時</tspan></text>
+      <text x="756" y="929" font-size="18" fill="#52677C"><tspan x="756" y="929">Cleanup 每 10 分鐘取最多 100 筆並列鎖</tspan></text>
+      <text x="756" y="961" font-size="18" fill="#52677C"><tspan x="756" y="961">先刪 Garage 物件，再刪 DB 列；失敗稍後重試</tspan></text>
+    </g>
+    <g id="node-garage">
+      <rect x="56" y="1019" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="1045" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="1045">garage</tspan></text>
+      <text x="78" y="1076" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="1076">«storage» Garage S3</tspan></text>
+      <line x1="74" y1="1098" x2="684" y2="1098" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="1122" font-size="18" fill="#52677C"><tspan x="78" y="1122">私有 attachments bucket</tspan></text>
+      <text x="78" y="1154" font-size="18" fill="#52677C"><tspan x="78" y="1154">ObjectKey = uploads/{attachmentId:N}</tspan></text>
+      <text x="78" y="1186" font-size="18" fill="#52677C"><tspan x="78" y="1186">只由 Message 持有 S3 存取設定；不公開物件網址</tspan></text>
+    </g>
+    <g id="node-download">
+      <rect x="734" y="1019" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="1045" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="1045">download</tspan></text>
+      <text x="756" y="1076" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="1076">«operation» Authorized Download</tspan></text>
+      <line x1="752" y1="1098" x2="1362" y2="1098" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="1122" font-size="18" fill="#52677C"><tspan x="756" y="1122">GET /api/v1/chat/attachments/{id}</tspan></text>
+      <text x="756" y="1154" font-size="18" fill="#52677C"><tspan x="756" y="1154">每次驗證 Session 與房間／管理員權限</tspan></text>
+      <text x="756" y="1186" font-size="18" fill="#52677C"><tspan x="756" y="1186">綁定訊息已刪除時，一般會員不可下載</tspan></text>
+    </g>
+    <g id="edges-heading">
+      <text x="56" y="1259" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="1259">關係</tspan></text>
+    </g>
+    <g id="edge-1">
+      <rect x="56" y="1294" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1321" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1321">pending</tspan></text>
+      <text x="76" y="1351" font-size="17" fill="#183048"><tspan x="76" y="1351">Pending</tspan></text>
+      <text x="1155" y="1321" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1321">ready</tspan></text>
+      <text x="1155" y="1351" font-size="17" fill="#183048"><tspan x="1155" y="1351">Ready／Unbound</tspan></text>
+      <text x="325" y="1321" font-size="17" fill="#183048"><tspan x="325" y="1321">01 transition | S3 Put 成功並保存 Ready；若進程中斷則保留 Pending 供清理</tspan></text>
+      <line x1="325" y1="1378" x2="1125" y2="1378" stroke="#087E7C" stroke-width="2" />
+      <polyline points="1113,1371 1125,1378 1113,1385" fill="none" stroke="#087E7C" stroke-width="2" />
+    </g>
+    <g id="edge-2">
+      <rect x="56" y="1410" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1437" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1437">ready</tspan></text>
+      <text x="76" y="1467" font-size="17" fill="#183048"><tspan x="76" y="1467">Ready／Unbound</tspan></text>
+      <text x="1155" y="1437" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1437">bound</tspan></text>
+      <text x="1155" y="1467" font-size="17" fill="#183048"><tspan x="1155" y="1467">Bound</tspan></text>
+      <text x="325" y="1437" font-size="17" fill="#183048"><tspan x="325" y="1437">02 transition | Send 鎖房間並檢查 owner、room、Ready、未綁定與未逾時</tspan></text>
+      <line x1="325" y1="1494" x2="1125" y2="1494" stroke="#087E7C" stroke-width="2" />
+      <polyline points="1113,1487 1125,1494 1113,1501" fill="none" stroke="#087E7C" stroke-width="2" />
+    </g>
+    <g id="edge-3">
+      <rect x="56" y="1526" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1553" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1553">pending</tspan></text>
+      <text x="76" y="1583" font-size="17" fill="#183048"><tspan x="76" y="1583">Pending</tspan></text>
+      <text x="1155" y="1553" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1553">removed</tspan></text>
+      <text x="1155" y="1583" font-size="17" fill="#183048"><tspan x="1155" y="1583">Expired／Removed</tspan></text>
+      <text x="325" y="1553" font-size="17" fill="#183048"><tspan x="325" y="1553">03 transition | MessageId 為 null 且已超過 24 小時；清理可回收上傳中斷紀錄</tspan></text>
+      <line x1="325" y1="1610" x2="1125" y2="1610" stroke="#087E7C" stroke-width="2" />
+      <polyline points="1113,1603 1125,1610 1113,1617" fill="none" stroke="#087E7C" stroke-width="2" />
+    </g>
+    <g id="edge-4">
+      <rect x="56" y="1642" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1669" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1669">ready</tspan></text>
+      <text x="76" y="1699" font-size="17" fill="#183048"><tspan x="76" y="1699">Ready／Unbound</tspan></text>
+      <text x="1155" y="1669" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1669">removed</tspan></text>
+      <text x="1155" y="1699" font-size="17" fill="#183048"><tspan x="1155" y="1699">Expired／Removed</tspan></text>
+      <text x="325" y="1669" font-size="17" fill="#183048"><tspan x="325" y="1669">04 transition | MessageId 為 null 且已超過 24 小時；清理未使用物件</tspan></text>
+      <line x1="325" y1="1726" x2="1125" y2="1726" stroke="#087E7C" stroke-width="2" />
+      <polyline points="1113,1719 1125,1726 1113,1733" fill="none" stroke="#087E7C" stroke-width="2" />
+    </g>
+    <g id="edge-5">
+      <rect x="56" y="1758" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1785" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1785">pending</tspan></text>
+      <text x="76" y="1815" font-size="17" fill="#183048"><tspan x="76" y="1815">Pending</tspan></text>
+      <text x="1155" y="1785" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1785">garage</tspan></text>
+      <text x="1155" y="1815" font-size="17" fill="#183048"><tspan x="1155" y="1815">Garage S3</tspan></text>
+      <text x="325" y="1785" font-size="17" fill="#183048"><tspan x="325" y="1785">05 association | 先保存 DB 待完成紀錄，再寫入物件，降低無法追蹤的孤兒檔案</tspan></text>
+      <line x1="325" y1="1842" x2="1125" y2="1842" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,1835 1125,1842 1113,1849" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-6">
+      <rect x="56" y="1874" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1901" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1901">download</tspan></text>
+      <text x="76" y="1931" font-size="17" fill="#183048"><tspan x="76" y="1931">Authorized Download</tspan></text>
+      <text x="1155" y="1901" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1901">garage</tspan></text>
+      <text x="1155" y="1931" font-size="17" fill="#183048"><tspan x="1155" y="1931">Garage S3</tspan></text>
+      <text x="325" y="1901" font-size="17" fill="#183048"><tspan x="325" y="1901">06 call | Message 授權後串流下載；不發出可繞過撤銷的公開下載網址</tspan></text>
+      <line x1="325" y1="1958" x2="1125" y2="1958" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,1951 1125,1958 1113,1965" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="section-63">
+      <text x="56" y="2024" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="2024">準則</tspan></text>
+    </g>
+    <g id="line-65">
+      <text x="70" y="2066" font-size="18" fill="#52677C"><tspan x="70" y="2066">每檔最多 20 MiB；允許 JPEG、PNG、WebP、PDF 與 UTF-8 文字；空檔、格式偽造及危險檔名須拒絕。</tspan></text>
+    </g>
+    <g id="line-66">
+      <text x="70" y="2108" font-size="18" fill="#52677C"><tspan x="70" y="2108">圖片單邊最多 8192 像素且總量最多 1600 萬像素；使用解碼檢查，不只信任 MIME 或副檔名。</tspan></text>
+    </g>
+    <g id="line-67">
+      <text x="70" y="2150" font-size="18" fill="#52677C"><tspan x="70" y="2150">已綁定附件不由未綁定清理流程刪除；訊息刪除採軟刪除與稽核，不應畫成即刻刪除 S3。</tspan></text>
+    </g>
+    <g id="line-68">
+      <text x="70" y="2192" font-size="18" fill="#52677C"><tspan x="70" y="2192">Attachment.MessageId、OwnerId 是邏輯參照；RoomId 才是這個模型已設定的資料庫 FK。</tspan></text>
+    </g>
+    <g id="section-70">
+      <text x="56" y="2257" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="2257">來源</tspan></text>
+    </g>
+    <g id="line-72">
+      <text x="70" y="2299" font-size="15" fill="#52677C"><tspan x="70" y="2299">src/Services/Message/Message.Domain/Chat.cs</tspan></text>
+    </g>
+    <g id="line-73">
+      <text x="70" y="2338" font-size="15" fill="#52677C"><tspan x="70" y="2338">src/Services/Message/Message.Infrastructure/ChatService.cs</tspan></text>
+    </g>
+    <g id="line-74">
+      <text x="70" y="2377" font-size="15" fill="#52677C"><tspan x="70" y="2377">src/Services/Message/Message.Infrastructure/ObjectStorage.cs</tspan></text>
+    </g>
+    <g id="line-75">
+      <text x="70" y="2416" font-size="15" fill="#52677C"><tspan x="70" y="2416">src/Services/Message/Message.Infrastructure/AttachmentCleanup.cs</tspan></text>
+    </g>
+    <g id="line-76">
+      <text x="70" y="2455" font-size="15" fill="#52677C"><tspan x="70" y="2455">src/Services/Message/Message.Infrastructure/MessageDbContext.cs</tspan></text>
+    </g>
+    <line x1="56" y1="2524" x2="1384" y2="2524" stroke="#CEDAE8" stroke-width="2" />
+    <text x="56" y="2550" font-size="12" fill="#52677C"><tspan x="56" y="2550">RELAY / STATIC SVG / MARKDOWN IS THE CONTENT AUTHORITY</tspan></text>
+  </g>
+</svg>

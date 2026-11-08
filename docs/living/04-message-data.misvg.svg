@@ -1,0 +1,593 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:a="https://github.com/Lian0123/my-c-sharp-templates/ns/living-docs/1" xmlns:m="https://example.org/ns/markdown-in-svg/0.1" version="1.1" width="1440" height="2922" viewBox="0 0 1440 2922">
+  <title>Message ERD、外鍵與訊息不變條件</title>
+  <desc>繁體中文 Agent living document。Markdown 是內容權威；UML 關係、資料來源與更新規則以原生靜態 SVG 呈現。</desc>
+  <metadata>
+    <m:document version="0.1" profile="static" doc-id="urn:uuid:ba1c374c-9971-49a4-8e2f-9257018a33ad" revision="6">
+      <m:source media-type="text/markdown" dialect="commonmark-0.31.2" xml:space="preserve"># Message ERD、外鍵與訊息不變條件
+
+視圖：cards
+文件編號：DOC-04
+文件狀態：current
+核准狀態：not-recorded
+維護角色：聊天室資料維護角色（待具名確認）
+具名負責人：unassigned
+適用基準：referenced-source-sha256；歷史測試僅適用其紀錄版本
+最後審查：2026-11-08
+關聯需求：REQ-BOUNDARY-001,REQ-CHAT-001,REQ-FILE-001,REQ-CMS-001,REQ-DOC-001
+關聯決策：ADR-DATA-001,ADR-AUTH-001,ADR-SYNC-001,ADR-DOC-001
+範圍：Message PostgreSQL；RoomId 的三條 fk 是 EF 明確設定的實體外鍵，其餘 logical 是程式參照。
+讀圖：每條關係獨立列示，節點 ID 重複代表同一實體，避免多重關係交叉而誤讀。
+
+## 節點
+
+### room | «entity» Room／Rooms
+
+- PK Id；Name；Kind = group 或 direct
+- DirectKey nullable／UNIQUE：排序後兩個 UserId
+- LastSequence : long；房間訊息單調遞增序號
+- CreatedAt
+
+### member | «entity» Membership／Members
+
+- 複合 PK (RoomId, UserId)
+- RoomId：實體 FK 到 Rooms.Id；刪除 Cascade
+- UserId：邏輯參照 ChatUser.Id，無 DB FK
+- Role = Owner／Moderator／Member
+- LastReadSequence；JoinedAt
+
+### message | «entity» ChatMessage／Messages
+
+- PK Id；RoomId：實體 FK 到 Rooms.Id
+- SenderId：邏輯使用者；ClientMessageId：客戶端冪等鍵
+- UNIQUE (RoomId, Sequence)
+- UNIQUE (RoomId, SenderId, ClientMessageId)
+- Text／RequestHash／Deleted／CreatedAt
+
+### attachment | «entity» Attachment／Attachments
+
+- PK Id；RoomId：實體 FK 到 Rooms.Id
+- OwnerId：邏輯使用者；MessageId nullable（無 DB FK）
+- Ready；FileName；ContentType；Size；ObjectKey
+- CreatedAt；INDEX MessageId 與 (CreatedAt, MessageId)
+- 物件位元組只在 Garage，資料庫保存中繼資料
+
+### chatuser | «projection» ChatUser／Users
+
+- PK Id；DisplayName；Active
+- IdentityVersion／ProfileVersion
+- 由 Auth／Account 事件投影；不是身分權威
+
+### technical | «technical» Outbox／Inbox／Audit
+
+- Outbox：聊天變更事件；Inbox：EventId 去重
+- Audit：ActorId、Action、Target、Reason、CreatedAt
+- 每個服務 DB 都有自己的技術表
+
+## 關係
+
+- fk | member | room | 0..* 對 1；Members.RoomId -&gt; Rooms.Id；Cascade
+- fk | message | room | 0..* 對 1；Messages.RoomId -&gt; Rooms.Id
+- fk | attachment | room | 0..* 對 1；Attachments.RoomId -&gt; Rooms.Id
+- logical | chatuser | member | 1 對 0..*；Members.UserId，未建立 DB FK
+- logical | chatuser | message | 1 對 0..*；Messages.SenderId，未建立 DB FK
+- logical | chatuser | attachment | 1 對 0..*；Attachments.OwnerId，未建立 DB FK
+- logical | message | attachment | 訊息 1 對 0..5 附件；附件 0..1 訊息；MessageId 未建立 DB FK
+- association | message | technical | 訊息、房間序號、附件綁定與 ChatChanged Outbox 同交易提交
+
+## 準則
+
+- 房間列鎖決定 Sequence；同一 clientMessageId 相同內容回傳原訊息，不同內容回傳 409。
+- LastReadSequence 不得倒退，也不得超過 Room.LastSequence；未讀數依游標計算。
+- 綁定附件時檢查擁有者、房間、Ready、未綁定與未超過 24 小時，最多五個且不可重複。
+- 群組擁有者移轉、成員管理與管理員越權查閱皆由服務規則處理，不由 FK 取代授權。
+
+## 來源
+
+- src/Services/Message/Message.Domain/Chat.cs
+- src/Services/Message/Message.Infrastructure/MessageDbContext.cs
+- src/Services/Message/Message.Infrastructure/ChatService.cs
+- src/Shared/BuildingBlocks/Persistence.cs
+</m:source>
+      <m:presentation root-ref="view" source-digest="sha256:cadbeda742b69b95038df0d91a1c0ca16894c1cca6df5b7d276b218afda0b57a" renderer="relay-living-docs" renderer-version="1.2.0" />
+      <m:bindings>
+        <m:bind target="document-title" start-line="1" end-line="1" />
+        <m:bind target="intro-3" start-line="3" end-line="3" />
+        <m:bind target="intro-4" start-line="4" end-line="4" />
+        <m:bind target="intro-5" start-line="5" end-line="5" />
+        <m:bind target="intro-6" start-line="6" end-line="6" />
+        <m:bind target="intro-7" start-line="7" end-line="7" />
+        <m:bind target="intro-8" start-line="8" end-line="8" />
+        <m:bind target="intro-9" start-line="9" end-line="9" />
+        <m:bind target="intro-10" start-line="10" end-line="10" />
+        <m:bind target="intro-11" start-line="11" end-line="11" />
+        <m:bind target="intro-12" start-line="12" end-line="12" />
+        <m:bind target="intro-13" start-line="13" end-line="13" />
+        <m:bind target="intro-14" start-line="14" end-line="14" />
+        <m:bind target="nodes-heading" start-line="16" end-line="16" />
+        <m:bind target="node-room" start-line="18" end-line="23" />
+        <m:bind target="node-member" start-line="25" end-line="31" />
+        <m:bind target="node-message" start-line="33" end-line="39" />
+        <m:bind target="node-attachment" start-line="41" end-line="47" />
+        <m:bind target="node-chatuser" start-line="49" end-line="53" />
+        <m:bind target="node-technical" start-line="55" end-line="59" />
+        <m:bind target="edges-heading" start-line="61" end-line="61" />
+        <m:bind target="edge-1" start-line="63" end-line="63" />
+        <m:bind target="edge-2" start-line="64" end-line="64" />
+        <m:bind target="edge-3" start-line="65" end-line="65" />
+        <m:bind target="edge-4" start-line="66" end-line="66" />
+        <m:bind target="edge-5" start-line="67" end-line="67" />
+        <m:bind target="edge-6" start-line="68" end-line="68" />
+        <m:bind target="edge-7" start-line="69" end-line="69" />
+        <m:bind target="edge-8" start-line="70" end-line="70" />
+        <m:bind target="section-72" start-line="72" end-line="72" />
+        <m:bind target="line-74" start-line="74" end-line="74" />
+        <m:bind target="line-75" start-line="75" end-line="75" />
+        <m:bind target="line-76" start-line="76" end-line="76" />
+        <m:bind target="line-77" start-line="77" end-line="77" />
+        <m:bind target="section-79" start-line="79" end-line="79" />
+        <m:bind target="line-81" start-line="81" end-line="81" />
+        <m:bind target="line-82" start-line="82" end-line="82" />
+        <m:bind target="line-83" start-line="83" end-line="83" />
+        <m:bind target="line-84" start-line="84" end-line="84" />
+      </m:bindings>
+      <m:extensions>
+        <a:provenance version="1" spec-commit="c7c0d96aa398d650c6bea5588e5d060bc6d60da5">
+          <a:file path="src/Services/Message/Message.Domain/Chat.cs" sha256="f98dc830ad3b415711ad4f6a93938bec9150db4edf180abd028375252a4545ed" />
+          <a:file path="src/Services/Message/Message.Infrastructure/MessageDbContext.cs" sha256="cb0170df781cea95cdfb827a11dda7d093046eb19f75068d35d2e888100456a3" />
+          <a:file path="src/Services/Message/Message.Infrastructure/ChatService.cs" sha256="4d75f819d654b076e0e3d68af28839996c4ab9a8d598610eca81ad2d793fd633" />
+          <a:file path="src/Shared/BuildingBlocks/Persistence.cs" sha256="7c9ce71824ac063b130e2644a0a0cc53747a854bd4506a2bae91bd39acb7ff49" />
+        </a:provenance>
+      </m:extensions>
+    </m:document>
+  </metadata>
+  <g id="view" font-family="PingFang TC, Noto Sans CJK TC, Microsoft JhengHei, sans-serif" fill="#183048">
+    <rect x="0" y="0" width="1440" height="2922" fill="#FFFFFF" />
+    <rect x="0" y="0" width="1440" height="180" fill="#183048" />
+    <text x="56" y="45" font-size="16" fill="#9EBFE8"><tspan x="56" y="45">RELAY / AGENT LIVING DOCUMENT</tspan></text>
+    <text x="56" y="105" font-size="34" fill="#FFFFFF" font-weight="bold" id="document-title"><tspan x="56" y="105">Message ERD、外鍵與訊息不變條件</tspan></text>
+    <g id="intro-3">
+      <text x="56" y="215" font-size="19" fill="#52677C"><tspan x="56" y="215">視圖：cards</tspan></text>
+    </g>
+    <g id="intro-4">
+      <text x="56" y="250" font-size="16" fill="#52677C"><tspan x="56" y="250">文件編號：DOC-04</tspan></text>
+    </g>
+    <g id="intro-5">
+      <text x="734" y="250" font-size="16" fill="#087E7C"><tspan x="734" y="250">文件狀態：current</tspan></text>
+    </g>
+    <g id="intro-6">
+      <text x="56" y="287" font-size="16" fill="#52677C"><tspan x="56" y="287">核准狀態：not-recorded</tspan></text>
+    </g>
+    <g id="intro-7">
+      <text x="734" y="287" font-size="16" fill="#52677C"><tspan x="734" y="287">維護角色：聊天室資料維護角色（待具名確認）</tspan></text>
+    </g>
+    <g id="intro-8">
+      <text x="56" y="324" font-size="16" fill="#52677C"><tspan x="56" y="324">具名負責人：unassigned</tspan></text>
+    </g>
+    <g id="intro-9">
+      <text x="734" y="324" font-size="16" fill="#52677C"><tspan x="734" y="324">適用基準：referenced-source-sha256；歷史測試僅適用其紀錄版本</tspan></text>
+    </g>
+    <g id="intro-10">
+      <text x="56" y="361" font-size="16" fill="#52677C"><tspan x="56" y="361">最後審查：2026-11-08</tspan></text>
+    </g>
+    <g id="intro-11">
+      <text x="734" y="361" font-size="16" fill="#52677C"><tspan x="734" y="361">關聯需求：REQ-BOUNDARY-001,REQ-CHAT-001,REQ-FILE-001,REQ-CMS</tspan><tspan x="734" y="386">-001,REQ-DOC-001</tspan></text>
+    </g>
+    <g id="intro-12">
+      <text x="56" y="423" font-size="16" fill="#52677C"><tspan x="56" y="423">關聯決策：ADR-DATA-001,ADR-AUTH-001,ADR-SYNC-001,ADR-DOC-001</tspan></text>
+    </g>
+    <g id="intro-13">
+      <text x="56" y="472" font-size="19" fill="#52677C"><tspan x="56" y="472">範圍：Message PostgreSQL；RoomId 的三條 fk 是 EF 明確設定的實體外鍵，其餘 logical 是程式參照。</tspan></text>
+    </g>
+    <g id="intro-14">
+      <text x="56" y="507" font-size="19" fill="#52677C"><tspan x="56" y="507">讀圖：每條關係獨立列示，節點 ID 重複代表同一實體，避免多重關係交叉而誤讀。</tspan></text>
+    </g>
+    <g id="nodes-heading">
+      <text x="56" y="560" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="560">節點</tspan></text>
+    </g>
+    <g id="node-room">
+      <rect x="56" y="594" width="646" height="265" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="620" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="620">room</tspan></text>
+      <text x="78" y="651" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="651">«entity» Room／Rooms</tspan></text>
+      <line x1="74" y1="673" x2="684" y2="673" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="697" font-size="18" fill="#52677C"><tspan x="78" y="697">PK Id；Name；Kind = group 或 direct</tspan></text>
+      <text x="78" y="729" font-size="18" fill="#52677C"><tspan x="78" y="729">DirectKey nullable／UNIQUE：排序後兩個 UserId</tspan></text>
+      <text x="78" y="761" font-size="18" fill="#52677C"><tspan x="78" y="761">LastSequence : long；房間訊息單調遞增序號</tspan></text>
+      <text x="78" y="793" font-size="18" fill="#52677C"><tspan x="78" y="793">CreatedAt</tspan></text>
+    </g>
+    <g id="node-member">
+      <rect x="734" y="594" width="646" height="265" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="620" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="620">member</tspan></text>
+      <text x="756" y="651" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="651">«entity» Membership／Members</tspan></text>
+      <line x1="752" y1="673" x2="1362" y2="673" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="697" font-size="18" fill="#52677C"><tspan x="756" y="697">複合 PK (RoomId, UserId)</tspan></text>
+      <text x="756" y="729" font-size="18" fill="#52677C"><tspan x="756" y="729">RoomId：實體 FK 到 Rooms.Id；刪除 Cascade</tspan></text>
+      <text x="756" y="761" font-size="18" fill="#52677C"><tspan x="756" y="761">UserId：邏輯參照 ChatUser.Id，無 DB FK</tspan></text>
+      <text x="756" y="793" font-size="18" fill="#52677C"><tspan x="756" y="793">Role = Owner／Moderator／Member</tspan></text>
+      <text x="756" y="825" font-size="18" fill="#52677C"><tspan x="756" y="825">LastReadSequence；JoinedAt</tspan></text>
+    </g>
+    <g id="node-message">
+      <rect x="56" y="885" width="646" height="265" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="911" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="911">message</tspan></text>
+      <text x="78" y="942" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="942">«entity» ChatMessage／Messages</tspan></text>
+      <line x1="74" y1="964" x2="684" y2="964" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="988" font-size="18" fill="#52677C"><tspan x="78" y="988">PK Id；RoomId：實體 FK 到 Rooms.Id</tspan></text>
+      <text x="78" y="1020" font-size="18" fill="#52677C"><tspan x="78" y="1020">SenderId：邏輯使用者；ClientMessageId：客戶端冪等鍵</tspan></text>
+      <text x="78" y="1052" font-size="18" fill="#52677C"><tspan x="78" y="1052">UNIQUE (RoomId, Sequence)</tspan></text>
+      <text x="78" y="1084" font-size="18" fill="#52677C"><tspan x="78" y="1084">UNIQUE (RoomId, SenderId, ClientMessageId)</tspan></text>
+      <text x="78" y="1116" font-size="18" fill="#52677C"><tspan x="78" y="1116">Text／RequestHash／Deleted／CreatedAt</tspan></text>
+    </g>
+    <g id="node-attachment">
+      <rect x="734" y="885" width="646" height="265" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="911" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="911">attachment</tspan></text>
+      <text x="756" y="942" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="942">«entity» Attachment／Attachments</tspan></text>
+      <line x1="752" y1="964" x2="1362" y2="964" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="988" font-size="18" fill="#52677C"><tspan x="756" y="988">PK Id；RoomId：實體 FK 到 Rooms.Id</tspan></text>
+      <text x="756" y="1020" font-size="18" fill="#52677C"><tspan x="756" y="1020">OwnerId：邏輯使用者；MessageId nullable（無 DB FK）</tspan></text>
+      <text x="756" y="1052" font-size="18" fill="#52677C"><tspan x="756" y="1052">Ready；FileName；ContentType；Size；ObjectKey</tspan></text>
+      <text x="756" y="1084" font-size="18" fill="#52677C"><tspan x="756" y="1084">CreatedAt；INDEX MessageId 與 (CreatedAt, MessageId)</tspan></text>
+      <text x="756" y="1116" font-size="18" fill="#52677C"><tspan x="756" y="1116">物件位元組只在 Garage，資料庫保存中繼資料</tspan></text>
+    </g>
+    <g id="node-chatuser">
+      <rect x="56" y="1176" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="1202" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="1202">chatuser</tspan></text>
+      <text x="78" y="1233" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="1233">«projection» ChatUser／Users</tspan></text>
+      <line x1="74" y1="1255" x2="684" y2="1255" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="1279" font-size="18" fill="#52677C"><tspan x="78" y="1279">PK Id；DisplayName；Active</tspan></text>
+      <text x="78" y="1311" font-size="18" fill="#52677C"><tspan x="78" y="1311">IdentityVersion／ProfileVersion</tspan></text>
+      <text x="78" y="1343" font-size="18" fill="#52677C"><tspan x="78" y="1343">由 Auth／Account 事件投影；不是身分權威</tspan></text>
+    </g>
+    <g id="node-technical">
+      <rect x="734" y="1176" width="646" height="199" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="1202" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="1202">technical</tspan></text>
+      <text x="756" y="1233" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="1233">«technical» Outbox／Inbox／Audit</tspan></text>
+      <line x1="752" y1="1255" x2="1362" y2="1255" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="1279" font-size="18" fill="#52677C"><tspan x="756" y="1279">Outbox：聊天變更事件；Inbox：EventId 去重</tspan></text>
+      <text x="756" y="1311" font-size="18" fill="#52677C"><tspan x="756" y="1311">Audit：ActorId、Action、Target、Reason、CreatedAt</tspan></text>
+      <text x="756" y="1343" font-size="18" fill="#52677C"><tspan x="756" y="1343">每個服務 DB 都有自己的技術表</tspan></text>
+    </g>
+    <g id="edges-heading">
+      <text x="56" y="1416" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="1416">關係</tspan></text>
+    </g>
+    <g id="edge-1">
+      <rect x="56" y="1451" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1478" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1478">member</tspan></text>
+      <text x="76" y="1508" font-size="17" fill="#183048"><tspan x="76" y="1508">Membership／Members</tspan></text>
+      <text x="1155" y="1478" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1478">room</tspan></text>
+      <text x="1155" y="1508" font-size="17" fill="#183048"><tspan x="1155" y="1508">Room／Rooms</tspan></text>
+      <text x="325" y="1478" font-size="17" fill="#183048"><tspan x="325" y="1478">01 fk | 0..* 對 1；Members.RoomId -&gt; Rooms.Id；Cascade</tspan></text>
+      <line x1="325" y1="1535" x2="1125" y2="1535" stroke="#087E7C" stroke-width="2" />
+      <polyline points="1113,1528 1125,1535 1113,1542" fill="none" stroke="#087E7C" stroke-width="2" />
+    </g>
+    <g id="edge-2">
+      <rect x="56" y="1567" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1594" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1594">message</tspan></text>
+      <text x="76" y="1624" font-size="17" fill="#183048"><tspan x="76" y="1624">ChatMessage／Messages</tspan></text>
+      <text x="1155" y="1594" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1594">room</tspan></text>
+      <text x="1155" y="1624" font-size="17" fill="#183048"><tspan x="1155" y="1624">Room／Rooms</tspan></text>
+      <text x="325" y="1594" font-size="17" fill="#183048"><tspan x="325" y="1594">02 fk | 0..* 對 1；Messages.RoomId -&gt; Rooms.Id</tspan></text>
+      <line x1="325" y1="1651" x2="1125" y2="1651" stroke="#087E7C" stroke-width="2" />
+      <polyline points="1113,1644 1125,1651 1113,1658" fill="none" stroke="#087E7C" stroke-width="2" />
+    </g>
+    <g id="edge-3">
+      <rect x="56" y="1683" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1710" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1710">attachment</tspan></text>
+      <text x="76" y="1740" font-size="17" fill="#183048"><tspan x="76" y="1740">Attachment／Attachments</tspan></text>
+      <text x="1155" y="1710" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1710">room</tspan></text>
+      <text x="1155" y="1740" font-size="17" fill="#183048"><tspan x="1155" y="1740">Room／Rooms</tspan></text>
+      <text x="325" y="1710" font-size="17" fill="#183048"><tspan x="325" y="1710">03 fk | 0..* 對 1；Attachments.RoomId -&gt; Rooms.Id</tspan></text>
+      <line x1="325" y1="1767" x2="1125" y2="1767" stroke="#087E7C" stroke-width="2" />
+      <polyline points="1113,1760 1125,1767 1113,1774" fill="none" stroke="#087E7C" stroke-width="2" />
+    </g>
+    <g id="edge-4">
+      <rect x="56" y="1799" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1826" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1826">chatuser</tspan></text>
+      <text x="76" y="1856" font-size="17" fill="#183048"><tspan x="76" y="1856">ChatUser／Users</tspan></text>
+      <text x="1155" y="1826" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1826">member</tspan></text>
+      <text x="1155" y="1856" font-size="17" fill="#183048"><tspan x="1155" y="1856">Membership／Members</tspan></text>
+      <text x="325" y="1826" font-size="17" fill="#183048"><tspan x="325" y="1826">04 logical | 1 對 0..*；Members.UserId，未建立 DB FK</tspan></text>
+      <line x1="325.0" y1="1883.0" x2="332.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="1883.0" x2="346.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="1883.0" x2="360.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="1883.0" x2="374.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="1883.0" x2="388.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="1883.0" x2="402.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="1883.0" x2="416.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="1883.0" x2="430.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="1883.0" x2="444.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="1883.0" x2="458.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="1883.0" x2="472.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="1883.0" x2="486.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="1883.0" x2="500.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="1883.0" x2="514.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="1883.0" x2="528.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="1883.0" x2="542.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="1883.0" x2="556.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="1883.0" x2="570.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="1883.0" x2="584.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="1883.0" x2="598.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="1883.0" x2="612.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="1883.0" x2="626.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="1883.0" x2="640.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="1883.0" x2="654.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="1883.0" x2="668.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="1883.0" x2="682.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="1883.0" x2="696.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="1883.0" x2="710.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="1883.0" x2="724.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="1883.0" x2="738.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="1883.0" x2="752.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="1883.0" x2="766.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="1883.0" x2="780.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="1883.0" x2="794.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="1883.0" x2="808.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="1883.0" x2="822.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="1883.0" x2="836.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="1883.0" x2="850.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="1883.0" x2="864.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="1883.0" x2="878.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="1883.0" x2="892.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="1883.0" x2="906.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="1883.0" x2="920.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="1883.0" x2="934.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="1883.0" x2="948.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="1883.0" x2="962.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="1883.0" x2="976.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="1883.0" x2="990.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="1883.0" x2="1004.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="1883.0" x2="1018.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="1883.0" x2="1032.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="1883.0" x2="1046.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="1883.0" x2="1060.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="1883.0" x2="1074.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="1883.0" x2="1088.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="1883.0" x2="1102.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="1883.0" x2="1116.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="1883.0" x2="1125.0" y2="1883.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,1876 1125,1883 1113,1890" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-5">
+      <rect x="56" y="1915" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="1942" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="1942">chatuser</tspan></text>
+      <text x="76" y="1972" font-size="17" fill="#183048"><tspan x="76" y="1972">ChatUser／Users</tspan></text>
+      <text x="1155" y="1942" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="1942">message</tspan></text>
+      <text x="1155" y="1972" font-size="17" fill="#183048"><tspan x="1155" y="1972">ChatMessage／Messages</tspan></text>
+      <text x="325" y="1942" font-size="17" fill="#183048"><tspan x="325" y="1942">05 logical | 1 對 0..*；Messages.SenderId，未建立 DB FK</tspan></text>
+      <line x1="325.0" y1="1999.0" x2="332.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="1999.0" x2="346.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="1999.0" x2="360.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="1999.0" x2="374.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="1999.0" x2="388.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="1999.0" x2="402.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="1999.0" x2="416.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="1999.0" x2="430.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="1999.0" x2="444.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="1999.0" x2="458.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="1999.0" x2="472.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="1999.0" x2="486.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="1999.0" x2="500.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="1999.0" x2="514.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="1999.0" x2="528.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="1999.0" x2="542.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="1999.0" x2="556.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="1999.0" x2="570.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="1999.0" x2="584.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="1999.0" x2="598.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="1999.0" x2="612.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="1999.0" x2="626.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="1999.0" x2="640.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="1999.0" x2="654.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="1999.0" x2="668.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="1999.0" x2="682.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="1999.0" x2="696.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="1999.0" x2="710.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="1999.0" x2="724.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="1999.0" x2="738.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="1999.0" x2="752.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="1999.0" x2="766.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="1999.0" x2="780.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="1999.0" x2="794.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="1999.0" x2="808.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="1999.0" x2="822.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="1999.0" x2="836.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="1999.0" x2="850.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="1999.0" x2="864.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="1999.0" x2="878.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="1999.0" x2="892.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="1999.0" x2="906.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="1999.0" x2="920.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="1999.0" x2="934.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="1999.0" x2="948.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="1999.0" x2="962.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="1999.0" x2="976.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="1999.0" x2="990.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="1999.0" x2="1004.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="1999.0" x2="1018.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="1999.0" x2="1032.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="1999.0" x2="1046.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="1999.0" x2="1060.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="1999.0" x2="1074.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="1999.0" x2="1088.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="1999.0" x2="1102.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="1999.0" x2="1116.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="1999.0" x2="1125.0" y2="1999.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,1992 1125,1999 1113,2006" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-6">
+      <rect x="56" y="2031" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="2058" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="2058">chatuser</tspan></text>
+      <text x="76" y="2088" font-size="17" fill="#183048"><tspan x="76" y="2088">ChatUser／Users</tspan></text>
+      <text x="1155" y="2058" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="2058">attachment</tspan></text>
+      <text x="1155" y="2088" font-size="17" fill="#183048"><tspan x="1155" y="2088">Attachment／Attachments</tspan></text>
+      <text x="325" y="2058" font-size="17" fill="#183048"><tspan x="325" y="2058">06 logical | 1 對 0..*；Attachments.OwnerId，未建立 DB FK</tspan></text>
+      <line x1="325.0" y1="2115.0" x2="332.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="2115.0" x2="346.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="2115.0" x2="360.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="2115.0" x2="374.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="2115.0" x2="388.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="2115.0" x2="402.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="2115.0" x2="416.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="2115.0" x2="430.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="2115.0" x2="444.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="2115.0" x2="458.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="2115.0" x2="472.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="2115.0" x2="486.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="2115.0" x2="500.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="2115.0" x2="514.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="2115.0" x2="528.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="2115.0" x2="542.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="2115.0" x2="556.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="2115.0" x2="570.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="2115.0" x2="584.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="2115.0" x2="598.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="2115.0" x2="612.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="2115.0" x2="626.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="2115.0" x2="640.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="2115.0" x2="654.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="2115.0" x2="668.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="2115.0" x2="682.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="2115.0" x2="696.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="2115.0" x2="710.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="2115.0" x2="724.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="2115.0" x2="738.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="2115.0" x2="752.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="2115.0" x2="766.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="2115.0" x2="780.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="2115.0" x2="794.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="2115.0" x2="808.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="2115.0" x2="822.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="2115.0" x2="836.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="2115.0" x2="850.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="2115.0" x2="864.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="2115.0" x2="878.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="2115.0" x2="892.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="2115.0" x2="906.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="2115.0" x2="920.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="2115.0" x2="934.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="2115.0" x2="948.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="2115.0" x2="962.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="2115.0" x2="976.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="2115.0" x2="990.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="2115.0" x2="1004.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="2115.0" x2="1018.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="2115.0" x2="1032.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="2115.0" x2="1046.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="2115.0" x2="1060.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="2115.0" x2="1074.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="2115.0" x2="1088.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="2115.0" x2="1102.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="2115.0" x2="1116.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="2115.0" x2="1125.0" y2="2115.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,2108 1125,2115 1113,2122" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-7">
+      <rect x="56" y="2147" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="2174" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="2174">message</tspan></text>
+      <text x="76" y="2204" font-size="17" fill="#183048"><tspan x="76" y="2204">ChatMessage／Messages</tspan></text>
+      <text x="1155" y="2174" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="2174">attachment</tspan></text>
+      <text x="1155" y="2204" font-size="17" fill="#183048"><tspan x="1155" y="2204">Attachment／Attachments</tspan></text>
+      <text x="325" y="2174" font-size="17" fill="#183048"><tspan x="325" y="2174">07 logical | 訊息 1 對 0..5 附件；附件 0..1 訊息；MessageId 未建立 DB FK</tspan></text>
+      <line x1="325.0" y1="2231.0" x2="332.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="2231.0" x2="346.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="2231.0" x2="360.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="2231.0" x2="374.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="2231.0" x2="388.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="2231.0" x2="402.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="2231.0" x2="416.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="2231.0" x2="430.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="2231.0" x2="444.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="2231.0" x2="458.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="2231.0" x2="472.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="2231.0" x2="486.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="2231.0" x2="500.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="2231.0" x2="514.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="2231.0" x2="528.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="2231.0" x2="542.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="2231.0" x2="556.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="2231.0" x2="570.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="2231.0" x2="584.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="2231.0" x2="598.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="2231.0" x2="612.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="2231.0" x2="626.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="2231.0" x2="640.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="2231.0" x2="654.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="2231.0" x2="668.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="2231.0" x2="682.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="2231.0" x2="696.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="2231.0" x2="710.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="2231.0" x2="724.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="2231.0" x2="738.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="2231.0" x2="752.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="2231.0" x2="766.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="2231.0" x2="780.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="2231.0" x2="794.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="2231.0" x2="808.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="2231.0" x2="822.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="2231.0" x2="836.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="2231.0" x2="850.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="2231.0" x2="864.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="2231.0" x2="878.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="2231.0" x2="892.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="2231.0" x2="906.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="2231.0" x2="920.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="2231.0" x2="934.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="2231.0" x2="948.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="2231.0" x2="962.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="2231.0" x2="976.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="2231.0" x2="990.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="2231.0" x2="1004.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="2231.0" x2="1018.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="2231.0" x2="1032.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="2231.0" x2="1046.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="2231.0" x2="1060.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="2231.0" x2="1074.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="2231.0" x2="1088.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="2231.0" x2="1102.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="2231.0" x2="1116.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="2231.0" x2="1125.0" y2="2231.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,2224 1125,2231 1113,2238" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-8">
+      <rect x="56" y="2263" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="2290" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="2290">message</tspan></text>
+      <text x="76" y="2320" font-size="17" fill="#183048"><tspan x="76" y="2320">ChatMessage／Messages</tspan></text>
+      <text x="1155" y="2290" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="2290">technical</tspan></text>
+      <text x="1155" y="2320" font-size="17" fill="#183048"><tspan x="1155" y="2320">Outbox／Inbox／Audit</tspan></text>
+      <text x="325" y="2290" font-size="17" fill="#183048"><tspan x="325" y="2290">08 association | 訊息、房間序號、附件綁定與 ChatChanged Outbox 同交易提交</tspan></text>
+      <line x1="325" y1="2347" x2="1125" y2="2347" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,2340 1125,2347 1113,2354" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="section-72">
+      <text x="56" y="2413" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="2413">準則</tspan></text>
+    </g>
+    <g id="line-74">
+      <text x="70" y="2455" font-size="18" fill="#52677C"><tspan x="70" y="2455">房間列鎖決定 Sequence；同一 clientMessageId 相同內容回傳原訊息，不同內容回傳 409。</tspan></text>
+    </g>
+    <g id="line-75">
+      <text x="70" y="2497" font-size="18" fill="#52677C"><tspan x="70" y="2497">LastReadSequence 不得倒退，也不得超過 Room.LastSequence；未讀數依游標計算。</tspan></text>
+    </g>
+    <g id="line-76">
+      <text x="70" y="2539" font-size="18" fill="#52677C"><tspan x="70" y="2539">綁定附件時檢查擁有者、房間、Ready、未綁定與未超過 24 小時，最多五個且不可重複。</tspan></text>
+    </g>
+    <g id="line-77">
+      <text x="70" y="2581" font-size="18" fill="#52677C"><tspan x="70" y="2581">群組擁有者移轉、成員管理與管理員越權查閱皆由服務規則處理，不由 FK 取代授權。</tspan></text>
+    </g>
+    <g id="section-79">
+      <text x="56" y="2646" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="2646">來源</tspan></text>
+    </g>
+    <g id="line-81">
+      <text x="70" y="2688" font-size="15" fill="#52677C"><tspan x="70" y="2688">src/Services/Message/Message.Domain/Chat.cs</tspan></text>
+    </g>
+    <g id="line-82">
+      <text x="70" y="2727" font-size="15" fill="#52677C"><tspan x="70" y="2727">src/Services/Message/Message.Infrastructure/MessageDbContext.cs</tspan></text>
+    </g>
+    <g id="line-83">
+      <text x="70" y="2766" font-size="15" fill="#52677C"><tspan x="70" y="2766">src/Services/Message/Message.Infrastructure/ChatService.cs</tspan></text>
+    </g>
+    <g id="line-84">
+      <text x="70" y="2805" font-size="15" fill="#52677C"><tspan x="70" y="2805">src/Shared/BuildingBlocks/Persistence.cs</tspan></text>
+    </g>
+    <line x1="56" y1="2874" x2="1384" y2="2874" stroke="#CEDAE8" stroke-width="2" />
+    <text x="56" y="2900" font-size="12" fill="#52677C"><tspan x="56" y="2900">RELAY / STATIC SVG / MARKDOWN IS THE CONTENT AUTHORITY</tspan></text>
+  </g>
+</svg>

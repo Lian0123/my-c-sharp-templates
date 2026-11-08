@@ -1,6 +1,8 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")/.."
+python3 scripts/living_docs.py check
+python3 scripts/development_rules.py check
 ./scripts/init.sh
 export COMPOSE_PROJECT_NAME="${TEST_PROJECT_NAME:-microservice-starter-tests}"
 export HTTP_PORT="${TEST_HTTP_PORT:-18080}" MAILPIT_PORT="${TEST_MAILPIT_PORT:-18025}"

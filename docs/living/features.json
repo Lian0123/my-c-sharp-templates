@@ -1,0 +1,2022 @@
+{
+  "authority": "Derived from SVG m:source; do not hand edit.",
+  "features": [
+    {
+      "id": "FEAT-AUTH-REGISTER",
+      "document": "10-feature-identity.misvg.svg",
+      "title": "註冊與非同步會員初始化",
+      "fields": {
+        "需求": [
+          "REQ-AUTH-001"
+        ],
+        "責任服務": [
+          "Auth"
+        ],
+        "角色": [
+          "匿名訪客"
+        ],
+        "目標": [
+          "註冊與非同步會員初始化"
+        ],
+        "輸入": [
+          "Email、密碼、初始顯示名稱"
+        ],
+        "輸出": [
+          "User ID；郵件與 Account／Message 投影稍後完成"
+        ],
+        "權限": [
+          "匿名端點；輸入驗證與登入前 Email 驗證"
+        ],
+        "資料與交易": [
+          "User、Challenge、MailJob 與 IdentityChanged Outbox 同次保存"
+        ],
+        "同步與副作用": [
+          "MailWorker 寄信；RabbitMQ 更新投影；不傳密碼／Token"
+        ],
+        "失敗與重試": [
+          "Email 唯一鍵處理並行重複；投影未就緒回處理中／Retry-After"
+        ],
+        "邊界": [
+          "Email 正規化、Unicode 名稱、密碼長度、並行同 Email"
+        ],
+        "不做範圍": [
+          "不跨服務資料庫；不在本項擴充 社群登入或跨庫交易"
+        ],
+        "修改範圍": [
+          "src/Services/Auth/Auth.Infrastructure/AuthService.cs 與同服務契約、API、對應測試"
+        ],
+        "契約": [
+          "src/Services/Auth/Auth.Application/Contracts.cs#IAuthService.Register"
+        ],
+        "實作": [
+          "src/Services/Auth/Auth.Infrastructure/AuthService.cs#Register"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/AuthEdgeIntegrationTests.cs#ConcurrentRegistrationUsesDatabaseUniquenessRatherThanOnlyAnExistenceCheck"
+        ],
+        "完成條件": [
+          "Given 新 Email When 並行註冊 Then 僅一個帳號且可追蹤驗證／同步。"
+        ],
+        "回復方式": [
+          "保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。"
+        ],
+        "實作狀態": [
+          "implemented"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ]
+      }
+    },
+    {
+      "id": "FEAT-AUTH-CHALLENGE",
+      "document": "10-feature-identity.misvg.svg",
+      "title": "Email 驗證與重寄連結",
+      "fields": {
+        "需求": [
+          "REQ-AUTH-001"
+        ],
+        "責任服務": [
+          "Auth"
+        ],
+        "角色": [
+          "未驗證會員／忘記密碼者"
+        ],
+        "目標": [
+          "Email 驗證與重寄連結"
+        ],
+        "輸入": [
+          "Email 或單次驗證 Token、purpose"
+        ],
+        "輸出": [
+          "驗證完成或接受寄信要求"
+        ],
+        "權限": [
+          "限流；連結用途、雜湊、期限與單次使用"
+        ],
+        "資料與交易": [
+          "Challenge 鎖定；舊連結作廢；驗證後保存 User 狀態與 Outbox"
+        ],
+        "同步與副作用": [
+          "加密郵件工作；連結不進同步事件"
+        ],
+        "失敗與重試": [
+          "SMTP 失敗保留待寄工作；過期／錯用途／重用拒絕"
+        ],
+        "邊界": [
+          "空／過長 Token、24h 驗證期限、重寄限流"
+        ],
+        "不做範圍": [
+          "不跨服務資料庫；不在本項擴充 新增郵件通道"
+        ],
+        "修改範圍": [
+          "src/Services/Auth/Auth.Infrastructure/AuthService.cs 與同服務契約、API、對應測試"
+        ],
+        "契約": [
+          "src/Services/Auth/Auth.Application/Contracts.cs#IAuthService.SendChallenge,src/Services/Auth/Auth.Application/Contracts.cs#IAuthService.Verify"
+        ],
+        "實作": [
+          "src/Services/Auth/Auth.Infrastructure/AuthService.cs#Verify"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/AuthIntegrationTests.cs#UnverifiedUsersCannotLoginAndVerificationLinksCannotBeReused"
+        ],
+        "完成條件": [
+          "Given 未驗證帳號 When 有效連結使用一次 Then 可登入且再次使用失敗。"
+        ],
+        "回復方式": [
+          "保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。"
+        ],
+        "實作狀態": [
+          "implemented"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ]
+      }
+    },
+    {
+      "id": "FEAT-AUTH-RESET",
+      "document": "10-feature-identity.misvg.svg",
+      "title": "重設密碼並撤銷全部登入",
+      "fields": {
+        "需求": [
+          "REQ-AUTH-001"
+        ],
+        "責任服務": [
+          "Auth"
+        ],
+        "角色": [
+          "持有重設連結者"
+        ],
+        "目標": [
+          "重設密碼並撤銷全部登入"
+        ],
+        "輸入": [
+          "Token、新密碼"
+        ],
+        "輸出": [
+          "重設完成；既有 Session 不再有效"
+        ],
+        "權限": [
+          "單次 reset challenge；密碼規則"
+        ],
+        "資料與交易": [
+          "同交易使用 Challenge、更新 PasswordHash／SecurityVersion、撤銷 Session 與 Outbox"
+        ],
+        "同步與副作用": [
+          "提交後直接通知 Message 關閉連線；MQ 不決定撤銷生效"
+        ],
+        "失敗與重試": [
+          "過期、錯用途、重用與無效密碼拒絕；失敗不部分提交"
+        ],
+        "邊界": [
+          "重設期限 15 分鐘；空值、密碼長度與並行使用"
+        ],
+        "不做範圍": [
+          "不跨服務資料庫；不在本項擴充 密碼歷史政策"
+        ],
+        "修改範圍": [
+          "src/Services/Auth/Auth.Infrastructure/AuthService.cs 與同服務契約、API、對應測試"
+        ],
+        "契約": [
+          "src/Services/Auth/Auth.Application/Contracts.cs#IAuthService.Reset"
+        ],
+        "實作": [
+          "src/Services/Auth/Auth.Infrastructure/AuthService.cs#Reset"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/AuthIntegrationTests.cs#PasswordResetTokensAreSingleUseAndRevokeEverySession"
+        ],
+        "完成條件": [
+          "Given 有效 reset 連結與既有 Session When 重設成功 Then 舊 Session 拒絕且連結不得重用。"
+        ],
+        "回復方式": [
+          "保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。"
+        ],
+        "實作狀態": [
+          "implemented"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ]
+      }
+    },
+    {
+      "id": "FEAT-AUTH-LOGIN",
+      "document": "10-feature-identity.misvg.svg",
+      "title": "登入與 Token 簽發",
+      "fields": {
+        "需求": [
+          "REQ-AUTH-001"
+        ],
+        "責任服務": [
+          "Auth"
+        ],
+        "角色": [
+          "已驗證有效會員"
+        ],
+        "目標": [
+          "登入與 Token 簽發"
+        ],
+        "輸入": [
+          "Email、密碼、來源位址"
+        ],
+        "輸出": [
+          "五分鐘 RS256 Access Token、七天 Refresh Cookie 與 CSRF"
+        ],
+        "權限": [
+          "雜湊比對；有效／已驗證狀態；限流及失敗計數"
+        ],
+        "資料與交易": [
+          "新增 LoginSession；只保存 Refresh／CSRF 雜湊"
+        ],
+        "同步與副作用": [
+          "Access Token 由前端記憶體持有；Refresh HttpOnly Cookie"
+        ],
+        "失敗與重試": [
+          "錯誤憑證、停用、未驗證與鎖定回統一錯誤；不洩漏密碼"
+        ],
+        "邊界": [
+          "空值、密碼上下限、來源／帳號限流、Cookie Secure 正式設定"
+        ],
+        "不做範圍": [
+          "不跨服務資料庫；不在本項擴充 MFA 或外部 IdP"
+        ],
+        "修改範圍": [
+          "src/Services/Auth/Auth.Infrastructure/AuthService.cs 與同服務契約、API、對應測試"
+        ],
+        "契約": [
+          "src/Services/Auth/Auth.Application/Contracts.cs#IAuthService.Login"
+        ],
+        "實作": [
+          "src/Services/Auth/Auth.Infrastructure/AuthService.cs#Login"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/AuthIntegrationTests.cs#InvalidInputsCsrfExpiredChallengesAndLoginLockoutReturnStructuredErrors"
+        ],
+        "完成條件": [
+          "Given 已驗證會員 When 密碼正確登入 Then 建立 Session；錯誤或限流不得簽發。"
+        ],
+        "回復方式": [
+          "保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。"
+        ],
+        "實作狀態": [
+          "implemented"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ]
+      }
+    },
+    {
+      "id": "FEAT-AUTH-REFRESH",
+      "document": "10-feature-identity.misvg.svg",
+      "title": "Refresh 輪替與重用偵測",
+      "fields": {
+        "需求": [
+          "REQ-AUTH-001"
+        ],
+        "責任服務": [
+          "Auth"
+        ],
+        "角色": [
+          "持有 Refresh Cookie 的瀏覽器"
+        ],
+        "目標": [
+          "Refresh 輪替與重用偵測"
+        ],
+        "輸入": [
+          "Refresh Token、CSRF"
+        ],
+        "輸出": [
+          "舊 Session 撤銷、新 Session 同 family、保留原到期時間"
+        ],
+        "權限": [
+          "CSRF、User Active／Verified、Token 雜湊與期限"
+        ],
+        "資料與交易": [
+          "FOR UPDATE 舊 Session；輪替與 family 撤銷同交易"
+        ],
+        "同步與副作用": [
+          "提交後關閉舊 Session 連線；新 Token 才可重新連接"
+        ],
+        "失敗與重試": [
+          "重用舊 Token 撤銷同 family；CSRF 不符 403；過期 401"
+        ],
+        "邊界": [
+          "同時 refresh、重用、空值與 128 字元上限"
+        ],
+        "不做範圍": [
+          "不跨服務資料庫；不在本項擴充 延長原 family 七天期限"
+        ],
+        "修改範圍": [
+          "src/Services/Auth/Auth.Infrastructure/AuthService.cs 與同服務契約、API、對應測試"
+        ],
+        "契約": [
+          "src/Services/Auth/Auth.Application/Contracts.cs#IAuthService.Refresh"
+        ],
+        "實作": [
+          "src/Services/Auth/Auth.Infrastructure/AuthService.cs#Refresh"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/AuthIntegrationTests.cs#RefreshRotatesCookiesAndReusingOldTokenRevokesItsFamily"
+        ],
+        "完成條件": [
+          "Given 已輪替 Token When 舊 Token 重用 Then 同 family 有效 Session 撤銷。"
+        ],
+        "回復方式": [
+          "保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。"
+        ],
+        "實作狀態": [
+          "implemented"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ]
+      }
+    },
+    {
+      "id": "FEAT-AUTH-LOGOUT",
+      "document": "10-feature-identity.misvg.svg",
+      "title": "登出與權威 Session 查驗",
+      "fields": {
+        "需求": [
+          "REQ-AUTH-001"
+        ],
+        "責任服務": [
+          "Auth"
+        ],
+        "角色": [
+          "會員／受信任業務服務"
+        ],
+        "目標": [
+          "登出與權威 Session 查驗"
+        ],
+        "輸入": [
+          "Actor、CSRF；內部批次 SessionProbe"
+        ],
+        "輸出": [
+          "登出完成或逐 Session 有效性結果"
+        ],
+        "權限": [
+          "內部服務憑證；UserId、SessionId、安全版本必須一致"
+        ],
+        "資料與交易": [
+          "PostgreSQL 是權威；Redis 只快取已撤銷結果"
+        ],
+        "同步與副作用": [
+          "直接 revoke 通知既有連線；請求與推送查驗不等 MQ"
+        ],
+        "失敗與重試": [
+          "Auth 不可查驗時 fail closed；通知失敗靠連線複查"
+        ],
+        "邊界": [
+          "批次 0／1000／1001、錯所有者、過期、安全版本"
+        ],
+        "不做範圍": [
+          "不跨服務資料庫；不在本項擴充 JWT-only 授權"
+        ],
+        "修改範圍": [
+          "src/Services/Auth/Auth.Infrastructure/AuthService.cs 與同服務契約、API、對應測試"
+        ],
+        "契約": [
+          "src/Services/Auth/Auth.Application/Contracts.cs#IAuthService.Logout"
+        ],
+        "實作": [
+          "src/Services/Auth/Auth.Infrastructure/AuthService.cs#Logout,src/Services/Auth/Auth.Infrastructure/AuthService.cs#Check"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/AuthEdgeIntegrationTests.cs#SessionIntrospectionRejectsUnknownWrongOwnerStaleVersionsAndOversizedBatches"
+        ],
+        "完成條件": [
+          "Given 登入已撤銷 When 請求或推送查驗 Then 拒絕授權且不正向快取有效狀態。"
+        ],
+        "回復方式": [
+          "保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。"
+        ],
+        "實作狀態": [
+          "implemented"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ]
+      }
+    },
+    {
+      "id": "FEAT-AUTH-ADMIN",
+      "document": "10-feature-identity.misvg.svg",
+      "title": "帳號、角色與停用管理",
+      "fields": {
+        "需求": [
+          "REQ-CMS-001"
+        ],
+        "責任服務": [
+          "Auth"
+        ],
+        "角色": [
+          "Admin"
+        ],
+        "目標": [
+          "帳號、角色與停用管理"
+        ],
+        "輸入": [
+          "查詢上限、目標 ID、角色／停用狀態與原因"
+        ],
+        "輸出": [
+          "帳號列表、權限異動及稽核"
+        ],
+        "權限": [
+          "Admin；有效最後管理員不可降權或停用"
+        ],
+        "資料與交易": [
+          "異動鎖定與最後 Admin 保護；SecurityVersion／Session／Audit／Outbox 同保存"
+        ],
+        "同步與副作用": [
+          "直接撤銷受影響登入；事件更新其他服務身分投影"
+        ],
+        "失敗與重試": [
+          "無權 403、缺原因驗證錯誤、最後 Admin 409"
+        ],
+        "邊界": [
+          "角色 enum、並行異動、最後有效 Admin、查詢上限"
+        ],
+        "不做範圍": [
+          "不跨服務資料庫；不在本項擴充 額外自訂角色系統"
+        ],
+        "修改範圍": [
+          "src/Services/Auth/Auth.Infrastructure/AuthService.cs 與同服務契約、API、對應測試"
+        ],
+        "契約": [
+          "src/Services/Auth/Auth.Application/Contracts.cs#IAuthService.Users,src/Services/Auth/Auth.Application/Contracts.cs#IAuthService.Manage"
+        ],
+        "實作": [
+          "src/Services/Auth/Auth.Infrastructure/AuthService.cs#Manage"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/AuthIntegrationTests.cs#AdminRoleChangesRevokeAccessAndProtectTheLastAdministrator"
+        ],
+        "完成條件": [
+          "Given 最後有效 Admin When 嘗試降權 Then 409 且角色保持。"
+        ],
+        "回復方式": [
+          "保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。"
+        ],
+        "實作狀態": [
+          "implemented"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ]
+      }
+    },
+    {
+      "id": "FEAT-ACCOUNT-PROFILE",
+      "document": "10-feature-identity.misvg.svg",
+      "title": "個人資料讀取與修改",
+      "fields": {
+        "需求": [
+          "REQ-BOUNDARY-001,REQ-SYNC-001"
+        ],
+        "責任服務": [
+          "Account"
+        ],
+        "角色": [
+          "會員；有原因的 Admin"
+        ],
+        "目標": [
+          "個人資料讀取與修改"
+        ],
+        "輸入": [
+          "Actor、DisplayName、Bio、管理原因"
+        ],
+        "輸出": [
+          "ProfileView 或明確初始化中狀態"
+        ],
+        "權限": [
+          "本人更新；Admin 管理需原因與稽核"
+        ],
+        "資料與交易": [
+          "Profile 為唯一資料權威；Version 與 ProfileChanged Outbox 同保存"
+        ],
+        "同步與副作用": [
+          "快取失效；Message 更新必要公開投影"
+        ],
+        "失敗與重試": [
+          "快取故障／損毀回 PG；初始化未完成可重試；越權拒絕"
+        ],
+        "邊界": [
+          "名稱 50、Bio 500、Unicode、版本衝突與未初始化"
+        ],
+        "不做範圍": [
+          "不跨服務資料庫；不在本項擴充 修改 Auth 的 Email／角色"
+        ],
+        "修改範圍": [
+          "src/Services/Account/Account.Infrastructure/AccountService.cs 與同服務契約、API、對應測試"
+        ],
+        "契約": [
+          "src/Services/Account/Account.Application/Contracts.cs#IAccountService.Me,src/Services/Account/Account.Application/Contracts.cs#IAccountService.Update"
+        ],
+        "實作": [
+          "src/Services/Account/Account.Infrastructure/AccountService.cs#Update"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/ServiceIntegrationTests.cs#ProfilesSynchronizeVersionedPublicDataAndEnforceOwnership"
+        ],
+        "完成條件": [
+          "Given 本人有效資料 When 更新 Then 版本增加並最終同步；越權者不能修改。"
+        ],
+        "回復方式": [
+          "保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。"
+        ],
+        "實作狀態": [
+          "implemented"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ]
+      }
+    },
+    {
+      "id": "FEAT-ACCOUNT-DIRECTORY",
+      "document": "10-feature-identity.misvg.svg",
+      "title": "會員搜尋與管理稽核入口",
+      "fields": {
+        "需求": [
+          "REQ-BOUNDARY-001,REQ-CMS-001"
+        ],
+        "責任服務": [
+          "Account"
+        ],
+        "角色": [
+          "已登入會員／Admin"
+        ],
+        "目標": [
+          "會員搜尋與管理稽核入口"
+        ],
+        "輸入": [
+          "搜尋字串、分頁上限；Admin Audit 查詢"
+        ],
+        "輸出": [
+          "最小公開 Profile 列表／該服務稽核"
+        ],
+        "權限": [
+          "公開會員搜尋需有效 Session；Audit 僅 Admin"
+        ],
+        "資料與交易": [
+          "只查 Account DB；不跨讀 Auth；查詢不擁有角色資料"
+        ],
+        "同步與副作用": [
+          "無身分權威副作用；投影延遲以已知公開資料呈現"
+        ],
+        "失敗與重試": [
+          "無效分頁拒絕；快取／Auth 故障依平台政策處理"
+        ],
+        "邊界": [
+          "0／超限頁數、空搜尋、Unicode、必要欄位"
+        ],
+        "不做範圍": [
+          "不跨服務資料庫；不在本項擴充 跨服務聯表或全面歷史分頁"
+        ],
+        "修改範圍": [
+          "src/Services/Account/Account.Infrastructure/AccountService.cs 與同服務契約、API、對應測試"
+        ],
+        "契約": [
+          "src/Services/Account/Account.Application/Contracts.cs#IAccountService.Search"
+        ],
+        "實作": [
+          "src/Services/Account/Account.Infrastructure/AccountService.cs#Search"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/ProjectionAndFailureIntegrationTests.cs#ProfileCacheFailuresAndCorruptionFallBackToPostgresAndOwnershipIsCheckedInTheService"
+        ],
+        "完成條件": [
+          "Given 有效會員 When 搜尋 Then 只回可公開資料；管理稽核需 Admin。"
+        ],
+        "回復方式": [
+          "保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。"
+        ],
+        "實作狀態": [
+          "implemented"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ]
+      }
+    },
+    {
+      "id": "FEAT-CHAT-ROOM",
+      "document": "11-feature-chat.misvg.svg",
+      "title": "群組與一對一聊天室",
+      "fields": {
+        "需求": [
+          "REQ-CHAT-001"
+        ],
+        "責任服務": [
+          "Message"
+        ],
+        "角色": [
+          "會員；有原因的 Admin 查閱"
+        ],
+        "目標": [
+          "群組與一對一聊天室"
+        ],
+        "輸入": [
+          "RoomRequest 或目標 UserId"
+        ],
+        "輸出": [
+          "RoomView；正規化一對一房間"
+        ],
+        "權限": [
+          "有效 Session；一般列表僅本人房間；成員需已知且有效投影"
+        ],
+        "資料與交易": [
+          "Room／Membership 本庫保存；Direct advisory lock＋唯一 key"
+        ],
+        "同步與副作用": [
+          "不直接建立其他服務會員；依投影版本使用公開資料"
+        ],
+        "失敗與重試": [
+          "資料未同步回可重試；自己對話、超量成員與不存在對象拒絕"
+        ],
+        "邊界": [
+          "群組最多 200 人；Direct 兩端排序；並行建立"
+        ],
+        "不做範圍": [
+          "不跨服務資料庫；不在本項擴充 公開廣場或跨庫會員查詢"
+        ],
+        "修改範圍": [
+          "src/Services/Message/Message.Infrastructure/ChatService.cs 與同服務契約、API、對應測試"
+        ],
+        "契約": [
+          "src/Services/Message/Message.Application/Contracts.cs#IChatService.Rooms,src/Services/Message/Message.Application/Contracts.cs#IChatService.Create,src/Services/Message/Message.Application/Contracts.cs#IChatService.Direct"
+        ],
+        "實作": [
+          "src/Services/Message/Message.Infrastructure/ChatService.cs#Create,src/Services/Message/Message.Infrastructure/ChatService.cs#Direct"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/ServiceIntegrationTests.cs#DirectRoomCreationIsCanonicalAndMembershipChangesPreserveAnOwner"
+        ],
+        "完成條件": [
+          "Given 同一對會員 When 並行建立 Direct Then 得到同一房間。"
+        ],
+        "回復方式": [
+          "保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。"
+        ],
+        "實作狀態": [
+          "implemented"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ]
+      }
+    },
+    {
+      "id": "FEAT-CHAT-MEMBERS",
+      "document": "11-feature-chat.misvg.svg",
+      "title": "成員權限、移除與擁有權轉移",
+      "fields": {
+        "需求": [
+          "REQ-CHAT-001,REQ-CMS-001"
+        ],
+        "責任服務": [
+          "Message"
+        ],
+        "角色": [
+          "Owner／Moderator／本人離群／Admin"
+        ],
+        "目標": [
+          "成員權限、移除與擁有權轉移"
+        ],
+        "輸入": [
+          "UserId、角色、remove、管理原因"
+        ],
+        "輸出": [
+          "成員／角色變更與通知"
+        ],
+        "權限": [
+          "Moderator 不得提升或管理同級；Owner 不可直接移除；Admin 需稽核"
+        ],
+        "資料與交易": [
+          "Room FOR UPDATE；成員操作同交易；轉移先驗證目標"
+        ],
+        "同步與副作用": [
+          "提交後 members 通知；不以通知成功取代資料提交"
+        ],
+        "失敗與重試": [
+          "非成員、非群組、無效角色、最後 Owner、容量與缺原因拒絕"
+        ],
+        "邊界": [
+          "0／200／201 人、自我轉移、未知目標與併發"
+        ],
+        "不做範圍": [
+          "不跨服務資料庫；不在本項擴充 多人 Owner 或房間刪除"
+        ],
+        "修改範圍": [
+          "src/Services/Message/Message.Infrastructure/ChatService.cs 與同服務契約、API、對應測試"
+        ],
+        "契約": [
+          "src/Services/Message/Message.Application/Contracts.cs#IChatService.Members,src/Services/Message/Message.Application/Contracts.cs#IChatService.Transfer"
+        ],
+        "實作": [
+          "src/Services/Message/Message.Infrastructure/ChatService.cs#Members,src/Services/Message/Message.Infrastructure/ChatService.cs#Transfer"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/ChatEdgeIntegrationTests.cs#GroupMemberPermissionsCoverSelfLeaveOwnerProtectionUnknownTargetsAndCapacity"
+        ],
+        "完成條件": [
+          "Given 群組 Owner When 轉移給有效成員 Then 新 Owner 唯一且原 Owner 成 Moderator。"
+        ],
+        "回復方式": [
+          "保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。"
+        ],
+        "實作狀態": [
+          "implemented"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ]
+      }
+    },
+    {
+      "id": "FEAT-CHAT-HISTORY",
+      "document": "11-feature-chat.misvg.svg",
+      "title": "歷史游標與斷線補齊",
+      "fields": {
+        "需求": [
+          "REQ-CHAT-001"
+        ],
+        "責任服務": [
+          "Message"
+        ],
+        "角色": [
+          "成員；有原因的 Admin"
+        ],
+        "目標": [
+          "歷史游標與斷線補齊"
+        ],
+        "輸入": [
+          "roomId、before 或 after、limit、reason"
+        ],
+        "輸出": [
+          "依 Sequence 排序的 Page 與 next cursor"
+        ],
+        "權限": [
+          "成員；Admin 例外查閱需原因與稽核"
+        ],
+        "資料與交易": [
+          "AsNoTracking 查 Message DB；不從 WebSocket 保存歷史"
+        ],
+        "同步與副作用": [
+          "after 補齊與通知解耦；前端按 ID／Sequence 合併"
+        ],
+        "失敗與重試": [
+          "無權隱藏房間；雙游標、負值與超限拒絕；斷線可重試"
+        ],
+        "邊界": [
+          "before>=1、after>=0、不可同時給；空頁、limit+1"
+        ],
+        "不做範圍": [
+          "不跨服務資料庫；不在本項擴充 全文搜尋或無上限歷史"
+        ],
+        "修改範圍": [
+          "src/Services/Message/Message.Infrastructure/ChatService.cs 與同服務契約、API、對應測試"
+        ],
+        "契約": [
+          "src/Services/Message/Message.Application/Contracts.cs#IChatService.History"
+        ],
+        "實作": [
+          "src/Services/Message/Message.Infrastructure/ChatService.cs#History"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/ServiceIntegrationTests.cs#MessagesAreIdempotentOrderedAndReadPositionsCannotRegress"
+        ],
+        "完成條件": [
+          "Given 有離線訊息 When 以 after 游標查詢 Then 按房內序號補齊且不重複。"
+        ],
+        "回復方式": [
+          "保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。"
+        ],
+        "實作狀態": [
+          "implemented"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ]
+      }
+    },
+    {
+      "id": "FEAT-CHAT-SEND",
+      "document": "11-feature-chat.misvg.svg",
+      "title": "冪等訊息寫入與附件綁定",
+      "fields": {
+        "需求": [
+          "REQ-CHAT-001,REQ-FILE-001"
+        ],
+        "責任服務": [
+          "Message"
+        ],
+        "角色": [
+          "房間成員"
+        ],
+        "目標": [
+          "冪等訊息寫入與附件綁定"
+        ],
+        "輸入": [
+          "clientMessageId、文字、附件 IDs"
+        ],
+        "輸出": [
+          "持久化 MessageView 與房內遞增 Sequence"
+        ],
+        "權限": [
+          "房間成員；附件必須本人、同房、Ready、未綁定且未過期"
+        ],
+        "資料與交易": [
+          "Room FOR UPDATE；訊息、LastSequence、附件綁定、ChatChanged Outbox 同交易"
+        ],
+        "同步與副作用": [
+          "REST 是寫入口；MQ 後續通知 SignalR；提交後不等待通知完成"
+        ],
+        "失敗與重試": [
+          "相同 ID 同內容回原訊息；不同內容 409；依附狀態失敗拒絕"
+        ],
+        "邊界": [
+          "文字 code point、空內容、五／六附件、重複附件、並行序號"
+        ],
+        "不做範圍": [
+          "不跨服務資料庫；不在本項擴充 WebSocket 直接訊息寫入"
+        ],
+        "修改範圍": [
+          "src/Services/Message/Message.Infrastructure/ChatService.cs 與同服務契約、API、對應測試"
+        ],
+        "契約": [
+          "src/Services/Message/Message.Application/Contracts.cs#IChatService.Send"
+        ],
+        "實作": [
+          "src/Services/Message/Message.Infrastructure/ChatService.cs#Send"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/ServiceIntegrationTests.cs#MessagesAreIdempotentOrderedAndReadPositionsCannotRegress"
+        ],
+        "完成條件": [
+          "Given 同一 clientMessageId When 重送 Then 不新增；內容不同時 409。"
+        ],
+        "回復方式": [
+          "保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。"
+        ],
+        "實作狀態": [
+          "implemented"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ]
+      }
+    },
+    {
+      "id": "FEAT-CHAT-READ",
+      "document": "11-feature-chat.misvg.svg",
+      "title": "單調已讀游標與未讀數",
+      "fields": {
+        "需求": [
+          "REQ-CHAT-001"
+        ],
+        "責任服務": [
+          "Message"
+        ],
+        "角色": [
+          "房間成員"
+        ],
+        "目標": [
+          "單調已讀游標與未讀數"
+        ],
+        "輸入": [
+          "roomId、sequence"
+        ],
+        "輸出": [
+          "更新 LastReadSequence；read 通知"
+        ],
+        "權限": [
+          "有效 Session 與房間 Membership"
+        ],
+        "資料與交易": [
+          "Room 鎖定；ReadPosition 不倒退且不得超過 LastSequence"
+        ],
+        "同步與副作用": [
+          "提交後 read 通知；未讀依非本人且未刪訊息計算"
+        ],
+        "失敗與重試": [
+          "非法／超前游標拒絕；舊值重送保持不倒退"
+        ],
+        "邊界": [
+          "0、現值、較舊值、LastSequence、超前與並行已讀"
+        ],
+        "不做範圍": [
+          "不跨服務資料庫；不在本項擴充 逐則讀者永久紀錄"
+        ],
+        "修改範圍": [
+          "src/Services/Message/Message.Infrastructure/ChatService.cs 與同服務契約、API、對應測試"
+        ],
+        "契約": [
+          "src/Services/Message/Message.Application/Contracts.cs#IChatService.Read"
+        ],
+        "實作": [
+          "src/Services/Message/Message.Infrastructure/ChatService.cs#Read"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/ServiceIntegrationTests.cs#MessagesAreIdempotentOrderedAndReadPositionsCannotRegress"
+        ],
+        "完成條件": [
+          "Given 已讀 N When 提交 N-1 Then 已讀仍為 N；超前訊息拒絕。"
+        ],
+        "回復方式": [
+          "保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。"
+        ],
+        "實作狀態": [
+          "implemented"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ]
+      }
+    },
+    {
+      "id": "FEAT-CHAT-UPLOAD",
+      "document": "11-feature-chat.misvg.svg",
+      "title": "附件驗證與 Pending／Ready 上傳",
+      "fields": {
+        "需求": [
+          "REQ-FILE-001"
+        ],
+        "責任服務": [
+          "Message"
+        ],
+        "角色": [
+          "房間成員"
+        ],
+        "目標": [
+          "附件驗證與 Pending／Ready 上傳"
+        ],
+        "輸入": [
+          "fileName、宣告 MIME、Stream"
+        ],
+        "輸出": [
+          "私有 AttachmentView"
+        ],
+        "權限": [
+          "有效成員；路徑／標頭注入、MIME 與內容特徵檢查"
+        ],
+        "資料與交易": [
+          "先保存 Pending，再 S3 Put，再 Ready；不是跨 PG／S3 原子交易"
+        ],
+        "同步與副作用": [
+          "失敗由未綁定清理工作恢復；物件 key 由 ID 產生"
+        ],
+        "失敗與重試": [
+          "超限 413、格式偽造拒絕、S3 故障 503；可重新上傳新暫存"
+        ],
+        "邊界": [
+          "空檔、20 MiB 臨界、圖片解碼尺寸、PDF 與 UTF-8"
+        ],
+        "不做範圍": [
+          "不跨服務資料庫；不在本項擴充 公開 S3 URL 或防毒服務保證"
+        ],
+        "修改範圍": [
+          "src/Services/Message/Message.Infrastructure/ChatService.cs 與同服務契約、API、對應測試"
+        ],
+        "契約": [
+          "src/Services/Message/Message.Application/Contracts.cs#IChatService.Upload"
+        ],
+        "實作": [
+          "src/Services/Message/Message.Infrastructure/ChatService.cs#Upload"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/ChatEdgeIntegrationTests.cs#ExactFileSizeAndFiveAttachmentLimitAreEnforcedAtTheHttpBoundary"
+        ],
+        "完成條件": [
+          "Given 合法成員 When 上傳有效 20 MiB 檔 Then 可用；超限及偽造內容拒絕。"
+        ],
+        "回復方式": [
+          "保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。"
+        ],
+        "實作狀態": [
+          "implemented"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ]
+      }
+    },
+    {
+      "id": "FEAT-CHAT-FILE-ADMIN",
+      "document": "11-feature-chat.misvg.svg",
+      "title": "附件下載、管理清單與訊息審核",
+      "fields": {
+        "需求": [
+          "REQ-FILE-001,REQ-CMS-001"
+        ],
+        "責任服務": [
+          "Message"
+        ],
+        "角色": [
+          "成員／Admin"
+        ],
+        "目標": [
+          "附件下載、管理清單與訊息審核"
+        ],
+        "輸入": [
+          "attachmentId、roomId、messageId、管理原因"
+        ],
+        "輸出": [
+          "授權串流；附件列表；軟刪訊息"
+        ],
+        "權限": [
+          "房間存取；未綁定非本人不可讀；Admin 敏感操作記原因"
+        ],
+        "資料與交易": [
+          "Audit 與軟刪／Outbox 保存；物件存於 Garage"
+        ],
+        "同步與副作用": [
+          "軟刪後一般會員不能讀其附件；Admin 可稽核查閱"
+        ],
+        "失敗與重試": [
+          "未 Ready／無權／未知／已刪訊息依規則拒絕；儲存故障回統一錯誤"
+        ],
+        "邊界": [
+          "跨房間、跨帳號、管理原因、頁數、已刪內容"
+        ],
+        "不做範圍": [
+          "不跨服務資料庫；不在本項擴充 永久抹除或公開分享連結"
+        ],
+        "修改範圍": [
+          "src/Services/Message/Message.Infrastructure/ChatService.cs 與同服務契約、API、對應測試"
+        ],
+        "契約": [
+          "src/Services/Message/Message.Application/Contracts.cs#IChatService.Download,src/Services/Message/Message.Application/Contracts.cs#IChatService.Attachments,src/Services/Message/Message.Application/Contracts.cs#IChatService.Moderate"
+        ],
+        "實作": [
+          "src/Services/Message/Message.Infrastructure/ChatService.cs#Download,src/Services/Message/Message.Infrastructure/ChatService.cs#Moderate"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/ServiceIntegrationTests.cs#AttachmentsUseRealS3AndRequireOwnerRoomAndCurrentSessionPermissions"
+        ],
+        "完成條件": [
+          "Given 無房間權限者 When 下載附件 Then 拒絕；Admin 合法查閱有稽核。"
+        ],
+        "回復方式": [
+          "保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。"
+        ],
+        "實作狀態": [
+          "implemented"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ]
+      }
+    },
+    {
+      "id": "FEAT-CHAT-REALTIME",
+      "document": "11-feature-chat.misvg.svg",
+      "title": "房間存取、在線與安全推送",
+      "fields": {
+        "需求": [
+          "REQ-AUTH-001,REQ-CHAT-001"
+        ],
+        "責任服務": [
+          "Message"
+        ],
+        "角色": [
+          "連線會員／通知工作"
+        ],
+        "目標": [
+          "房間存取、在線與安全推送"
+        ],
+        "輸入": [
+          "JWT、roomId、SignalR Join／Heartbeat"
+        ],
+        "輸出": [
+          "presence／changed／read／members；斷線與撤銷"
+        ],
+        "權限": [
+          "Join 成員查驗；推送前批次 Auth Session 查驗"
+        ],
+        "資料與交易": [
+          "Message Redis 連線索引與 backplane；PG 保存業務資料"
+        ],
+        "同步與副作用": [
+          "ChatHub、ConnectionRegistry、ChatNotifier 各自職責；Auth 直接 revoke"
+        ],
+        "失敗與重試": [
+          "Auth 故障停止授權／推送；Redis 故障不把在線狀態當權威"
+        ],
+        "邊界": [
+          "多分頁、多 Session、斷線TTL、過期、撤銷與 Broker 中斷"
+        ],
+        "不做範圍": [
+          "不跨服務資料庫；不在本項擴充 端到端加密或訊息寫 Hub"
+        ],
+        "修改範圍": [
+          "src/Services/Message/Message.Infrastructure/ChatService.cs 與同服務契約、API、對應測試"
+        ],
+        "契約": [
+          "src/Services/Message/Message.Application/Contracts.cs#IChatService.EnsureMember"
+        ],
+        "實作": [
+          "src/Services/Message/Message.Infrastructure/ChatService.cs#EnsureMember,src/Services/Message/Message.Api/Realtime.cs#ChatNotifier"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/RealtimeIntegrationTests.cs#WebsocketPushPresenceHeartbeatAndImmediateSessionRevocationAreEnforced"
+        ],
+        "完成條件": [
+          "Given Session 撤銷 When 新操作或通知 Then 拒絕並中止連線；重連以游標補齊。"
+        ],
+        "回復方式": [
+          "保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。"
+        ],
+        "實作狀態": [
+          "implemented"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ]
+      }
+    },
+    {
+      "id": "FEAT-EDGE",
+      "document": "12-feature-platform.misvg.svg",
+      "title": "Gateway REST／WebSocket／文件入口",
+      "fields": {
+        "需求": [
+          "REQ-DELIVERY-001,REQ-BOUNDARY-001"
+        ],
+        "責任服務": [
+          "Gateway"
+        ],
+        "角色": [
+          "公開客戶端"
+        ],
+        "目標": [
+          "Gateway REST／WebSocket／文件入口"
+        ],
+        "輸入": [
+          "/api/v1/auth、accounts、chat；/hubs/chat；/openapi 與網站路徑"
+        ],
+        "輸出": [
+          "上游回應或統一 Problem Details；/docs 與 Admin 系統狀態"
+        ],
+        "權限": [
+          "業務與 Hub 路由 JWT 初驗；系統狀態需 Admin＋權威查驗；internal 明確 404"
+        ],
+        "資料與交易": [
+          "使用既有元件資料權責；不得跨服務 Entity／DbContext"
+        ],
+        "同步與副作用": [
+          "副作用與恢復方式見關聯 UML 及來源"
+        ],
+        "失敗與重試": [
+          "上游逾時／失敗轉統一錯誤；429 限流；Gateway 不自動重送非冪等寫入"
+        ],
+        "邊界": [
+          "API／Hub 每來源預設 300／分；body 21 MiB；靜態頁不受 API 限流"
+        ],
+        "不做範圍": [
+          "不跨服務資料庫；不在本項擴充 新增服務資料庫"
+        ],
+        "修改範圍": [
+          "src/Gateway/Program.cs、appsettings.json、Gateway 對應測試"
+        ],
+        "契約": [
+          "none"
+        ],
+        "實作": [
+          "src/Gateway/Program.cs#Program"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/GatewayIntegrationTests.cs#GatewayRoutesPublicAndProtectedApisHidesInternalEndpointsAndReportsUpstreamErrors"
+        ],
+        "完成條件": [
+          "Given 未授權或內部路徑 When 經 Gateway 請求 Then 統一拒絕且不公開 internal。"
+        ],
+        "回復方式": [
+          "保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。"
+        ],
+        "實作狀態": [
+          "implemented"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ]
+      }
+    },
+    {
+      "id": "FEAT-EVENTS",
+      "document": "12-feature-platform.misvg.svg",
+      "title": "Outbox／Inbox、版本與死信同步",
+      "fields": {
+        "需求": [
+          "REQ-SYNC-001"
+        ],
+        "責任服務": [
+          "Shared"
+        ],
+        "角色": [
+          "三服務發布者與 Account／Message 消費者"
+        ],
+        "目標": [
+          "Outbox／Inbox、版本與死信同步"
+        ],
+        "輸入": [
+          "具 ID、type、schemaVersion、aggregateVersion、trace 的 IntegrationEvent／Outbox"
+        ],
+        "輸出": [
+          "確認發布、投影＋Inbox、重試或死信；各服務只處理自己的資料"
+        ],
+        "權限": [
+          "服務 AMQP 憑證；不可放密碼／Token；事件不是授權依據"
+        ],
+        "資料與交易": [
+          "業務與 Outbox 同庫交易；消費投影與 Inbox 同庫交易；禁止跨 DB Transaction"
+        ],
+        "同步與副作用": [
+          "持久佇列／訊息、Publisher Confirm＋mandatory、手動 ACK；至少一次"
+        ],
+        "失敗與重試": [
+          "未 confirm 不標 PublishedAt；去重、舊版本忽略、有限重試與死信；人工修正重送"
+        ],
+        "邊界": [
+          "重複、亂序、發布後未確認、消費提交前／後重啟、未綁定路由"
+        ],
+        "不做範圍": [
+          "不跨服務資料庫；不在本項擴充 密碼／Token 事件或 exactly-once 保證"
+        ],
+        "修改範圍": [
+          "src/Shared/BuildingBlocks/RabbitWorkers.cs 與同服務契約、API、對應測試"
+        ],
+        "契約": [
+          "none"
+        ],
+        "實作": [
+          "src/Shared/BuildingBlocks/RabbitWorkers.cs#OutboxPublisher"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/WorkerIntegrationTests.cs#MissingBrokerNeverMarksOutboxRowsPublishedAndWorkersCanStopDuringRecovery"
+        ],
+        "完成條件": [
+          "Given Broker 中斷 When 已提交 Outbox Then 保留待送；恢復後補送。"
+        ],
+        "回復方式": [
+          "保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。"
+        ],
+        "實作狀態": [
+          "implemented"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ]
+      }
+    },
+    {
+      "id": "FEAT-MAIL",
+      "document": "12-feature-platform.misvg.svg",
+      "title": "加密郵件工作與 SMTP 重試",
+      "fields": {
+        "需求": [
+          "REQ-AUTH-001"
+        ],
+        "責任服務": [
+          "Auth"
+        ],
+        "角色": [
+          "Auth 工作程序"
+        ],
+        "目標": [
+          "加密郵件工作與 SMTP 重試"
+        ],
+        "輸入": [
+          "Auth DB MailJob 的 Recipient、Subject、ProtectedBody 與狀態"
+        ],
+        "輸出": [
+          "SMTP 成功後 DeliveredAt 與清除郵件內容；失敗保留可重試"
+        ],
+        "權限": [
+          "Data Protection key 僅 Auth 掛載；SMTP 設定從環境提供"
+        ],
+        "資料與交易": [
+          "建立 Challenge 時保存加密 MailJob；寄信與 DB 非分散式交易"
+        ],
+        "同步與副作用": [
+          "副作用與恢復方式見關聯 UML 及來源"
+        ],
+        "失敗與重試": [
+          "SMTP 故障重試；寄信成功但 DB 未標記可能重複，單次驗證 Token 保護業務"
+        ],
+        "邊界": [
+          "SMTP 故障、加密 key 遺失、工作重啟、內容清除與不輸出連結"
+        ],
+        "不做範圍": [
+          "不跨服務資料庫；不在本項擴充 正式 SMTP 供應商／SLA"
+        ],
+        "修改範圍": [
+          "src/Services/Auth/Auth.Infrastructure/MailWorker.cs 與同服務契約、API、對應測試"
+        ],
+        "契約": [
+          "none"
+        ],
+        "實作": [
+          "src/Services/Auth/Auth.Infrastructure/MailWorker.cs#MailWorker"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/WorkerIntegrationTests.cs#EmailJobsAreEncryptedAtRestDeliveredToSmtpAndScrubbedAfterDelivery"
+        ],
+        "完成條件": [
+          "Given SMTP 暫時不可用 When 郵件工作執行 Then 保留可重試；成功後清理內容。"
+        ],
+        "回復方式": [
+          "保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。"
+        ],
+        "實作狀態": [
+          "implemented"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ]
+      }
+    },
+    {
+      "id": "FEAT-CLEANUP",
+      "document": "12-feature-platform.misvg.svg",
+      "title": "逾期未綁定附件清理",
+      "fields": {
+        "需求": [
+          "REQ-FILE-001"
+        ],
+        "責任服務": [
+          "Message"
+        ],
+        "角色": [
+          "Message 工作程序"
+        ],
+        "目標": [
+          "逾期未綁定附件清理"
+        ],
+        "輸入": [
+          "CreatedAt 超過 24h 且 MessageId 為 null 的附件"
+        ],
+        "輸出": [
+          "刪除物件後移除參照；已綁定資料不在本輪清理"
+        ],
+        "權限": [
+          "內網 Message S3 key；不能用使用者檔名當路徑"
+        ],
+        "資料與交易": [
+          "每 10 分鐘最多 100 筆；先 Garage Delete 再 DB Remove"
+        ],
+        "同步與副作用": [
+          "副作用與恢復方式見關聯 UML 及來源"
+        ],
+        "失敗與重試": [
+          "物件刪除失敗保留 DB；程序重啟後再次清理；不假稱 PG／S3 原子"
+        ],
+        "邊界": [
+          "24h 臨界、Ready／Pending、已綁定、S3 不可用與重啟"
+        ],
+        "不做範圍": [
+          "不跨服務資料庫；不在本項擴充 永久刪除仍綁定訊息的檔案"
+        ],
+        "修改範圍": [
+          "src/Services/Message/Message.Infrastructure/AttachmentCleanup.cs 與同服務契約、API、對應測試"
+        ],
+        "契約": [
+          "none"
+        ],
+        "實作": [
+          "src/Services/Message/Message.Infrastructure/AttachmentCleanup.cs#AttachmentCleanup"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/WorkerIntegrationTests.cs#AttachmentCleanupDeletesExpiredUnboundObjectsAndDatabaseReferences"
+        ],
+        "完成條件": [
+          "Given 過期未綁定附件 When 清理成功 Then 物件與參照移除；儲存失敗保留可恢復資訊。"
+        ],
+        "回復方式": [
+          "保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。"
+        ],
+        "實作狀態": [
+          "implemented"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ]
+      }
+    },
+    {
+      "id": "FEAT-UI-AUTH",
+      "document": "12-feature-platform.misvg.svg",
+      "title": "繁體中文註冊登入與個人資料介面",
+      "fields": {
+        "需求": [
+          "REQ-AUTH-001,REQ-BOUNDARY-001"
+        ],
+        "責任服務": [
+          "Web"
+        ],
+        "角色": [
+          "訪客／會員"
+        ],
+        "目標": [
+          "繁體中文註冊登入與個人資料介面"
+        ],
+        "輸入": [
+          "註冊／登入表單、Email URL Token、本人 Profile"
+        ],
+        "輸出": [
+          "驗證／登入結果、處理中／錯誤／重試及個人資料編輯"
+        ],
+        "權限": [
+          "Access Token 在記憶體；Refresh HttpOnly Cookie＋CSRF；UI 隱藏不代替 API 授權"
+        ],
+        "資料與交易": [
+          "不持有會員 DB；Profile 更新送 Account API；初始化未完成不開放編輯"
+        ],
+        "同步與副作用": [
+          "副作用與恢復方式見關聯 UML 及來源"
+        ],
+        "失敗與重試": [
+          "缺欄位先顯示；後端錯誤可重試；投影 202 等待 Retry-After；登出清記憶體"
+        ],
+        "邊界": [
+          "空欄位、錯 Token、未初始化、重複送出與未授權 CMS"
+        ],
+        "不做範圍": [
+          "不跨服務資料庫；不在本項擴充 新增視覺設計系統"
+        ],
+        "修改範圍": [
+          "src/Web/src/AuthPage.tsx 與同服務契約、API、對應測試"
+        ],
+        "契約": [
+          "none"
+        ],
+        "實作": [
+          "src/Web/src/AuthPage.tsx#AuthPage,src/Web/src/App.tsx#App"
+        ],
+        "測試": [
+          "src/Web/src/AuthPage.test.tsx#test:logs in with validated form inputs,src/Web/e2e/workspace.spec.ts#test:會員可從網頁註冊、收信驗證、登入與更新個人資料"
+        ],
+        "完成條件": [
+          "Given 表單缺欄位 When 送出 Then 顯示錯誤；有效登入後進會員區。"
+        ],
+        "回復方式": [
+          "保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。"
+        ],
+        "實作狀態": [
+          "implemented"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ]
+      }
+    },
+    {
+      "id": "FEAT-UI-CHAT",
+      "document": "12-feature-platform.misvg.svg",
+      "title": "會員聊天、附件進度與重連",
+      "fields": {
+        "需求": [
+          "REQ-CHAT-001,REQ-FILE-001"
+        ],
+        "責任服務": [
+          "Web"
+        ],
+        "角色": [
+          "會員"
+        ],
+        "目標": [
+          "會員聊天、附件進度與重連"
+        ],
+        "輸入": [
+          "房間、文字草稿、最多五個檔案、REST 歷史與 SignalR changed"
+        ],
+        "輸出": [
+          "訊息列表、已讀、在線、上傳進度、連線狀態與補齊結果"
+        ],
+        "權限": [
+          "會員區；每個 API／Join／下載仍由服務驗證 Session 與房間權限"
+        ],
+        "資料與交易": [
+          "前端只持有 UI 狀態；REST 保存訊息；按 ID／Sequence 合併歷史與通知"
+        ],
+        "同步與副作用": [
+          "副作用與恢復方式見關聯 UML 及來源"
+        ],
+        "失敗與重試": [
+          "相同失敗草稿重試保留 clientMessageId；斷線重連後 after 補齊；上傳可重試"
+        ],
+        "邊界": [
+          "空訊息、五／六附件、20 MiB、重複推送、離線多則及行動寬度"
+        ],
+        "不做範圍": [
+          "不跨服務資料庫；不在本項擴充 新增會議／語音"
+        ],
+        "修改範圍": [
+          "src/Web/src/ChatPage.tsx 與同服務契約、API、對應測試"
+        ],
+        "契約": [
+          "none"
+        ],
+        "實作": [
+          "src/Web/src/ChatPage.tsx#ChatPage"
+        ],
+        "測試": [
+          "src/Web/src/ChatPage.test.tsx#test:keeps clientMessageId stable when retrying the same failed send,src/Web/e2e/workspace.spec.ts#test:雙會員透過 WebSocket 聊天、讀取附件、已讀並在重連後補齊訊息"
+        ],
+        "完成條件": [
+          "Given 送出失敗 When 重試相同草稿 Then clientMessageId 保持不變。"
+        ],
+        "回復方式": [
+          "保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。"
+        ],
+        "實作狀態": [
+          "implemented"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ]
+      }
+    },
+    {
+      "id": "FEAT-UI-CMS",
+      "document": "12-feature-platform.misvg.svg",
+      "title": "管理後台與敏感操作原因",
+      "fields": {
+        "需求": [
+          "REQ-CMS-001"
+        ],
+        "責任服務": [
+          "Web"
+        ],
+        "角色": [
+          "Admin"
+        ],
+        "目標": [
+          "管理後台與敏感操作原因"
+        ],
+        "輸入": [
+          "Admin 身分、查詢、角色／狀態／內容異動與操作原因"
+        ],
+        "輸出": [
+          "管理表格、服務就緒狀態、稽核、載入／空資料／錯誤／重試"
+        ],
+        "權限": [
+          "Admin route guard；實際敏感讀寫與最後 Admin 保護在後端"
+        ],
+        "資料與交易": [
+          "呼叫各資料權責服務 API；沒有 CMS 專屬 DB 或跨庫聯表"
+        ],
+        "同步與副作用": [
+          "副作用與恢復方式見關聯 UML 及來源"
+        ],
+        "失敗與重試": [
+          "缺原因不送出；409／403／503 明確顯示；失敗不偽裝成功"
+        ],
+        "邊界": [
+          "最後管理員、停用會員、未知目標、不可用服務及讀取全部聊天權限"
+        ],
+        "不做範圍": [
+          "不跨服務資料庫；不在本項擴充 自訂 RBAC 編輯器"
+        ],
+        "修改範圍": [
+          "src/Web/src/AdminPage.tsx 與同服務契約、API、對應測試"
+        ],
+        "契約": [
+          "none"
+        ],
+        "實作": [
+          "src/Web/src/AdminPage.tsx#AdminPage"
+        ],
+        "測試": [
+          "src/Web/src/AdminPage.test.tsx#test:edits identity settings and records an explicit reason,src/Web/e2e/workspace.spec.ts#test:管理員檢視狀態、管理資料與稽核，且保護最後一位管理員"
+        ],
+        "完成條件": [
+          "Given Admin 變更權限 When 儲存 Then 提交明確原因；非 Admin 不可入 CMS。"
+        ],
+        "回復方式": [
+          "保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。"
+        ],
+        "實作狀態": [
+          "implemented"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ]
+      }
+    },
+    {
+      "id": "FEAT-OPS",
+      "document": "12-feature-platform.misvg.svg",
+      "title": "Compose 部署、維運與交接",
+      "fields": {
+        "需求": [
+          "REQ-DELIVERY-001"
+        ],
+        "責任服務": [
+          "Operations"
+        ],
+        "角色": [
+          "維運／接手者"
+        ],
+        "目標": [
+          "Compose 部署、維運與交接"
+        ],
+        "輸入": [
+          "Compose／.env、Migration、備份目錄與死信重送參數"
+        ],
+        "輸出": [
+          "健康檢查、隔離測試結果、備份清單或明確失敗"
+        ],
+        "權限": [
+          "只在已授權環境操作；不提交 .env／金鑰／資料與測試產物"
+        ],
+        "資料與交易": [
+          "使用既有元件資料權責；不得跨服務 Entity／DbContext"
+        ],
+        "同步與副作用": [
+          "副作用與恢復方式見關聯 UML 及來源"
+        ],
+        "失敗與重試": [
+          "Migration 失敗不啟動業務；還原失敗不自動開放部分系統；重送需修正根因"
+        ],
+        "邊界": [
+          "版本／schema 相容、Volume 持久化、金鑰與快照完整性；恢復演練未執行"
+        ],
+        "不做範圍": [
+          "不跨服務資料庫；不在本項擴充 未執行的恢復驗收"
+        ],
+        "修改範圍": [
+          "scripts/backup.py 與同服務契約、API、對應測試"
+        ],
+        "契約": [
+          "none"
+        ],
+        "實作": [
+          "scripts/backup.py#backup"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/PlatformTests.cs#MigrationFactoriesCreateOnlyTheOwningServiceModel"
+        ],
+        "完成條件": [
+          "Given 隔離環境 When 依文件啟動 Then 可檢查健康；還原與獨立交接需另行演練。"
+        ],
+        "回復方式": [
+          "保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。"
+        ],
+        "實作狀態": [
+          "implemented"
+        ],
+        "驗證狀態": [
+          "partial"
+        ]
+      }
+    },
+    {
+      "id": "FEAT-DOCS",
+      "document": "12-feature-platform.misvg.svg",
+      "title": "MISVG 文件與工程規則檢查",
+      "fields": {
+        "需求": [
+          "REQ-DOC-001"
+        ],
+        "責任服務": [
+          "Docs"
+        ],
+        "角色": [
+          "開發者／Agent"
+        ],
+        "目標": [
+          "MISVG 文件與工程規則檢查"
+        ],
+        "輸入": [
+          "SVG m:source、來源檔案、功能契約、規則及測試參照"
+        ],
+        "輸出": [
+          "18 份圖頁、catalog／features 派生索引、可定位的錯誤報告"
+        ],
+        "權限": [
+          "文件不是額外操作授權；核准與具名負責人不得虛構"
+        ],
+        "資料與交易": [
+          "完整檔案 SHA-256 樂觀鎖＋合作式鎖＋原子替換；封存唯增"
+        ],
+        "同步與副作用": [
+          "副作用與恢復方式見關聯 UML 及來源"
+        ],
+        "失敗與重試": [
+          "來源過期、未知擴充、圖面竄改、編輯衝突、缺功能映射即拒絕；核對後重試"
+        ],
+        "邊界": [
+          "MISVG 資源上限、Unicode、危險 XML、無效 UML、斷鏈與封存改寫"
+        ],
+        "不做範圍": [
+          "不跨服務資料庫；不在本項擴充 一般 UML／MISVG 認證"
+        ],
+        "修改範圍": [
+          "scripts/development_rules.py 與同服務契約、API、對應測試"
+        ],
+        "契約": [
+          "none"
+        ],
+        "實作": [
+          "scripts/development_rules.py#feature_catalog"
+        ],
+        "測試": [
+          "tests/Tooling/test_development_rules.py#test_all_business_operations_have_one_feature_owner"
+        ],
+        "完成條件": [
+          "Given 新增公開業務方法未建功能契約 When 執行檢查 Then 失敗並指出未映射方法。"
+        ],
+        "回復方式": [
+          "保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。"
+        ],
+        "實作狀態": [
+          "implemented"
+        ],
+        "驗證狀態": [
+          "not-run"
+        ]
+      }
+    }
+  ],
+  "rules": [
+    {
+      "id": "RULE-ARCH-001",
+      "document": "17-development-rules.misvg.svg",
+      "fields": {
+        "規則": [
+          "專案依賴只向內且服務獨立"
+        ],
+        "理由": [
+          "避免跨服務 Entity／DbContext 與反向分層耦合"
+        ],
+        "檢查方式": [
+          "automated"
+        ],
+        "適用變更": [
+          "任何 csproj／專案新增或移動"
+        ],
+        "違反處理": [
+          "E_ARCH；先更新 ADR、相依政策與相關驗收"
+        ],
+        "測試": [
+          "tests/Tooling/test_development_rules.py#test_cross_service_and_reversed_layer_project_references_fail"
+        ]
+      }
+    },
+    {
+      "id": "RULE-ARCH-002",
+      "document": "17-development-rules.misvg.svg",
+      "fields": {
+        "規則": [
+          "Domain／Application／Contracts 不依賴外框架"
+        ],
+        "理由": [
+          "業務規則與交換合約不讀 DB／Redis／HTTP 框架"
+        ],
+        "檢查方式": [
+          "automated"
+        ],
+        "適用變更": [
+          "內層 csproj、using 與新檔案"
+        ],
+        "違反處理": [
+          "E_ARCH；移到外層 adapter 或重新設計契約"
+        ],
+        "測試": [
+          "tests/Tooling/test_development_rules.py#test_nested_domain_framework_import_and_package_fail"
+        ]
+      }
+    },
+    {
+      "id": "RULE-API-001",
+      "document": "17-development-rules.misvg.svg",
+      "fields": {
+        "規則": [
+          "Gateway 公開路由與 JWT 邊界"
+        ],
+        "理由": [
+          "不把 internal Session／revoke 介面暴露給客戶端"
+        ],
+        "檢查方式": [
+          "automated"
+        ],
+        "適用變更": [
+          "路由、cluster、transform 或授權政策"
+        ],
+        "違反處理": [
+          "E_GATEWAY；以明確路由與受保護政策修正"
+        ],
+        "測試": [
+          "tests/Tooling/test_development_rules.py#test_gateway_internal_proxy_and_lost_jwt_policy_fail"
+        ]
+      }
+    },
+    {
+      "id": "RULE-TRACE-001",
+      "document": "17-development-rules.misvg.svg",
+      "fields": {
+        "規則": [
+          "公開業務操作只能有一個功能契約 owner"
+        ],
+        "理由": [
+          "防止只加 API 卻沒有範圍、失敗與測試定義"
+        ],
+        "檢查方式": [
+          "automated"
+        ],
+        "適用變更": [
+          "IAuthService／IAccountService／IChatService 新增方法或 FEAT 修改"
+        ],
+        "違反處理": [
+          "E_FEATURE／E_UML；補功能、圖頁與測試；不能捏造已通過"
+        ],
+        "測試": [
+          "tests/Tooling/test_development_rules.py#test_unmapped_new_interface_operation_fails"
+        ]
+      }
+    },
+    {
+      "id": "RULE-DATA-001",
+      "document": "17-development-rules.misvg.svg",
+      "fields": {
+        "規則": [
+          "交易、事件與冪等"
+        ],
+        "理由": [
+          "SaveChanges 與 Outbox 同交易；Confirm／ACK／Inbox／版本語意不能被重構破壞"
+        ],
+        "檢查方式": [
+          "review-required"
+        ],
+        "適用變更": [
+          "資料寫入、事件 schema、worker 或 Migration"
+        ],
+        "違反處理": [
+          "核對 Transaction／唯一鍵及中斷、重複、亂序、重啟測試；異動事件須評估 schemaVersion"
+        ],
+        "測試": [
+          "tests/Tooling/test_development_rules.py#test_feature_requires_bounds_failure_handling_and_rollback"
+        ]
+      }
+    },
+    {
+      "id": "RULE-AUTH-001",
+      "document": "17-development-rules.misvg.svg",
+      "fields": {
+        "規則": [
+          "權威 Session、最小權限與稽核"
+        ],
+        "理由": [
+          "拒絕正向有效快取；撤銷不等 MQ；敏感讀寫需原因"
+        ],
+        "檢查方式": [
+          "review-required"
+        ],
+        "適用變更": [
+          "JWT、Cookie／CSRF、Admin、連線／推送、附件授權"
+        ],
+        "違反處理": [
+          "執行對應權限與故障測試；檢查不得洩漏 Token／密碼／內容"
+        ],
+        "測試": [
+          "tests/Tooling/test_development_rules.py#test_feature_cannot_claim_current_pass_from_references"
+        ]
+      }
+    },
+    {
+      "id": "RULE-ERROR-001",
+      "document": "17-development-rules.misvg.svg",
+      "fields": {
+        "規則": [
+          "錯誤、API 與外部服務契約"
+        ],
+        "理由": [
+          "七位碼區間唯一；Problem Details；不得回傳堆疊或連線機密"
+        ],
+        "檢查方式": [
+          "review-required"
+        ],
+        "適用變更": [
+          "公開 DTO、路由、狀態碼、外部逾時／重試"
+        ],
+        "違反處理": [
+          "核對 Errors 目錄、錯誤斷言、OpenAPI／TS 型別同步與向後相容"
+        ],
+        "測試": [
+          "tests/Tooling/test_development_rules.py#test_feature_requires_bounds_failure_handling_and_rollback"
+        ]
+      }
+    },
+    {
+      "id": "RULE-QUALITY-001",
+      "document": "17-development-rules.misvg.svg",
+      "fields": {
+        "規則": [
+          "固定檢查與可信覆蓋率"
+        ],
+        "理由": [
+          "行 95%／分支 90% 不得排除手寫碼；參照覆蓋不是驗收"
+        ],
+        "檢查方式": [
+          "review-required"
+        ],
+        "適用變更": [
+          "所有行為、前端、共用模組及依賴修改"
+        ],
+        "違反處理": [
+          "CI 執行格式／靜態／型別／建置、測試、audit、OpenAPI 一致性、Docker；依風險擴大"
+        ],
+        "測試": [
+          "tests/Tooling/test_development_rules.py#test_feature_cannot_claim_current_pass_from_references"
+        ]
+      }
+    },
+    {
+      "id": "RULE-CHANGE-001",
+      "document": "17-development-rules.misvg.svg",
+      "fields": {
+        "規則": [
+          "有界任務與文件同步"
+        ],
+        "理由": [
+          "每次從 FEAT 定義修改範圍、預期、檢查與回復；不任意新增抽象"
+        ],
+        "檢查方式": [
+          "review-required"
+        ],
+        "適用變更": [
+          "功能、介面、資料或規則變更"
+        ],
+        "違反處理": [
+          "先用任務契約核對；超範圍需重評影響，保持原有授權，不增無依據的確認流程"
+        ],
+        "測試": [
+          "tests/Tooling/test_development_rules.py#test_feature_requires_bounds_failure_handling_and_rollback"
+        ]
+      }
+    },
+    {
+      "id": "RULE-DELIVERY-001",
+      "document": "17-development-rules.misvg.svg",
+      "fields": {
+        "規則": [
+          "版本交付、恢復與唯增紀錄"
+        ],
+        "理由": [
+          "原始產物不進 Git；歷史 CI 不當作本次驗收"
+        ],
+        "檢查方式": [
+          "review-required"
+        ],
+        "適用變更": [
+          "部署、備份、金鑰、規則與交接變更"
+        ],
+        "違反處理": [
+          "保留限定版本摘要與原始指紋；未做列 not-run；更正用新紀錄而非覆寫"
+        ],
+        "測試": [
+          "tests/Tooling/test_development_rules.py#test_feature_cannot_claim_current_pass_from_references"
+        ]
+      }
+    }
+  ],
+  "operationOwners": {
+    "src/Services/Auth/Auth.Application/Contracts.cs#IAuthService.Register": "FEAT-AUTH-REGISTER",
+    "src/Services/Auth/Auth.Application/Contracts.cs#IAuthService.SendChallenge": "FEAT-AUTH-CHALLENGE",
+    "src/Services/Auth/Auth.Application/Contracts.cs#IAuthService.Verify": "FEAT-AUTH-CHALLENGE",
+    "src/Services/Auth/Auth.Application/Contracts.cs#IAuthService.Reset": "FEAT-AUTH-RESET",
+    "src/Services/Auth/Auth.Application/Contracts.cs#IAuthService.Login": "FEAT-AUTH-LOGIN",
+    "src/Services/Auth/Auth.Application/Contracts.cs#IAuthService.Refresh": "FEAT-AUTH-REFRESH",
+    "src/Services/Auth/Auth.Application/Contracts.cs#IAuthService.Logout": "FEAT-AUTH-LOGOUT",
+    "src/Services/Auth/Auth.Application/Contracts.cs#IAuthService.Users": "FEAT-AUTH-ADMIN",
+    "src/Services/Auth/Auth.Application/Contracts.cs#IAuthService.Manage": "FEAT-AUTH-ADMIN",
+    "src/Services/Account/Account.Application/Contracts.cs#IAccountService.Me": "FEAT-ACCOUNT-PROFILE",
+    "src/Services/Account/Account.Application/Contracts.cs#IAccountService.Update": "FEAT-ACCOUNT-PROFILE",
+    "src/Services/Account/Account.Application/Contracts.cs#IAccountService.Search": "FEAT-ACCOUNT-DIRECTORY",
+    "src/Services/Message/Message.Application/Contracts.cs#IChatService.Rooms": "FEAT-CHAT-ROOM",
+    "src/Services/Message/Message.Application/Contracts.cs#IChatService.Create": "FEAT-CHAT-ROOM",
+    "src/Services/Message/Message.Application/Contracts.cs#IChatService.Direct": "FEAT-CHAT-ROOM",
+    "src/Services/Message/Message.Application/Contracts.cs#IChatService.Members": "FEAT-CHAT-MEMBERS",
+    "src/Services/Message/Message.Application/Contracts.cs#IChatService.Transfer": "FEAT-CHAT-MEMBERS",
+    "src/Services/Message/Message.Application/Contracts.cs#IChatService.History": "FEAT-CHAT-HISTORY",
+    "src/Services/Message/Message.Application/Contracts.cs#IChatService.Send": "FEAT-CHAT-SEND",
+    "src/Services/Message/Message.Application/Contracts.cs#IChatService.Read": "FEAT-CHAT-READ",
+    "src/Services/Message/Message.Application/Contracts.cs#IChatService.Upload": "FEAT-CHAT-UPLOAD",
+    "src/Services/Message/Message.Application/Contracts.cs#IChatService.Download": "FEAT-CHAT-FILE-ADMIN",
+    "src/Services/Message/Message.Application/Contracts.cs#IChatService.Attachments": "FEAT-CHAT-FILE-ADMIN",
+    "src/Services/Message/Message.Application/Contracts.cs#IChatService.Moderate": "FEAT-CHAT-FILE-ADMIN",
+    "src/Services/Message/Message.Application/Contracts.cs#IChatService.EnsureMember": "FEAT-CHAT-REALTIME"
+  },
+  "coverage": {
+    "features": 26,
+    "businessOperations": 25,
+    "mappedOperations": 25,
+    "meaning": "Contract mapping completeness only; shared implementation classes remain shared; no current behavioral pass is inferred."
+  }
+}

@@ -1,0 +1,1071 @@
+{
+  "schemaVersion": 1,
+  "authority": "Derived from SVG m:source; do not edit this index.",
+  "documents": [
+    {
+      "id": "DOC-00",
+      "file": "00-system-overview.misvg.svg",
+      "title": "專案全景與服務邊界",
+      "status": "current",
+      "approval": "not-recorded",
+      "ownerRole": "架構維護角色（待具名確認）",
+      "namedOwner": "unassigned",
+      "applicability": "referenced-source-sha256；歷史測試僅適用其紀錄版本",
+      "reviewed": "2026-11-08",
+      "requirements": [
+        "REQ-BOUNDARY-001",
+        "REQ-AUTH-001",
+        "REQ-SYNC-001",
+        "REQ-CMS-001",
+        "REQ-DOC-001",
+        "REQ-DELIVERY-001"
+      ],
+      "decisions": [
+        "ADR-DATA-001",
+        "ADR-AUTH-001",
+        "ADR-SYNC-001",
+        "ADR-DOC-001"
+      ]
+    },
+    {
+      "id": "DOC-01",
+      "file": "01-layer-and-class.misvg.svg",
+      "title": "UML 分層與主要類別依賴",
+      "status": "current",
+      "approval": "not-recorded",
+      "ownerRole": "架構維護角色（待具名確認）",
+      "namedOwner": "unassigned",
+      "applicability": "referenced-source-sha256；歷史測試僅適用其紀錄版本",
+      "reviewed": "2026-11-08",
+      "requirements": [
+        "REQ-BOUNDARY-001",
+        "REQ-DOC-001"
+      ],
+      "decisions": [
+        "ADR-DATA-001",
+        "ADR-DOC-001"
+      ]
+    },
+    {
+      "id": "DOC-02",
+      "file": "02-auth-data.misvg.svg",
+      "title": "Auth 資料模型與登入狀態",
+      "status": "current",
+      "approval": "not-recorded",
+      "ownerRole": "身分維護角色（待具名確認）",
+      "namedOwner": "unassigned",
+      "applicability": "referenced-source-sha256；歷史測試僅適用其紀錄版本",
+      "reviewed": "2026-11-08",
+      "requirements": [
+        "REQ-BOUNDARY-001",
+        "REQ-AUTH-001",
+        "REQ-CMS-001",
+        "REQ-DOC-001"
+      ],
+      "decisions": [
+        "ADR-DATA-001",
+        "ADR-AUTH-001",
+        "ADR-DOC-001"
+      ]
+    },
+    {
+      "id": "DOC-03",
+      "file": "03-account-projections.misvg.svg",
+      "title": "Account 與跨服務資料投影",
+      "status": "current",
+      "approval": "not-recorded",
+      "ownerRole": "帳號／投影維護角色（待具名確認）",
+      "namedOwner": "unassigned",
+      "applicability": "referenced-source-sha256；歷史測試僅適用其紀錄版本",
+      "reviewed": "2026-11-08",
+      "requirements": [
+        "REQ-BOUNDARY-001",
+        "REQ-SYNC-001",
+        "REQ-DOC-001"
+      ],
+      "decisions": [
+        "ADR-DATA-001",
+        "ADR-SYNC-001",
+        "ADR-DOC-001"
+      ]
+    },
+    {
+      "id": "DOC-04",
+      "file": "04-message-data.misvg.svg",
+      "title": "Message ERD、外鍵與訊息不變條件",
+      "status": "current",
+      "approval": "not-recorded",
+      "ownerRole": "聊天室資料維護角色（待具名確認）",
+      "namedOwner": "unassigned",
+      "applicability": "referenced-source-sha256；歷史測試僅適用其紀錄版本",
+      "reviewed": "2026-11-08",
+      "requirements": [
+        "REQ-BOUNDARY-001",
+        "REQ-CHAT-001",
+        "REQ-FILE-001",
+        "REQ-CMS-001",
+        "REQ-DOC-001"
+      ],
+      "decisions": [
+        "ADR-DATA-001",
+        "ADR-AUTH-001",
+        "ADR-SYNC-001",
+        "ADR-DOC-001"
+      ]
+    },
+    {
+      "id": "DOC-05",
+      "file": "05-event-synchronization.misvg.svg",
+      "title": "事件同步與 Outbox／Inbox 投遞時序",
+      "status": "current",
+      "approval": "not-recorded",
+      "ownerRole": "事件整合維護角色（待具名確認）",
+      "namedOwner": "unassigned",
+      "applicability": "referenced-source-sha256；歷史測試僅適用其紀錄版本",
+      "reviewed": "2026-11-08",
+      "requirements": [
+        "REQ-SYNC-001",
+        "REQ-DOC-001"
+      ],
+      "decisions": [
+        "ADR-SYNC-001",
+        "ADR-DOC-001"
+      ]
+    },
+    {
+      "id": "DOC-06",
+      "file": "06-auth-revocation.misvg.svg",
+      "title": "登入、權威查驗與即時撤銷時序",
+      "status": "current",
+      "approval": "not-recorded",
+      "ownerRole": "身分／安全維護角色（待具名確認）",
+      "namedOwner": "unassigned",
+      "applicability": "referenced-source-sha256；歷史測試僅適用其紀錄版本",
+      "reviewed": "2026-11-08",
+      "requirements": [
+        "REQ-AUTH-001",
+        "REQ-CMS-001",
+        "REQ-DOC-001"
+      ],
+      "decisions": [
+        "ADR-AUTH-001",
+        "ADR-DOC-001"
+      ]
+    },
+    {
+      "id": "DOC-07",
+      "file": "07-chat-sequence.misvg.svg",
+      "title": "REST 寫入、WebSocket 推送與斷線補齊",
+      "status": "current",
+      "approval": "not-recorded",
+      "ownerRole": "聊天室即時功能維護角色（待具名確認）",
+      "namedOwner": "unassigned",
+      "applicability": "referenced-source-sha256；歷史測試僅適用其紀錄版本",
+      "reviewed": "2026-11-08",
+      "requirements": [
+        "REQ-SYNC-001",
+        "REQ-CHAT-001",
+        "REQ-DOC-001"
+      ],
+      "decisions": [
+        "ADR-SYNC-001",
+        "ADR-DOC-001"
+      ]
+    },
+    {
+      "id": "DOC-08",
+      "file": "08-attachment-lifecycle.misvg.svg",
+      "title": "附件狀態、私有儲存與清理流程",
+      "status": "current",
+      "approval": "not-recorded",
+      "ownerRole": "附件／儲存維護角色（待具名確認）",
+      "namedOwner": "unassigned",
+      "applicability": "referenced-source-sha256；歷史測試僅適用其紀錄版本",
+      "reviewed": "2026-11-08",
+      "requirements": [
+        "REQ-FILE-001",
+        "REQ-DOC-001"
+      ],
+      "decisions": [
+        "ADR-DATA-001",
+        "ADR-DOC-001"
+      ]
+    },
+    {
+      "id": "DOC-09",
+      "file": "09-agent-maintenance.misvg.svg",
+      "title": "工程交付控制與 Agent 維護契約",
+      "status": "current",
+      "approval": "not-recorded",
+      "ownerRole": "需求／技術／交付維護角色（待具名確認）",
+      "namedOwner": "unassigned",
+      "applicability": "referenced-source-sha256；歷史測試僅適用其紀錄版本",
+      "reviewed": "2026-11-08",
+      "requirements": [
+        "REQ-BOUNDARY-001",
+        "REQ-AUTH-001",
+        "REQ-SYNC-001",
+        "REQ-CHAT-001",
+        "REQ-FILE-001",
+        "REQ-CMS-001",
+        "REQ-DOC-001",
+        "REQ-DELIVERY-001"
+      ],
+      "decisions": [
+        "ADR-DATA-001",
+        "ADR-AUTH-001",
+        "ADR-SYNC-001",
+        "ADR-DOC-001"
+      ]
+    },
+    {
+      "id": "DOC-10",
+      "file": "10-feature-identity.misvg.svg",
+      "title": "Auth／Account 功能拆分與工作契約",
+      "status": "current",
+      "approval": "not-recorded",
+      "ownerRole": "技術／測試維護角色（待具名確認）",
+      "namedOwner": "unassigned",
+      "applicability": "referenced-source-sha256；驗證以紀錄快照為準",
+      "reviewed": "2026-11-08",
+      "requirements": [
+        "REQ-AUTH-001",
+        "REQ-BOUNDARY-001",
+        "REQ-CMS-001",
+        "REQ-SYNC-001"
+      ],
+      "decisions": [
+        "ADR-DATA-001",
+        "ADR-SYNC-001",
+        "ADR-AUTH-001",
+        "ADR-DOC-001"
+      ]
+    },
+    {
+      "id": "DOC-11",
+      "file": "11-feature-chat.misvg.svg",
+      "title": "Message 功能拆分與工作契約",
+      "status": "current",
+      "approval": "not-recorded",
+      "ownerRole": "技術／測試維護角色（待具名確認）",
+      "namedOwner": "unassigned",
+      "applicability": "referenced-source-sha256；驗證以紀錄快照為準",
+      "reviewed": "2026-11-08",
+      "requirements": [
+        "REQ-AUTH-001",
+        "REQ-CHAT-001",
+        "REQ-CMS-001",
+        "REQ-FILE-001"
+      ],
+      "decisions": [
+        "ADR-DATA-001",
+        "ADR-SYNC-001",
+        "ADR-AUTH-001",
+        "ADR-DOC-001"
+      ]
+    },
+    {
+      "id": "DOC-12",
+      "file": "12-feature-platform.misvg.svg",
+      "title": "Gateway／Web／背景工作功能拆分",
+      "status": "current",
+      "approval": "not-recorded",
+      "ownerRole": "技術／測試維護角色（待具名確認）",
+      "namedOwner": "unassigned",
+      "applicability": "referenced-source-sha256；驗證以紀錄快照為準",
+      "reviewed": "2026-11-08",
+      "requirements": [
+        "REQ-AUTH-001",
+        "REQ-BOUNDARY-001",
+        "REQ-CHAT-001",
+        "REQ-CMS-001",
+        "REQ-DELIVERY-001",
+        "REQ-DOC-001",
+        "REQ-FILE-001",
+        "REQ-SYNC-001"
+      ],
+      "decisions": [
+        "ADR-DATA-001",
+        "ADR-SYNC-001",
+        "ADR-AUTH-001",
+        "ADR-DOC-001"
+      ]
+    },
+    {
+      "id": "DOC-13",
+      "file": "13-use-cases.misvg.svg",
+      "title": "UML 使用案例與角色邊界",
+      "status": "current",
+      "approval": "not-recorded",
+      "ownerRole": "技術／測試維護角色（待具名確認）",
+      "namedOwner": "unassigned",
+      "applicability": "referenced-source-sha256；驗證以紀錄快照為準",
+      "reviewed": "2026-11-08",
+      "requirements": [
+        "REQ-AUTH-001",
+        "REQ-BOUNDARY-001",
+        "REQ-CHAT-001",
+        "REQ-FILE-001",
+        "REQ-CMS-001"
+      ],
+      "decisions": [
+        "ADR-DATA-001",
+        "ADR-SYNC-001",
+        "ADR-AUTH-001",
+        "ADR-DOC-001"
+      ]
+    },
+    {
+      "id": "DOC-14",
+      "file": "14-registration-activity.misvg.svg",
+      "title": "UML 註冊、提交與同步活動",
+      "status": "current",
+      "approval": "not-recorded",
+      "ownerRole": "技術／測試維護角色（待具名確認）",
+      "namedOwner": "unassigned",
+      "applicability": "referenced-source-sha256；驗證以紀錄快照為準",
+      "reviewed": "2026-11-08",
+      "requirements": [
+        "REQ-AUTH-001",
+        "REQ-SYNC-001"
+      ],
+      "decisions": [
+        "ADR-DATA-001",
+        "ADR-SYNC-001",
+        "ADR-AUTH-001",
+        "ADR-DOC-001"
+      ]
+    },
+    {
+      "id": "DOC-15",
+      "file": "15-session-state.misvg.svg",
+      "title": "UML Session 與 Refresh family 狀態",
+      "status": "current",
+      "approval": "not-recorded",
+      "ownerRole": "技術／測試維護角色（待具名確認）",
+      "namedOwner": "unassigned",
+      "applicability": "referenced-source-sha256；驗證以紀錄快照為準",
+      "reviewed": "2026-11-08",
+      "requirements": [
+        "REQ-AUTH-001",
+        "REQ-CMS-001"
+      ],
+      "decisions": [
+        "ADR-AUTH-001"
+      ]
+    },
+    {
+      "id": "DOC-16",
+      "file": "16-deployment.misvg.svg",
+      "title": "UML Compose 部署、網路與持久化",
+      "status": "current",
+      "approval": "not-recorded",
+      "ownerRole": "技術／測試維護角色（待具名確認）",
+      "namedOwner": "unassigned",
+      "applicability": "referenced-source-sha256；驗證以紀錄快照為準",
+      "reviewed": "2026-11-08",
+      "requirements": [
+        "REQ-BOUNDARY-001",
+        "REQ-SYNC-001",
+        "REQ-DELIVERY-001"
+      ],
+      "decisions": [
+        "ADR-DATA-001",
+        "ADR-SYNC-001"
+      ]
+    },
+    {
+      "id": "DOC-17",
+      "file": "17-development-rules.misvg.svg",
+      "title": "開發規則、強制邊界與任務契約",
+      "status": "current",
+      "approval": "not-recorded",
+      "ownerRole": "技術／測試維護角色（待具名確認）",
+      "namedOwner": "unassigned",
+      "applicability": "referenced-source-sha256；驗證以紀錄快照為準",
+      "reviewed": "2026-11-08",
+      "requirements": [
+        "REQ-BOUNDARY-001",
+        "REQ-AUTH-001",
+        "REQ-SYNC-001",
+        "REQ-DOC-001",
+        "REQ-DELIVERY-001"
+      ],
+      "decisions": [
+        "ADR-DATA-001",
+        "ADR-SYNC-001",
+        "ADR-AUTH-001",
+        "ADR-DOC-001"
+      ]
+    }
+  ],
+  "stages": [
+    {
+      "id": "PHASE-01",
+      "title": "«activity» 需求制定",
+      "document": "09-agent-maintenance.misvg.svg",
+      "fields": {
+        "輸入": [
+          "問題、角色、業務規則、預算與運行限制；已確認與推測分開。"
+        ],
+        "產出": [
+          "REQ 編號、範圍／不做項目、未知條件與驗收草案。"
+        ],
+        "完成條件": [
+          "有可觀察目標與可修改範圍；無法推定的條件保留 OPEN，不自動變成既定需求。"
+        ],
+        "責任角色": [
+          "業務需求角色＋技術維護角色；具名確認尚未提供。"
+        ]
+      }
+    },
+    {
+      "id": "PHASE-02",
+      "title": "«activity» 設計分析",
+      "document": "09-agent-maintenance.misvg.svg",
+      "fields": {
+        "輸入": [
+          "已確認需求、現有程式與關鍵假設；優先使用 MCP 圖譜探索。"
+        ],
+        "產出": [
+          "ADR、UML／資料關聯、同步／非同步與失敗處理；需 POC 者列證據計畫。"
+        ],
+        "完成條件": [
+          "理由、代價與重評條件可查；替代方案若未實測必須標示，不補造歷史會議。"
+        ],
+        "責任角色": [
+          "技術設計角色（待具名）。"
+        ]
+      }
+    },
+    {
+      "id": "PHASE-03",
+      "title": "«activity» 驗收定義",
+      "document": "09-agent-maintenance.misvg.svg",
+      "fields": {
+        "輸入": [
+          "REQ、風險與獨立預期依據；先確認如何判定完成。"
+        ],
+        "產出": [
+          "AC 的 Given／When／Then、測試參照、命令及所需環境。"
+        ],
+        "完成條件": [
+          "重要權限、資料完整性與失敗情境均有驗證方式；參照完整不等於已通過驗收。"
+        ],
+        "責任角色": [
+          "需求／測試角色（待具名）；不以 TDD 或覆蓋率取代產品驗收。"
+        ]
+      }
+    },
+    {
+      "id": "PHASE-04",
+      "title": "«activity» 小步開發",
+      "document": "09-agent-maintenance.misvg.svg",
+      "fields": {
+        "輸入": [
+          "一個可回復的小任務、允許修改範圍、契約與回歸條件。"
+        ],
+        "產出": [
+          "可審查變更、受影響 REQ／ADR／圖頁與相關測試結果。"
+        ],
+        "完成條件": [
+          "相關格式、型別、建置與測試通過；共用模組、資料遷移或介面變更須重評影響。"
+        ],
+        "責任角色": [
+          "實作／審查角色（待具名）；依既有授權推進，不新增無依據的批准流程。"
+        ]
+      }
+    },
+    {
+      "id": "PHASE-05",
+      "title": "«activity» 可靠度驗證",
+      "document": "09-agent-maintenance.misvg.svg",
+      "fields": {
+        "輸入": [
+          "風險分級、測試計畫、版本與隔離環境。"
+        ],
+        "產出": [
+          "命令、環境、時間、pass／fail／skipped／not-run 與原始證據。"
+        ],
+        "完成條件": [
+          "正常、異常、邊界及部署情境依風險驗證；本次文件變更不擴張成應用程式重新驗收。"
+        ],
+        "責任角色": [
+          "測試／維運角色（待具名）；效能、安全深度與恢復演練依目標安排。"
+        ],
+        "歷史證據": [
+          "HIST-CI-46FB1E2；commit 46fb1e21eae8d40d59309cc405b3d77ae5d0b190；GitHub Actions 42389347629／attempt 1。"
+        ]
+      }
+    },
+    {
+      "id": "PHASE-06",
+      "title": "«activity» 交付與交接",
+      "document": "09-agent-maintenance.misvg.svg",
+      "fields": {
+        "輸入": [
+          "適用版本文件、驗收證據、部署與故障手冊、已知限制。"
+        ],
+        "產出": [
+          "當前文件索引＋唯增封存紀錄；更正須另建紀錄並連回原文。"
+        ],
+        "完成條件": [
+          "有啟動前置條件、成功判據、失敗處理及維護入口；未參與者演練／第二模型檢查未做則列 not-run。"
+        ],
+        "責任角色": [
+          "交付／接手維護角色（待具名）；目前沒有冒認人工核准。"
+        ],
+        "交接 Q-H01": [
+          "外部服務與權責？查 00 的服務／資料資源節點；三組 PG／Redis、RabbitMQ、Garage 與 SMTP。"
+        ],
+        "交接 Q-H02": [
+          "如何啟動成功？根 README 的 init.sh／Compose；wait-containers.py --all 檢查健康。"
+        ],
+        "交接 Q-H03": [
+          "MQ 中斷怎麼辦？05 的 Outbox 保留已提交資料、恢復補送；授權撤銷看 06。"
+        ],
+        "交接 Q-H04": [
+          "需求對應測試？先查 catalog 的 REQ／驗收／測試參照，再核對封存版本與原始輸出。"
+        ],
+        "交接 Q-H05": [
+          "何時人工介入？死信修正重送、金鑰輪替、備份還原；查 docs/operations.md。"
+        ]
+      }
+    }
+  ],
+  "requirements": [
+    {
+      "id": "REQ-BOUNDARY-001",
+      "title": "«requirement» 服務與資料權責",
+      "document": "09-agent-maintenance.misvg.svg",
+      "fields": {
+        "需求狀態": [
+          "confirmed"
+        ],
+        "需求依據": [
+          "USER-PLAN-001（使用者已要求的專案計畫）／USER-ARTICLE-001（本次文件思路）。"
+        ],
+        "風險": [
+          "medium"
+        ],
+        "目標": [
+          "三業務服務各有獨立 PG／Redis，禁止跨庫與跨服務 Entity 共用。"
+        ],
+        "驗收": [
+          "AC-001；Given 三服務專案，When 檢查專案參考與 Compose，Then 各自資料資源與服務邊界保持獨立。"
+        ],
+        "預期依據": [
+          "使用者的明確限制與失敗語意；測試的預期不得只複製目前實作。"
+        ],
+        "決策": [
+          "ADR-DATA-001"
+        ],
+        "圖頁": [
+          "00-system-overview.misvg.svg,01-layer-and-class.misvg.svg,02-auth-data.misvg.svg,03-account-projections.misvg.svg,04-message-data.misvg.svg,09-agent-maintenance.misvg.svg,10-feature-identity.misvg.svg,12-feature-platform.misvg.svg,13-use-cases.misvg.svg,16-deployment.misvg.svg,17-development-rules.misvg.svg"
+        ],
+        "實作": [
+          "src/Services/Message/Message.Infrastructure/MessageDbContext.cs#MessageDbContext"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/ArchitectureTests.cs#ServicesCannotReferenceEachOthersProjectsAndDomainCannotReferenceInfrastructure"
+        ],
+        "驗證命令": [
+          "dotnet test --filter FullyQualifiedName~ServicesCannotReferenceEachOthersProjects"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ],
+        "證據": [
+          "HIST-CI-46FB1E2（僅該程式版本；不宣稱本次重跑）"
+        ]
+      }
+    },
+    {
+      "id": "REQ-AUTH-001",
+      "title": "«requirement» 身分與即時撤銷",
+      "document": "09-agent-maintenance.misvg.svg",
+      "fields": {
+        "需求狀態": [
+          "confirmed"
+        ],
+        "需求依據": [
+          "USER-PLAN-001（使用者已要求的專案計畫）／USER-ARTICLE-001（本次文件思路）。"
+        ],
+        "風險": [
+          "high"
+        ],
+        "目標": [
+          "Auth 是 Session／安全版本權威，撤銷不等待 MQ，無法驗證時 fail closed。"
+        ],
+        "驗收": [
+          "AC-002；Given 有效登入與連線，When 登出或撤銷／Auth 無法查驗，Then 新操作與推送不得繼續授權，既有連線依直接通知與複查關閉。"
+        ],
+        "預期依據": [
+          "使用者的明確限制與失敗語意；測試的預期不得只複製目前實作。"
+        ],
+        "決策": [
+          "ADR-AUTH-001"
+        ],
+        "圖頁": [
+          "00-system-overview.misvg.svg,02-auth-data.misvg.svg,06-auth-revocation.misvg.svg,09-agent-maintenance.misvg.svg,10-feature-identity.misvg.svg,11-feature-chat.misvg.svg,12-feature-platform.misvg.svg,13-use-cases.misvg.svg,14-registration-activity.misvg.svg,15-session-state.misvg.svg,17-development-rules.misvg.svg"
+        ],
+        "實作": [
+          "src/Services/Auth/Auth.Infrastructure/AuthService.cs#Check"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/RealtimeIntegrationTests.cs#WebsocketPushPresenceHeartbeatAndImmediateSessionRevocationAreEnforced"
+        ],
+        "驗證命令": [
+          "RUN_INTEGRATION=1 dotnet test --filter FullyQualifiedName~WebsocketPushPresence"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ],
+        "證據": [
+          "HIST-CI-46FB1E2（僅該程式版本；不宣稱本次重跑）"
+        ]
+      }
+    },
+    {
+      "id": "REQ-SYNC-001",
+      "title": "«requirement» 可靠事件同步",
+      "document": "09-agent-maintenance.misvg.svg",
+      "fields": {
+        "需求狀態": [
+          "confirmed"
+        ],
+        "需求依據": [
+          "USER-PLAN-001（使用者已要求的專案計畫）／USER-ARTICLE-001（本次文件思路）。"
+        ],
+        "風險": [
+          "high"
+        ],
+        "目標": [
+          "業務與 Outbox 同交易；Confirm 後標記，Inbox 去重，投影不被舊版本覆寫。"
+        ],
+        "驗收": [
+          "AC-003；Given 已提交 Outbox，When Broker 故障或重複／亂序投遞，Then 保留待送資料、不提前發布成功、不重複套用或倒退投影。"
+        ],
+        "預期依據": [
+          "使用者的明確限制與失敗語意；測試的預期不得只複製目前實作。"
+        ],
+        "決策": [
+          "ADR-SYNC-001"
+        ],
+        "圖頁": [
+          "00-system-overview.misvg.svg,03-account-projections.misvg.svg,05-event-synchronization.misvg.svg,07-chat-sequence.misvg.svg,09-agent-maintenance.misvg.svg,10-feature-identity.misvg.svg,12-feature-platform.misvg.svg,14-registration-activity.misvg.svg,16-deployment.misvg.svg,17-development-rules.misvg.svg"
+        ],
+        "實作": [
+          "src/Shared/BuildingBlocks/RabbitWorkers.cs#OutboxPublisher"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/WorkerIntegrationTests.cs#MissingBrokerNeverMarksOutboxRowsPublishedAndWorkersCanStopDuringRecovery,tests/MicroserviceStarter.Tests/ProjectionAndFailureIntegrationTests.cs#ProjectionVersionsIgnoreDuplicatesAndOldEventsIncludingProfileBeforeIdentity"
+        ],
+        "驗證命令": [
+          "RUN_INTEGRATION=1 dotnet test --filter FullyQualifiedName~WorkerIntegrationTests"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ],
+        "證據": [
+          "HIST-CI-46FB1E2（僅該程式版本；不宣稱本次重跑）"
+        ]
+      }
+    },
+    {
+      "id": "REQ-CHAT-001",
+      "title": "«requirement» 訊息冪等、順序與補齊",
+      "document": "09-agent-maintenance.misvg.svg",
+      "fields": {
+        "需求狀態": [
+          "confirmed"
+        ],
+        "需求依據": [
+          "USER-PLAN-001（使用者已要求的專案計畫）／USER-ARTICLE-001（本次文件思路）。"
+        ],
+        "風險": [
+          "high"
+        ],
+        "目標": [
+          "REST 寫入，房間序號與已讀單調；WebSocket 通知可由游標補齊。"
+        ],
+        "驗收": [
+          "AC-004；Given 同一 clientMessageId，When 重送相同／不同內容，Then 回原訊息／409；並行訊息不重號，已讀不得倒退，重連可補齊。"
+        ],
+        "預期依據": [
+          "使用者的明確限制與失敗語意；測試的預期不得只複製目前實作。"
+        ],
+        "決策": [
+          "ADR-SYNC-001"
+        ],
+        "圖頁": [
+          "04-message-data.misvg.svg,07-chat-sequence.misvg.svg,09-agent-maintenance.misvg.svg,11-feature-chat.misvg.svg,12-feature-platform.misvg.svg,13-use-cases.misvg.svg"
+        ],
+        "實作": [
+          "src/Services/Message/Message.Infrastructure/ChatService.cs#Send"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/ServiceIntegrationTests.cs#MessagesAreIdempotentOrderedAndReadPositionsCannotRegress"
+        ],
+        "驗證命令": [
+          "RUN_INTEGRATION=1 dotnet test --filter FullyQualifiedName~MessagesAreIdempotent"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ],
+        "證據": [
+          "HIST-CI-46FB1E2（僅該程式版本；不宣稱本次重跑）"
+        ]
+      }
+    },
+    {
+      "id": "REQ-FILE-001",
+      "title": "«requirement» 附件邊界與私有存取",
+      "document": "09-agent-maintenance.misvg.svg",
+      "fields": {
+        "需求狀態": [
+          "confirmed"
+        ],
+        "需求依據": [
+          "USER-PLAN-001（使用者已要求的專案計畫）／USER-ARTICLE-001（本次文件思路）。"
+        ],
+        "風險": [
+          "high"
+        ],
+        "目標": [
+          "每檔 20 MiB、每則五個，內容檢查、房間授權與未綁定清理。"
+        ],
+        "驗收": [
+          "AC-005；Given 合法成員與檔案，When 上傳／綁定／下載，Then 大小、數量、內容與權限均受檢查；跨房間與未授權下載須失敗。"
+        ],
+        "預期依據": [
+          "使用者的明確限制與失敗語意；測試的預期不得只複製目前實作。"
+        ],
+        "決策": [
+          "ADR-DATA-001"
+        ],
+        "圖頁": [
+          "04-message-data.misvg.svg,08-attachment-lifecycle.misvg.svg,09-agent-maintenance.misvg.svg,11-feature-chat.misvg.svg,12-feature-platform.misvg.svg,13-use-cases.misvg.svg"
+        ],
+        "實作": [
+          "src/Services/Message/Message.Infrastructure/ChatService.cs#Upload"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/ChatEdgeIntegrationTests.cs#ExactFileSizeAndFiveAttachmentLimitAreEnforcedAtTheHttpBoundary,tests/MicroserviceStarter.Tests/ServiceIntegrationTests.cs#AttachmentsUseRealS3AndRequireOwnerRoomAndCurrentSessionPermissions"
+        ],
+        "驗證命令": [
+          "RUN_INTEGRATION=1 dotnet test --filter FullyQualifiedName~ChatEdgeIntegrationTests"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ],
+        "證據": [
+          "HIST-CI-46FB1E2（僅該程式版本；不宣稱本次重跑）"
+        ]
+      }
+    },
+    {
+      "id": "REQ-CMS-001",
+      "title": "«requirement» 管理權限、稽核與最後管理員",
+      "document": "09-agent-maintenance.misvg.svg",
+      "fields": {
+        "需求狀態": [
+          "confirmed"
+        ],
+        "需求依據": [
+          "USER-PLAN-001（使用者已要求的專案計畫）／USER-ARTICLE-001（本次文件思路）。"
+        ],
+        "風險": [
+          "high"
+        ],
+        "目標": [
+          "Admin 敏感查閱／異動需原因與稽核；不得移除最後一位有效 Admin。"
+        ],
+        "驗收": [
+          "AC-006；Given 最後一位有效管理員，When 嘗試停用或降權，Then 回 409 且仍保留管理能力；越權查閱不得成功。"
+        ],
+        "預期依據": [
+          "使用者的明確限制與失敗語意；測試的預期不得只複製目前實作。"
+        ],
+        "決策": [
+          "ADR-AUTH-001"
+        ],
+        "圖頁": [
+          "00-system-overview.misvg.svg,02-auth-data.misvg.svg,04-message-data.misvg.svg,06-auth-revocation.misvg.svg,09-agent-maintenance.misvg.svg,10-feature-identity.misvg.svg,11-feature-chat.misvg.svg,12-feature-platform.misvg.svg,13-use-cases.misvg.svg,15-session-state.misvg.svg"
+        ],
+        "實作": [
+          "src/Services/Auth/Auth.Infrastructure/AuthService.cs#Manage"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/AuthIntegrationTests.cs#AdminRoleChangesRevokeAccessAndProtectTheLastAdministrator"
+        ],
+        "驗證命令": [
+          "RUN_INTEGRATION=1 dotnet test --filter FullyQualifiedName~AdminRoleChanges"
+        ],
+        "驗證狀態": [
+          "historical-pass"
+        ],
+        "證據": [
+          "HIST-CI-46FB1E2（僅該程式版本；不宣稱本次重跑）"
+        ]
+      }
+    },
+    {
+      "id": "REQ-DOC-001",
+      "title": "«requirement» 可追溯且可維護的文件",
+      "document": "09-agent-maintenance.misvg.svg",
+      "fields": {
+        "需求狀態": [
+          "confirmed"
+        ],
+        "需求依據": [
+          "USER-PLAN-001（使用者已要求的專案計畫）／USER-ARTICLE-001（本次文件思路）。"
+        ],
+        "風險": [
+          "medium"
+        ],
+        "目標": [
+          "需求、ADR、UML、程式、測試及版本證據可互相追查；來源與圖面不分歧。"
+        ],
+        "驗收": [
+          "AC-007；Given 有效 SVG 與控制資料，When 圖面／來源／關聯被竄改或封存遭覆寫，Then 檢查須失敗；引用程式變更必須重新核對。"
+        ],
+        "預期依據": [
+          "使用者的明確限制與失敗語意；測試的預期不得只複製目前實作。"
+        ],
+        "決策": [
+          "ADR-DOC-001"
+        ],
+        "圖頁": [
+          "00-system-overview.misvg.svg,01-layer-and-class.misvg.svg,02-auth-data.misvg.svg,03-account-projections.misvg.svg,04-message-data.misvg.svg,05-event-synchronization.misvg.svg,06-auth-revocation.misvg.svg,07-chat-sequence.misvg.svg,08-attachment-lifecycle.misvg.svg,09-agent-maintenance.misvg.svg,12-feature-platform.misvg.svg,17-development-rules.misvg.svg"
+        ],
+        "實作": [
+          "scripts/living_docs.py#engineering_catalog"
+        ],
+        "測試": [
+          "tests/Tooling/test_living_docs.py#test_view_tampering_is_not_hidden_by_a_matching_source_digest,tests/Tooling/test_engineering_docs.py#test_missing_acceptance_fails"
+        ],
+        "驗證命令": [
+          "python3 -m unittest discover -s tests/Tooling -p test_*.py"
+        ],
+        "驗證狀態": [
+          "record-linked"
+        ],
+        "證據": [
+          "REC-DOCS-20261108-001（僅文件／工具範圍）"
+        ]
+      }
+    },
+    {
+      "id": "REQ-DELIVERY-001",
+      "title": "«requirement» 重現部署與可交接性",
+      "document": "09-agent-maintenance.misvg.svg",
+      "fields": {
+        "需求狀態": [
+          "confirmed"
+        ],
+        "需求依據": [
+          "USER-PLAN-001（使用者已要求的專案計畫）／USER-ARTICLE-001（本次文件思路）。"
+        ],
+        "風險": [
+          "high"
+        ],
+        "目標": [
+          "Compose、Migration、健康檢查、測試證據及維運步驟能交接，未執行演練須明列。"
+        ],
+        "驗收": [
+          "AC-008；Given 文件與乾淨環境，When 依初始化／啟動／驗收步驟操作，Then 有成功判據及故障處理；還原與獨立交接未測不得宣稱完成。"
+        ],
+        "預期依據": [
+          "使用者的明確限制與失敗語意；測試的預期不得只複製目前實作。"
+        ],
+        "決策": [
+          "ADR-DATA-001,ADR-DOC-001"
+        ],
+        "圖頁": [
+          "00-system-overview.misvg.svg,09-agent-maintenance.misvg.svg,12-feature-platform.misvg.svg,16-deployment.misvg.svg,17-development-rules.misvg.svg"
+        ],
+        "實作": [
+          "src/Shared/BuildingBlocks/Platform.cs#UsePlatform"
+        ],
+        "測試": [
+          "tests/MicroserviceStarter.Tests/GatewayIntegrationTests.cs#GatewayRoutesPublicAndProtectedApisHidesInternalEndpointsAndReportsUpstreamErrors"
+        ],
+        "驗證命令": [
+          "./scripts/test.sh；./scripts/test-e2e.sh；維護時段另做備份還原與交接演練"
+        ],
+        "驗證狀態": [
+          "partial"
+        ],
+        "證據": [
+          "HIST-CI-46FB1E2（僅該程式版本；不宣稱本次重跑）"
+        ]
+      }
+    }
+  ],
+  "decisions": [
+    {
+      "id": "ADR-DATA-001",
+      "title": "«decision» 獨立資料權責",
+      "document": "09-agent-maintenance.misvg.svg",
+      "fields": {
+        "決策狀態": [
+          "observed-retrospective"
+        ],
+        "問題": [
+          "跨服務耦合、資料所有權與故障隔離。"
+        ],
+        "採用方案": [
+          "每業務服務獨立 PostgreSQL／Redis；跨服務只以 API／事件交互。"
+        ],
+        "替代方案": [
+          "共享 DB／schema 是可重評選項；未在本次進行比較 POC。"
+        ],
+        "理由與代價": [
+          "依使用者明確架構約束；代價為更多容器、投影延遲與維運成本。"
+        ],
+        "重評條件": [
+          "資源預算、跨服務一致性需求或部署規模改變時重評。"
+        ],
+        "紀錄性質": [
+          "依使用者已確認計畫及現況補記；沒有原始會議／人工核准紀錄，不補造開發前評估。"
+        ]
+      }
+    },
+    {
+      "id": "ADR-SYNC-001",
+      "title": "«decision» Outbox／Inbox 與通知",
+      "document": "09-agent-maintenance.misvg.svg",
+      "fields": {
+        "決策狀態": [
+          "observed-retrospective"
+        ],
+        "問題": [
+          "資料先保存、通知失敗時，避免未追蹤的雙寫缺口。"
+        ],
+        "採用方案": [
+          "本庫交易＋Outbox、Confirm、Inbox、版本與有限重試；至少一次。"
+        ],
+        "替代方案": [
+          "直接 DB 後發布、分散式交易為可比較方案；不宣稱已完成比較實驗。"
+        ],
+        "理由與代價": [
+          "保留恢復能力；代價為重複通知、事件延遲與清理／死信操作。"
+        ],
+        "重評條件": [
+          "延遲目標、事件量、保留政策或副作用無法冪等時重評。"
+        ],
+        "紀錄性質": [
+          "依使用者已確認計畫及現況補記；沒有原始會議／人工核准紀錄，不補造開發前評估。"
+        ]
+      }
+    },
+    {
+      "id": "ADR-AUTH-001",
+      "title": "«decision» 權威 Session 查驗",
+      "document": "09-agent-maintenance.misvg.svg",
+      "fields": {
+        "決策狀態": [
+          "observed-retrospective"
+        ],
+        "問題": [
+          "JWT 尚未到期但帳號／權限已撤銷，仍不能繼續操作或收推送。"
+        ],
+        "採用方案": [
+          "業務請求與推送批次向 Auth 查驗；只快取已撤銷結果；故障 fail closed。"
+        ],
+        "替代方案": [
+          "JWT-only 或正向有效快取為可重評選項；未本次實測，不宣稱符合撤銷需求。"
+        ],
+        "理由與代價": [
+          "符合使用者撤銷語意；代價為 Auth 可用性依賴、延遲與請求量。"
+        ],
+        "重評條件": [
+          "有明確撤銷 SLO、負載量測或可用性目標後重評。"
+        ],
+        "紀錄性質": [
+          "依使用者已確認計畫及現況補記；沒有原始會議／人工核准紀錄，不補造開發前評估。"
+        ]
+      }
+    },
+    {
+      "id": "ADR-DOC-001",
+      "title": "«decision» 單一來源與可交接證據",
+      "document": "09-agent-maintenance.misvg.svg",
+      "fields": {
+        "決策狀態": [
+          "observed-retrospective"
+        ],
+        "問題": [
+          "圖、文字、需求與測試易分歧；新 Agent 不應重新猜測全部上下文。"
+        ],
+        "採用方案": [
+          "SVG 內嵌權威 Markdown；派生索引；文件 current／draft 與唯增 records 分開。"
+        ],
+        "替代方案": [
+          "Mermaid／PlantUML／外部 Markdown 可重評；MISVG static 內不執行它們。"
+        ],
+        "理由與代價": [
+          "依使用者的 MISVG 規則；代價為受控語法、維護檢查與字型／渲染限制。"
+        ],
+        "重評條件": [
+          "上游 wire version、圖頁閱讀方式或維護成本改變時重評。"
+        ],
+        "紀錄性質": [
+          "依使用者已確認計畫及現況補記；沒有原始會議／人工核准紀錄，不補造開發前評估。"
+        ]
+      }
+    }
+  ],
+  "openItems": [
+    {
+      "id": "OPEN-PERF-001",
+      "title": "«open» 效能與資源目標",
+      "document": "09-agent-maintenance.misvg.svg",
+      "fields": {
+        "待辦狀態": [
+          "open"
+        ],
+        "未知條件": [
+          "同時在線數、延遲 SLO、容量與運算／儲存預算尚未給定。"
+        ],
+        "影響": [
+          "無法宣稱負載能力、擴展時機或資源成本已驗收。"
+        ],
+        "處理方式": [
+          "保留待確認；有具體目標後再做負載／容量驗證，不以猜測改架構。"
+        ],
+        "責任角色": [
+          "需求／技術／維運角色（待具名）。"
+        ]
+      }
+    },
+    {
+      "id": "OPEN-OPS-001",
+      "title": "«open» 恢復與獨立交接",
+      "document": "09-agent-maintenance.misvg.svg",
+      "fields": {
+        "待辦狀態": [
+          "open"
+        ],
+        "未知條件": [
+          "RPO／RTO、保存政策、正式 SMTP／HTTPS 與具名接手者尚未定義。"
+        ],
+        "影響": [
+          "備份還原、版本回退與未參與者依手冊演練，尚未形成完整驗收證據。"
+        ],
+        "處理方式": [
+          "本次列 not-run；另排維護時段與隔離演練，記錄相容性與恢復結果。"
+        ],
+        "責任角色": [
+          "維運／交付／接手角色（待具名）。"
+        ]
+      }
+    }
+  ],
+  "coverage": {
+    "requirements": 8,
+    "withAcceptanceAndTestReferences": 8,
+    "meaning": "Reference coverage only; not proof that requirements pass or that current code was executed."
+  }
+}

@@ -13,6 +13,8 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
       - uses: actions/setup-dotnet@v6.1.0
         with:
           global-json-file: global.json
@@ -23,6 +25,10 @@ jobs:
           cache-dependency-path: src/Web/package-lock.json
       - name: Initialize isolated development credentials
         run: ./scripts/init.sh
+      - name: Verify living architecture documents
+        run: python3 scripts/living_docs.py check --report artifacts/living-docs/source-report.json
+      - name: Enforce feature contracts and development boundaries
+        run: python3 scripts/development_rules.py check --report artifacts/living-docs/development-rules.json
       - name: Unit, architecture, integration and frontend quality gates
         run: ./scripts/test.sh
       - name: Verify C# formatting
@@ -35,6 +41,11 @@ jobs:
           npm audit --audit-level=moderate
       - name: Docker builds and browser acceptance tests
         run: ./scripts/test-e2e.sh
+      - name: Review static SVG document rendering
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk
+          node src/Web/scripts/check-living-docs.mjs
       - name: Verify generated API contracts
         env:
           BASE_URL: http://localhost:18080

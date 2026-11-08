@@ -1,0 +1,350 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:a="https://github.com/Lian0123/my-c-sharp-templates/ns/living-docs/1" xmlns:m="https://example.org/ns/markdown-in-svg/0.1" version="1.1" width="1440" height="2860" viewBox="0 0 1440 2860">
+  <title>UML 使用案例與角色邊界</title>
+  <desc>繁體中文 Agent living document。Markdown 是內容權威；UML 關係、資料來源與更新規則以原生靜態 SVG 呈現。</desc>
+  <metadata>
+    <m:document version="0.1" profile="static" doc-id="urn:uuid:7f0175ae-a4db-4edb-b49c-e0e767d03f91" revision="2">
+      <m:source media-type="text/markdown" dialect="commonmark-0.31.2" xml:space="preserve"># UML 使用案例與角色邊界
+
+視圖：usecase
+文件編號：DOC-13
+文件狀態：current
+核准狀態：not-recorded
+維護角色：技術／測試維護角色（待具名確認）
+具名負責人：unassigned
+適用基準：referenced-source-sha256；驗證以紀錄快照為準
+最後審查：2026-11-08
+關聯需求：REQ-AUTH-001,REQ-BOUNDARY-001,REQ-CHAT-001,REQ-FILE-001,REQ-CMS-001
+關聯決策：ADR-DATA-001,ADR-SYNC-001,ADR-AUTH-001,ADR-DOC-001
+範圍：依現有實作說明功能與關聯；不冒認本次已執行業務驗收。
+
+## 節點
+
+### visitor | «actor» 訪客
+
+- 角色：尚未登入的使用者
+
+### member | «actor» 會員
+
+- 角色：有效且已驗證的 Session
+
+### admin | «actor» 管理員
+
+- 角色：通過權威查驗的 Admin
+
+### register | «usecase» 註冊／驗證
+
+- 功能：FEAT-AUTH-REGISTER
+- 契約：註冊後非同步初始化
+
+### login | «usecase» 登入／密碼
+
+- 功能：FEAT-AUTH-LOGIN
+- 限制：Email 驗證與限流
+
+### profile | «usecase» 個人資料
+
+- 功能：FEAT-ACCOUNT-PROFILE
+- 限制：本人或有理由的 Admin
+
+### room | «usecase» 房間／成員
+
+- 功能：FEAT-CHAT-ROOM
+- 限制：Owner／Moderator 權限
+
+### chat | «usecase» 訊息／已讀
+
+- 功能：FEAT-CHAT-SEND
+- 限制：房間成員與冪等
+
+### file | «usecase» 私有附件
+
+- 功能：FEAT-CHAT-UPLOAD
+- 限制：成員、數量與內容檢查
+
+### users | «usecase» 帳號／角色
+
+- 功能：FEAT-AUTH-ADMIN
+- 限制：最後有效 Admin 保護
+
+### moderate | «usecase» 內容／稽核
+
+- 功能：FEAT-CHAT-FILE-ADMIN
+- 限制：管理原因與敏感稽核
+
+## 關係
+
+- association | visitor | register | 訪客可註冊與使用驗證連結。
+
+- association | visitor | login | 登入、忘記及重設密碼。
+
+- association | member | profile | 本人資料與會員搜尋。
+
+- association | member | room | 房間與成員操作依房內角色授權。
+
+- association | member | chat | REST 送訊、歷史、已讀與 WebSocket 通知。
+
+- association | member | file | 附件經 Message 驗證；S3 不直接公開。
+
+- association | admin | users | 角色與停用需原因，不能移除最後有效管理員。
+
+- association | admin | moderate | 管理員可查內容／附件並留下稽核。
+
+## 準則
+
+- 實作與預期語意有差異時，先記錄缺口再修改；不只刷新來源指紋。
+- 程式與測試參照存在不等於本次已執行；核對限定版本與原始證據。
+
+## 來源
+
+- src/Services/Account/Account.Api/Program.cs
+- src/Services/Auth/Auth.Api/Program.cs
+- src/Services/Message/Message.Api/Program.cs
+- src/Web/src/App.tsx
+</m:source>
+      <m:presentation root-ref="view" source-digest="sha256:776420e73b83fa902f4746ac6327a9b82b7ae0f3e9c43e68ca200ba31d70d526" renderer="relay-living-docs" renderer-version="1.2.0" />
+      <m:bindings>
+        <m:bind target="document-title" start-line="1" end-line="1" />
+        <m:bind target="intro-3" start-line="3" end-line="3" />
+        <m:bind target="intro-4" start-line="4" end-line="4" />
+        <m:bind target="intro-5" start-line="5" end-line="5" />
+        <m:bind target="intro-6" start-line="6" end-line="6" />
+        <m:bind target="intro-7" start-line="7" end-line="7" />
+        <m:bind target="intro-8" start-line="8" end-line="8" />
+        <m:bind target="intro-9" start-line="9" end-line="9" />
+        <m:bind target="intro-10" start-line="10" end-line="10" />
+        <m:bind target="intro-11" start-line="11" end-line="11" />
+        <m:bind target="intro-12" start-line="12" end-line="12" />
+        <m:bind target="intro-13" start-line="13" end-line="13" />
+        <m:bind target="nodes-heading" start-line="15" end-line="15" />
+        <m:bind target="node-visitor" start-line="17" end-line="19" />
+        <m:bind target="node-member" start-line="21" end-line="23" />
+        <m:bind target="node-admin" start-line="25" end-line="27" />
+        <m:bind target="node-register" start-line="29" end-line="32" />
+        <m:bind target="node-login" start-line="34" end-line="37" />
+        <m:bind target="node-profile" start-line="39" end-line="42" />
+        <m:bind target="node-room" start-line="44" end-line="47" />
+        <m:bind target="node-chat" start-line="49" end-line="52" />
+        <m:bind target="node-file" start-line="54" end-line="57" />
+        <m:bind target="node-users" start-line="59" end-line="62" />
+        <m:bind target="node-moderate" start-line="64" end-line="67" />
+        <m:bind target="uml-edges" start-line="69" end-line="69" />
+        <m:bind target="edge-1" start-line="71" end-line="71" />
+        <m:bind target="edge-2" start-line="73" end-line="73" />
+        <m:bind target="edge-3" start-line="75" end-line="75" />
+        <m:bind target="edge-4" start-line="77" end-line="77" />
+        <m:bind target="edge-5" start-line="79" end-line="79" />
+        <m:bind target="edge-6" start-line="81" end-line="81" />
+        <m:bind target="edge-7" start-line="83" end-line="83" />
+        <m:bind target="edge-8" start-line="85" end-line="85" />
+        <m:bind target="section-87" start-line="87" end-line="87" />
+        <m:bind target="line-89" start-line="89" end-line="89" />
+        <m:bind target="line-90" start-line="90" end-line="90" />
+        <m:bind target="section-92" start-line="92" end-line="92" />
+        <m:bind target="line-94" start-line="94" end-line="94" />
+        <m:bind target="line-95" start-line="95" end-line="95" />
+        <m:bind target="line-96" start-line="96" end-line="96" />
+        <m:bind target="line-97" start-line="97" end-line="97" />
+      </m:bindings>
+      <m:extensions>
+        <a:provenance version="1" spec-commit="c7c0d96aa398d650c6bea5588e5d060bc6d60da5">
+          <a:file path="src/Services/Account/Account.Api/Program.cs" sha256="e359461925b2ab6fabb368505e554e16ff23920be124ffdaf1de379fb9f836cc" />
+          <a:file path="src/Services/Auth/Auth.Api/Program.cs" sha256="426599b4543d862fe6245fa4691575cba98a6e9e50a1afb6410028119798f351" />
+          <a:file path="src/Services/Message/Message.Api/Program.cs" sha256="f0795251e23d37530ab0ad963ffb67d01c1d4034be0962f257b334726196cc9a" />
+          <a:file path="src/Web/src/App.tsx" sha256="5dfedeb03e42c16af4867bb7af788bd9b74ca80a1e9deab42eaa46e3b5088776" />
+        </a:provenance>
+      </m:extensions>
+    </m:document>
+  </metadata>
+  <g id="view" font-family="PingFang TC, Noto Sans CJK TC, Microsoft JhengHei, sans-serif" fill="#183048">
+    <rect x="0" y="0" width="1440" height="2860" fill="#FFFFFF" />
+    <rect x="0" y="0" width="1440" height="180" fill="#183048" />
+    <text x="56" y="45" font-size="16" fill="#9EBFE8"><tspan x="56" y="45">RELAY / AGENT LIVING DOCUMENT</tspan></text>
+    <text x="56" y="105" font-size="34" fill="#FFFFFF" font-weight="bold" id="document-title"><tspan x="56" y="105">UML 使用案例與角色邊界</tspan></text>
+    <g id="intro-3">
+      <text x="56" y="215" font-size="19" fill="#52677C"><tspan x="56" y="215">視圖：usecase</tspan></text>
+    </g>
+    <g id="intro-4">
+      <text x="56" y="250" font-size="16" fill="#52677C"><tspan x="56" y="250">文件編號：DOC-13</tspan></text>
+    </g>
+    <g id="intro-5">
+      <text x="734" y="250" font-size="16" fill="#087E7C"><tspan x="734" y="250">文件狀態：current</tspan></text>
+    </g>
+    <g id="intro-6">
+      <text x="56" y="287" font-size="16" fill="#52677C"><tspan x="56" y="287">核准狀態：not-recorded</tspan></text>
+    </g>
+    <g id="intro-7">
+      <text x="734" y="287" font-size="16" fill="#52677C"><tspan x="734" y="287">維護角色：技術／測試維護角色（待具名確認）</tspan></text>
+    </g>
+    <g id="intro-8">
+      <text x="56" y="324" font-size="16" fill="#52677C"><tspan x="56" y="324">具名負責人：unassigned</tspan></text>
+    </g>
+    <g id="intro-9">
+      <text x="734" y="324" font-size="16" fill="#52677C"><tspan x="734" y="324">適用基準：referenced-source-sha256；驗證以紀錄快照為準</tspan></text>
+    </g>
+    <g id="intro-10">
+      <text x="56" y="361" font-size="16" fill="#52677C"><tspan x="56" y="361">最後審查：2026-11-08</tspan></text>
+    </g>
+    <g id="intro-11">
+      <text x="734" y="361" font-size="16" fill="#52677C"><tspan x="734" y="361">關聯需求：REQ-AUTH-001,REQ-BOUNDARY-001,REQ-CHAT-001,REQ-FIL</tspan><tspan x="734" y="386">E-001,REQ-CMS-001</tspan></text>
+    </g>
+    <g id="intro-12">
+      <text x="56" y="423" font-size="16" fill="#52677C"><tspan x="56" y="423">關聯決策：ADR-DATA-001,ADR-SYNC-001,ADR-AUTH-001,ADR-DOC-001</tspan></text>
+    </g>
+    <g id="intro-13">
+      <text x="56" y="472" font-size="19" fill="#52677C"><tspan x="56" y="472">範圍：依現有實作說明功能與關聯；不冒認本次已執行業務驗收。</tspan></text>
+    </g>
+    <g id="nodes-heading">
+      <text x="56" y="525" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="525">節點</tspan></text>
+    </g>
+    <rect x="405" y="559" width="980" height="1390" rx="8" fill="#F2F6FC" stroke="#CEDAE8" />
+    <text x="430" y="594" font-size="20" fill="#183048" font-weight="bold"><tspan x="430" y="594">«system» MicroserviceStarter</tspan></text>
+    <g id="node-visitor">
+      <circle cx="165" cy="694" r="22" fill="#FFFFFF" stroke="#2863D8" stroke-width="2" />
+      <line x1="165" y1="716" x2="165" y2="771" stroke="#2863D8" stroke-width="2" />
+      <line x1="130" y1="737" x2="200" y2="737" stroke="#2863D8" stroke-width="2" />
+      <line x1="165" y1="771" x2="135" y2="809" stroke="#2863D8" stroke-width="2" />
+      <line x1="165" y1="771" x2="195" y2="809" stroke="#2863D8" stroke-width="2" />
+      <text x="65" y="841" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="65" y="841">visitor</tspan></text>
+      <text x="65" y="869" font-size="18" fill="#183048" font-weight="bold"><tspan x="65" y="869">«actor» 訪客</tspan></text>
+      <text x="65" y="924" font-size="14" fill="#52677C"><tspan x="65" y="924">角色：尚未登入的使用者</tspan></text>
+    </g>
+    <g id="node-member">
+      <circle cx="165" cy="1124" r="22" fill="#FFFFFF" stroke="#2863D8" stroke-width="2" />
+      <line x1="165" y1="1146" x2="165" y2="1201" stroke="#2863D8" stroke-width="2" />
+      <line x1="130" y1="1167" x2="200" y2="1167" stroke="#2863D8" stroke-width="2" />
+      <line x1="165" y1="1201" x2="135" y2="1239" stroke="#2863D8" stroke-width="2" />
+      <line x1="165" y1="1201" x2="195" y2="1239" stroke="#2863D8" stroke-width="2" />
+      <text x="65" y="1271" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="65" y="1271">member</tspan></text>
+      <text x="65" y="1299" font-size="18" fill="#183048" font-weight="bold"><tspan x="65" y="1299">«actor» 會員</tspan></text>
+      <text x="65" y="1354" font-size="14" fill="#52677C"><tspan x="65" y="1354">角色：有效且已驗證的 Session</tspan></text>
+    </g>
+    <g id="node-admin">
+      <circle cx="165" cy="1554" r="22" fill="#FFFFFF" stroke="#2863D8" stroke-width="2" />
+      <line x1="165" y1="1576" x2="165" y2="1631" stroke="#2863D8" stroke-width="2" />
+      <line x1="130" y1="1597" x2="200" y2="1597" stroke="#2863D8" stroke-width="2" />
+      <line x1="165" y1="1631" x2="135" y2="1669" stroke="#2863D8" stroke-width="2" />
+      <line x1="165" y1="1631" x2="195" y2="1669" stroke="#2863D8" stroke-width="2" />
+      <text x="65" y="1701" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="65" y="1701">admin</tspan></text>
+      <text x="65" y="1729" font-size="18" fill="#183048" font-weight="bold"><tspan x="65" y="1729">«actor» 管理員</tspan></text>
+      <text x="65" y="1784" font-size="14" fill="#52677C"><tspan x="65" y="1784">角色：通過權威查驗的 Admin</tspan></text>
+    </g>
+    <g id="node-register">
+      <ellipse cx="650" cy="734" rx="205" ry="105" fill="#FFFFFF" stroke="#2863D8" stroke-width="2" />
+      <text x="510" y="682" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="510" y="682">register</tspan></text>
+      <text x="510" y="714" font-size="17" fill="#183048" font-weight="bold"><tspan x="510" y="714">«usecase» 註冊／驗證</tspan></text>
+      <text x="510" y="754" font-size="13" fill="#52677C"><tspan x="510" y="754">功能：FEAT-AUTH-REGISTER</tspan></text>
+      <text x="510" y="780" font-size="13" fill="#52677C"><tspan x="510" y="780">契約：註冊後非同步初始化</tspan></text>
+    </g>
+    <g id="node-login">
+      <ellipse cx="1130" cy="734" rx="205" ry="105" fill="#FFFFFF" stroke="#2863D8" stroke-width="2" />
+      <text x="990" y="682" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="990" y="682">login</tspan></text>
+      <text x="990" y="714" font-size="17" fill="#183048" font-weight="bold"><tspan x="990" y="714">«usecase» 登入／密碼</tspan></text>
+      <text x="990" y="754" font-size="13" fill="#52677C"><tspan x="990" y="754">功能：FEAT-AUTH-LOGIN</tspan></text>
+      <text x="990" y="780" font-size="13" fill="#52677C"><tspan x="990" y="780">限制：Email 驗證與限流</tspan></text>
+    </g>
+    <g id="node-profile">
+      <ellipse cx="650" cy="1014" rx="205" ry="105" fill="#FFFFFF" stroke="#2863D8" stroke-width="2" />
+      <text x="510" y="962" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="510" y="962">profile</tspan></text>
+      <text x="510" y="994" font-size="17" fill="#183048" font-weight="bold"><tspan x="510" y="994">«usecase» 個人資料</tspan></text>
+      <text x="510" y="1034" font-size="13" fill="#52677C"><tspan x="510" y="1034">功能：FEAT-ACCOUNT-PROFILE</tspan></text>
+      <text x="510" y="1060" font-size="13" fill="#52677C"><tspan x="510" y="1060">限制：本人或有理由的 Admin</tspan></text>
+    </g>
+    <g id="node-room">
+      <ellipse cx="1130" cy="1014" rx="205" ry="105" fill="#FFFFFF" stroke="#2863D8" stroke-width="2" />
+      <text x="990" y="962" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="990" y="962">room</tspan></text>
+      <text x="990" y="994" font-size="17" fill="#183048" font-weight="bold"><tspan x="990" y="994">«usecase» 房間／成員</tspan></text>
+      <text x="990" y="1034" font-size="13" fill="#52677C"><tspan x="990" y="1034">功能：FEAT-CHAT-ROOM</tspan></text>
+      <text x="990" y="1060" font-size="13" fill="#52677C"><tspan x="990" y="1060">限制：Owner／Moderator 權限</tspan></text>
+    </g>
+    <g id="node-chat">
+      <ellipse cx="650" cy="1294" rx="205" ry="105" fill="#FFFFFF" stroke="#2863D8" stroke-width="2" />
+      <text x="510" y="1242" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="510" y="1242">chat</tspan></text>
+      <text x="510" y="1274" font-size="17" fill="#183048" font-weight="bold"><tspan x="510" y="1274">«usecase» 訊息／已讀</tspan></text>
+      <text x="510" y="1314" font-size="13" fill="#52677C"><tspan x="510" y="1314">功能：FEAT-CHAT-SEND</tspan></text>
+      <text x="510" y="1340" font-size="13" fill="#52677C"><tspan x="510" y="1340">限制：房間成員與冪等</tspan></text>
+    </g>
+    <g id="node-file">
+      <ellipse cx="1130" cy="1294" rx="205" ry="105" fill="#FFFFFF" stroke="#2863D8" stroke-width="2" />
+      <text x="990" y="1242" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="990" y="1242">file</tspan></text>
+      <text x="990" y="1274" font-size="17" fill="#183048" font-weight="bold"><tspan x="990" y="1274">«usecase» 私有附件</tspan></text>
+      <text x="990" y="1314" font-size="13" fill="#52677C"><tspan x="990" y="1314">功能：FEAT-CHAT-UPLOAD</tspan></text>
+      <text x="990" y="1340" font-size="13" fill="#52677C"><tspan x="990" y="1340">限制：成員、數量與內容檢查</tspan></text>
+    </g>
+    <g id="node-users">
+      <ellipse cx="650" cy="1574" rx="205" ry="105" fill="#FFFFFF" stroke="#2863D8" stroke-width="2" />
+      <text x="510" y="1522" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="510" y="1522">users</tspan></text>
+      <text x="510" y="1554" font-size="17" fill="#183048" font-weight="bold"><tspan x="510" y="1554">«usecase» 帳號／角色</tspan></text>
+      <text x="510" y="1594" font-size="13" fill="#52677C"><tspan x="510" y="1594">功能：FEAT-AUTH-ADMIN</tspan></text>
+      <text x="510" y="1620" font-size="13" fill="#52677C"><tspan x="510" y="1620">限制：最後有效 Admin 保護</tspan></text>
+    </g>
+    <g id="node-moderate">
+      <ellipse cx="1130" cy="1574" rx="205" ry="105" fill="#FFFFFF" stroke="#2863D8" stroke-width="2" />
+      <text x="990" y="1522" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="990" y="1522">moderate</tspan></text>
+      <text x="990" y="1554" font-size="17" fill="#183048" font-weight="bold"><tspan x="990" y="1554">«usecase» 內容／稽核</tspan></text>
+      <text x="990" y="1594" font-size="13" fill="#52677C"><tspan x="990" y="1594">功能：FEAT-CHAT-FILE-ADMIN</tspan></text>
+      <text x="990" y="1620" font-size="13" fill="#52677C"><tspan x="990" y="1620">限制：管理原因與敏感稽核</tspan></text>
+    </g>
+    <polyline points="220,737 310,737 310,734 445,734" fill="none" stroke="#CEDAE8" stroke-width="1" />
+    <polyline points="220,737 314,737 314,612 890,612 890,734 925,734" fill="none" stroke="#CEDAE8" stroke-width="1" />
+    <polyline points="220,1167 318,1167 318,1014 445,1014" fill="none" stroke="#CEDAE8" stroke-width="1" />
+    <polyline points="220,1167 322,1167 322,618 890,618 890,1014 925,1014" fill="none" stroke="#CEDAE8" stroke-width="1" />
+    <polyline points="220,1167 326,1167 326,1294 445,1294" fill="none" stroke="#CEDAE8" stroke-width="1" />
+    <polyline points="220,1167 330,1167 330,624 890,624 890,1294 925,1294" fill="none" stroke="#CEDAE8" stroke-width="1" />
+    <polyline points="220,1597 334,1597 334,1574 445,1574" fill="none" stroke="#CEDAE8" stroke-width="1" />
+    <polyline points="220,1597 338,1597 338,630 890,630 890,1574 925,1574" fill="none" stroke="#CEDAE8" stroke-width="1" />
+    <g id="uml-edges">
+      <text x="56" y="1999" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="1999">關係／條件目錄</tspan></text>
+    </g>
+    <g id="edge-1">
+      <text x="70" y="2037" font-size="17" fill="#183048"><tspan x="70" y="2037">01 visitor → register | association | 訪客可註冊與使用驗證連結。</tspan></text>
+    </g>
+    <g id="edge-2">
+      <text x="70" y="2080" font-size="17" fill="#183048"><tspan x="70" y="2080">02 visitor → login | association | 登入、忘記及重設密碼。</tspan></text>
+    </g>
+    <g id="edge-3">
+      <text x="70" y="2123" font-size="17" fill="#183048"><tspan x="70" y="2123">03 member → profile | association | 本人資料與會員搜尋。</tspan></text>
+    </g>
+    <g id="edge-4">
+      <text x="70" y="2166" font-size="17" fill="#183048"><tspan x="70" y="2166">04 member → room | association | 房間與成員操作依房內角色授權。</tspan></text>
+    </g>
+    <g id="edge-5">
+      <text x="70" y="2209" font-size="17" fill="#183048"><tspan x="70" y="2209">05 member → chat | association | REST 送訊、歷史、已讀與 WebSocket 通知。</tspan></text>
+    </g>
+    <g id="edge-6">
+      <text x="70" y="2252" font-size="17" fill="#183048"><tspan x="70" y="2252">06 member → file | association | 附件經 Message 驗證；S3 不直接公開。</tspan></text>
+    </g>
+    <g id="edge-7">
+      <text x="70" y="2295" font-size="17" fill="#183048"><tspan x="70" y="2295">07 admin → users | association | 角色與停用需原因，不能移除最後有效管理員。</tspan></text>
+    </g>
+    <g id="edge-8">
+      <text x="70" y="2338" font-size="17" fill="#183048"><tspan x="70" y="2338">08 admin → moderate | association | 管理員可查內容／附件並留下稽核。</tspan></text>
+    </g>
+    <g id="section-87">
+      <text x="56" y="2435" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="2435">準則</tspan></text>
+    </g>
+    <g id="line-89">
+      <text x="70" y="2477" font-size="18" fill="#52677C"><tspan x="70" y="2477">實作與預期語意有差異時，先記錄缺口再修改；不只刷新來源指紋。</tspan></text>
+    </g>
+    <g id="line-90">
+      <text x="70" y="2519" font-size="18" fill="#52677C"><tspan x="70" y="2519">程式與測試參照存在不等於本次已執行；核對限定版本與原始證據。</tspan></text>
+    </g>
+    <g id="section-92">
+      <text x="56" y="2584" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="2584">來源</tspan></text>
+    </g>
+    <g id="line-94">
+      <text x="70" y="2626" font-size="15" fill="#52677C"><tspan x="70" y="2626">src/Services/Account/Account.Api/Program.cs</tspan></text>
+    </g>
+    <g id="line-95">
+      <text x="70" y="2665" font-size="15" fill="#52677C"><tspan x="70" y="2665">src/Services/Auth/Auth.Api/Program.cs</tspan></text>
+    </g>
+    <g id="line-96">
+      <text x="70" y="2704" font-size="15" fill="#52677C"><tspan x="70" y="2704">src/Services/Message/Message.Api/Program.cs</tspan></text>
+    </g>
+    <g id="line-97">
+      <text x="70" y="2743" font-size="15" fill="#52677C"><tspan x="70" y="2743">src/Web/src/App.tsx</tspan></text>
+    </g>
+    <line x1="56" y1="2812" x2="1384" y2="2812" stroke="#CEDAE8" stroke-width="2" />
+    <text x="56" y="2838" font-size="12" fill="#52677C"><tspan x="56" y="2838">RELAY / STATIC SVG / MARKDOWN IS THE CONTENT AUTHORITY</tspan></text>
+  </g>
+</svg>

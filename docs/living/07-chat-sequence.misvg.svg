@@ -1,0 +1,853 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:a="https://github.com/Lian0123/my-c-sharp-templates/ns/living-docs/1" xmlns:m="https://example.org/ns/markdown-in-svg/0.1" version="1.1" width="1440" height="2628" viewBox="0 0 1440 2628">
+  <title>REST 寫入、WebSocket 推送與斷線補齊</title>
+  <desc>繁體中文 Agent living document。Markdown 是內容權威；UML 關係、資料來源與更新規則以原生靜態 SVG 呈現。</desc>
+  <metadata>
+    <m:document version="0.1" profile="static" doc-id="urn:uuid:b8f87f17-5802-445e-ac34-3dfdcbd84ee5" revision="6">
+      <m:source media-type="text/markdown" dialect="commonmark-0.31.2" xml:space="preserve"># REST 寫入、WebSocket 推送與斷線補齊
+
+視圖：sequence
+文件編號：DOC-07
+文件狀態：current
+核准狀態：not-recorded
+維護角色：聊天室即時功能維護角色（待具名確認）
+具名負責人：unassigned
+適用基準：referenced-source-sha256；歷史測試僅適用其紀錄版本
+最後審查：2026-11-08
+關聯需求：REQ-SYNC-001,REQ-CHAT-001,REQ-DOC-001
+關聯決策：ADR-SYNC-001,ADR-DOC-001
+範圍：傳送訊息、Outbox 觸發 SignalR、收件授權、歷史補拉與已讀。
+讀圖：REST 是寫入入口；WebSocket 推送的是 changed 事件，不是另一套寫入交易。
+
+## 節點
+
+### sender | 寄件瀏覽器
+
+- clientMessageId
+
+### message | Message API
+
+- ChatService／PG
+
+### rabbit | RabbitMQ
+
+- ChatChanged 事件
+
+### notifier | ChatNotifier
+
+- Registry／backplane
+
+### auth | Auth
+
+- 收件 Session 查驗
+
+### receiver | 收件瀏覽器
+
+- 游標／去重／已讀
+
+## 關係
+
+- call | sender | message | 經 Gateway POST /api/v1/chat/rooms/{id}/messages
+- call | message | message | 鎖 Room；查成員、冪等鍵及附件；分配單調 Sequence
+- call | message | message | 同交易提交訊息、Room.LastSequence、附件綁定與 Outbox
+- return | message | sender | 回傳 MessageView；同 ID 相同內容重送回傳原訊息
+- event | message | rabbit | Outbox Publisher Confirm 後發布 message.chat.changed.v1
+- event | rabbit | notifier | Message Consumer 呼叫 Changed；後續 Inbox 提交／ACK
+- call | notifier | notifier | 查 Room 成員與 Redis 連線索引；每批最多 500 個 Session
+- call | notifier | auth | 即時批次驗證收件 Session；無法驗證則停止推送
+- event | notifier | receiver | 透過 SignalR Redis backplane，對有效連線送 changed
+- call | receiver | message | REST 拉取／補齊訊息；以前後游標與訊息 ID 去重
+- call | receiver | message | PUT /rooms/{id}/read；LastReadSequence 單調更新
+- call | receiver | message | 重連或定期同步：after=最後 Sequence；歷史 before 游標分頁
+
+## 準則
+
+- 每則訊息使用 (RoomId, SenderId, ClientMessageId) 唯一鍵，RequestHash 防止同鍵不同內容。
+- 歷史 limit 1–100，預設 50；before 與 after 不可同時使用。
+- 每 30 秒 Heartbeat 維持索引；presence 到期分數為 120 秒、Key TTL 為 150 秒；節點每 2 秒查驗 Auth。
+- React 使用 WebSocket、重新連線與 15 秒同步；推送可能重複或漏接，持久化歷史才是依據。
+- 管理員查閱所有房間／訊息須提供原因並寫入稽核；一般會員必須為房間成員。
+
+## 來源
+
+- src/Services/Message/Message.Infrastructure/ChatService.cs
+- src/Services/Message/Message.Api/Realtime.cs
+- src/Services/Message/Message.Infrastructure/MessageIntegrationHandler.cs
+- src/Services/Message/Message.Application/Contracts.cs
+- src/Web/src/ChatPage.tsx
+- src/Gateway/appsettings.json
+</m:source>
+      <m:presentation root-ref="view" source-digest="sha256:98283138d9963d869310d0e9f98a8dce729378ff6049f169b92d75a8933fea1b" renderer="relay-living-docs" renderer-version="1.2.0" />
+      <m:bindings>
+        <m:bind target="document-title" start-line="1" end-line="1" />
+        <m:bind target="intro-3" start-line="3" end-line="3" />
+        <m:bind target="intro-4" start-line="4" end-line="4" />
+        <m:bind target="intro-5" start-line="5" end-line="5" />
+        <m:bind target="intro-6" start-line="6" end-line="6" />
+        <m:bind target="intro-7" start-line="7" end-line="7" />
+        <m:bind target="intro-8" start-line="8" end-line="8" />
+        <m:bind target="intro-9" start-line="9" end-line="9" />
+        <m:bind target="intro-10" start-line="10" end-line="10" />
+        <m:bind target="intro-11" start-line="11" end-line="11" />
+        <m:bind target="intro-12" start-line="12" end-line="12" />
+        <m:bind target="intro-13" start-line="13" end-line="13" />
+        <m:bind target="intro-14" start-line="14" end-line="14" />
+        <m:bind target="nodes-heading" start-line="16" end-line="16" />
+        <m:bind target="node-sender" start-line="18" end-line="20" />
+        <m:bind target="node-message" start-line="22" end-line="24" />
+        <m:bind target="node-rabbit" start-line="26" end-line="28" />
+        <m:bind target="node-notifier" start-line="30" end-line="32" />
+        <m:bind target="node-auth" start-line="34" end-line="36" />
+        <m:bind target="node-receiver" start-line="38" end-line="40" />
+        <m:bind target="edges-heading" start-line="42" end-line="42" />
+        <m:bind target="edge-1" start-line="44" end-line="44" />
+        <m:bind target="edge-2" start-line="45" end-line="45" />
+        <m:bind target="edge-3" start-line="46" end-line="46" />
+        <m:bind target="edge-4" start-line="47" end-line="47" />
+        <m:bind target="edge-5" start-line="48" end-line="48" />
+        <m:bind target="edge-6" start-line="49" end-line="49" />
+        <m:bind target="edge-7" start-line="50" end-line="50" />
+        <m:bind target="edge-8" start-line="51" end-line="51" />
+        <m:bind target="edge-9" start-line="52" end-line="52" />
+        <m:bind target="edge-10" start-line="53" end-line="53" />
+        <m:bind target="edge-11" start-line="54" end-line="54" />
+        <m:bind target="edge-12" start-line="55" end-line="55" />
+        <m:bind target="section-57" start-line="57" end-line="57" />
+        <m:bind target="line-59" start-line="59" end-line="59" />
+        <m:bind target="line-60" start-line="60" end-line="60" />
+        <m:bind target="line-61" start-line="61" end-line="61" />
+        <m:bind target="line-62" start-line="62" end-line="62" />
+        <m:bind target="line-63" start-line="63" end-line="63" />
+        <m:bind target="section-65" start-line="65" end-line="65" />
+        <m:bind target="line-67" start-line="67" end-line="67" />
+        <m:bind target="line-68" start-line="68" end-line="68" />
+        <m:bind target="line-69" start-line="69" end-line="69" />
+        <m:bind target="line-70" start-line="70" end-line="70" />
+        <m:bind target="line-71" start-line="71" end-line="71" />
+        <m:bind target="line-72" start-line="72" end-line="72" />
+      </m:bindings>
+      <m:extensions>
+        <a:provenance version="1" spec-commit="c7c0d96aa398d650c6bea5588e5d060bc6d60da5">
+          <a:file path="src/Services/Message/Message.Infrastructure/ChatService.cs" sha256="4d75f819d654b076e0e3d68af28839996c4ab9a8d598610eca81ad2d793fd633" />
+          <a:file path="src/Services/Message/Message.Api/Realtime.cs" sha256="dbc70d5baa076960343b4f400c3ebb340bd5f0f73a79536aff722b96c8c2ddaf" />
+          <a:file path="src/Services/Message/Message.Infrastructure/MessageIntegrationHandler.cs" sha256="da2224f113f6756b6cc877cb5f41d87357e1fbd10986f4fec2384c46b873683c" />
+          <a:file path="src/Services/Message/Message.Application/Contracts.cs" sha256="0f630734e2c57f13b399b437a5b309f5bb734f7183f442ab8555dce7324ed71c" />
+          <a:file path="src/Web/src/ChatPage.tsx" sha256="4d0650a4ac48438e5d01c484fc5a44799ed5592ddf1f7695a336e83373d16758" />
+          <a:file path="src/Gateway/appsettings.json" sha256="9563f5d327ef56d4359729153db3127fde260b3ba2a55645cb1abcad8b7db412" />
+        </a:provenance>
+      </m:extensions>
+    </m:document>
+  </metadata>
+  <g id="view" font-family="PingFang TC, Noto Sans CJK TC, Microsoft JhengHei, sans-serif" fill="#183048">
+    <rect x="0" y="0" width="1440" height="2628" fill="#FFFFFF" />
+    <rect x="0" y="0" width="1440" height="180" fill="#183048" />
+    <text x="56" y="45" font-size="16" fill="#9EBFE8"><tspan x="56" y="45">RELAY / AGENT LIVING DOCUMENT</tspan></text>
+    <text x="56" y="105" font-size="34" fill="#FFFFFF" font-weight="bold" id="document-title"><tspan x="56" y="105">REST 寫入、WebSocket 推送與斷線補齊</tspan></text>
+    <g id="intro-3">
+      <text x="56" y="215" font-size="19" fill="#52677C"><tspan x="56" y="215">視圖：sequence</tspan></text>
+    </g>
+    <g id="intro-4">
+      <text x="56" y="250" font-size="16" fill="#52677C"><tspan x="56" y="250">文件編號：DOC-07</tspan></text>
+    </g>
+    <g id="intro-5">
+      <text x="734" y="250" font-size="16" fill="#087E7C"><tspan x="734" y="250">文件狀態：current</tspan></text>
+    </g>
+    <g id="intro-6">
+      <text x="56" y="287" font-size="16" fill="#52677C"><tspan x="56" y="287">核准狀態：not-recorded</tspan></text>
+    </g>
+    <g id="intro-7">
+      <text x="734" y="287" font-size="16" fill="#52677C"><tspan x="734" y="287">維護角色：聊天室即時功能維護角色（待具名確認）</tspan></text>
+    </g>
+    <g id="intro-8">
+      <text x="56" y="324" font-size="16" fill="#52677C"><tspan x="56" y="324">具名負責人：unassigned</tspan></text>
+    </g>
+    <g id="intro-9">
+      <text x="734" y="324" font-size="16" fill="#52677C"><tspan x="734" y="324">適用基準：referenced-source-sha256；歷史測試僅適用其紀錄版本</tspan></text>
+    </g>
+    <g id="intro-10">
+      <text x="56" y="361" font-size="16" fill="#52677C"><tspan x="56" y="361">最後審查：2026-11-08</tspan></text>
+    </g>
+    <g id="intro-11">
+      <text x="734" y="361" font-size="16" fill="#52677C"><tspan x="734" y="361">關聯需求：REQ-SYNC-001,REQ-CHAT-001,REQ-DOC-001</tspan></text>
+    </g>
+    <g id="intro-12">
+      <text x="56" y="398" font-size="16" fill="#52677C"><tspan x="56" y="398">關聯決策：ADR-SYNC-001,ADR-DOC-001</tspan></text>
+    </g>
+    <g id="intro-13">
+      <text x="56" y="447" font-size="19" fill="#52677C"><tspan x="56" y="447">範圍：傳送訊息、Outbox 觸發 SignalR、收件授權、歷史補拉與已讀。</tspan></text>
+    </g>
+    <g id="intro-14">
+      <text x="56" y="482" font-size="19" fill="#52677C"><tspan x="56" y="482">讀圖：REST 是寫入入口；WebSocket 推送的是 changed 事件，不是另一套寫入交易。</tspan></text>
+    </g>
+    <g id="nodes-heading">
+      <text x="56" y="535" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="535">節點</tspan></text>
+    </g>
+    <g id="node-sender">
+      <rect x="59.0" y="569" width="213.33333333333334" height="123" rx="8" fill="#F2F6FC" stroke="#CEDAE8" />
+      <text x="71.0" y="594" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="71.0" y="594">sender</tspan></text>
+      <text x="71.0" y="617" font-size="17" fill="#183048" font-weight="bold"><tspan x="71.0" y="617">寄件瀏覽器</tspan></text>
+      <text x="71.0" y="643" font-size="14" fill="#52677C"><tspan x="71.0" y="643">clientMessageId</tspan></text>
+    </g>
+    <g id="node-message">
+      <rect x="280.33333333333337" y="569" width="213.33333333333334" height="123" rx="8" fill="#F2F6FC" stroke="#CEDAE8" />
+      <text x="292.33333333333337" y="594" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="292.33333333333337" y="594">message</tspan></text>
+      <text x="292.33333333333337" y="617" font-size="17" fill="#183048" font-weight="bold"><tspan x="292.33333333333337" y="617">Message API</tspan></text>
+      <text x="292.33333333333337" y="643" font-size="14" fill="#52677C"><tspan x="292.33333333333337" y="643">ChatService／PG</tspan></text>
+    </g>
+    <g id="node-rabbit">
+      <rect x="501.6666666666667" y="569" width="213.33333333333334" height="123" rx="8" fill="#F2F6FC" stroke="#CEDAE8" />
+      <text x="513.6666666666667" y="594" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="513.6666666666667" y="594">rabbit</tspan></text>
+      <text x="513.6666666666667" y="617" font-size="17" fill="#183048" font-weight="bold"><tspan x="513.6666666666667" y="617">RabbitMQ</tspan></text>
+      <text x="513.6666666666667" y="643" font-size="14" fill="#52677C"><tspan x="513.6666666666667" y="643">ChatChanged 事件</tspan></text>
+    </g>
+    <g id="node-notifier">
+      <rect x="723.0" y="569" width="213.33333333333334" height="123" rx="8" fill="#F2F6FC" stroke="#CEDAE8" />
+      <text x="735.0" y="594" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="735.0" y="594">notifier</tspan></text>
+      <text x="735.0" y="617" font-size="17" fill="#183048" font-weight="bold"><tspan x="735.0" y="617">ChatNotifier</tspan></text>
+      <text x="735.0" y="643" font-size="14" fill="#52677C"><tspan x="735.0" y="643">Registry／backplane</tspan></text>
+    </g>
+    <g id="node-auth">
+      <rect x="944.3333333333334" y="569" width="213.33333333333334" height="123" rx="8" fill="#F2F6FC" stroke="#CEDAE8" />
+      <text x="956.3333333333334" y="594" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="956.3333333333334" y="594">auth</tspan></text>
+      <text x="956.3333333333334" y="617" font-size="17" fill="#183048" font-weight="bold"><tspan x="956.3333333333334" y="617">Auth</tspan></text>
+      <text x="956.3333333333334" y="643" font-size="14" fill="#52677C"><tspan x="956.3333333333334" y="643">收件 Session 查驗</tspan></text>
+    </g>
+    <g id="node-receiver">
+      <rect x="1165.6666666666667" y="569" width="213.33333333333334" height="123" rx="8" fill="#F2F6FC" stroke="#CEDAE8" />
+      <text x="1177.6666666666667" y="594" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="1177.6666666666667" y="594">receiver</tspan></text>
+      <text x="1177.6666666666667" y="617" font-size="17" fill="#183048" font-weight="bold"><tspan x="1177.6666666666667" y="617">收件瀏覽器</tspan></text>
+      <text x="1177.6666666666667" y="643" font-size="14" fill="#52677C"><tspan x="1177.6666666666667" y="643">游標／去重／已讀</tspan></text>
+    </g>
+    <g id="edges-heading">
+      <text x="56" y="740" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="740">關係</tspan></text>
+    </g>
+    <g>
+      <line x1="166.66666666666669" y1="775.0" x2="166.66666666666669" y2="782.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="789.0" x2="166.66666666666669" y2="796.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="803.0" x2="166.66666666666669" y2="810.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="817.0" x2="166.66666666666669" y2="824.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="831.0" x2="166.66666666666669" y2="838.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="845.0" x2="166.66666666666669" y2="852.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="859.0" x2="166.66666666666669" y2="866.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="873.0" x2="166.66666666666669" y2="880.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="887.0" x2="166.66666666666669" y2="894.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="901.0" x2="166.66666666666669" y2="908.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="915.0" x2="166.66666666666669" y2="922.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="929.0" x2="166.66666666666669" y2="936.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="943.0" x2="166.66666666666669" y2="950.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="957.0" x2="166.66666666666669" y2="964.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="971.0" x2="166.66666666666669" y2="978.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="985.0" x2="166.66666666666669" y2="992.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="999.0" x2="166.66666666666669" y2="1006.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1013.0" x2="166.66666666666669" y2="1020.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1027.0" x2="166.66666666666669" y2="1034.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1041.0" x2="166.66666666666669" y2="1048.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1055.0" x2="166.66666666666669" y2="1062.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1069.0" x2="166.66666666666669" y2="1076.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1083.0" x2="166.66666666666669" y2="1090.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1097.0" x2="166.66666666666669" y2="1104.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1111.0" x2="166.66666666666669" y2="1118.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1125.0" x2="166.66666666666669" y2="1132.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1139.0" x2="166.66666666666669" y2="1146.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1153.0" x2="166.66666666666669" y2="1160.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1167.0" x2="166.66666666666669" y2="1174.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1181.0" x2="166.66666666666669" y2="1188.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1195.0" x2="166.66666666666669" y2="1202.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1209.0" x2="166.66666666666669" y2="1216.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1223.0" x2="166.66666666666669" y2="1230.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1237.0" x2="166.66666666666669" y2="1244.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1251.0" x2="166.66666666666669" y2="1258.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1265.0" x2="166.66666666666669" y2="1272.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1279.0" x2="166.66666666666669" y2="1286.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1293.0" x2="166.66666666666669" y2="1300.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1307.0" x2="166.66666666666669" y2="1314.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1321.0" x2="166.66666666666669" y2="1328.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1335.0" x2="166.66666666666669" y2="1342.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1349.0" x2="166.66666666666669" y2="1356.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1363.0" x2="166.66666666666669" y2="1370.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1377.0" x2="166.66666666666669" y2="1384.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1391.0" x2="166.66666666666669" y2="1398.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1405.0" x2="166.66666666666669" y2="1412.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1419.0" x2="166.66666666666669" y2="1426.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1433.0" x2="166.66666666666669" y2="1440.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1447.0" x2="166.66666666666669" y2="1454.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1461.0" x2="166.66666666666669" y2="1468.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1475.0" x2="166.66666666666669" y2="1482.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1489.0" x2="166.66666666666669" y2="1496.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1503.0" x2="166.66666666666669" y2="1510.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1517.0" x2="166.66666666666669" y2="1524.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1531.0" x2="166.66666666666669" y2="1538.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1545.0" x2="166.66666666666669" y2="1552.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1559.0" x2="166.66666666666669" y2="1566.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1573.0" x2="166.66666666666669" y2="1580.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1587.0" x2="166.66666666666669" y2="1594.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1601.0" x2="166.66666666666669" y2="1608.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1615.0" x2="166.66666666666669" y2="1622.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1629.0" x2="166.66666666666669" y2="1636.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1643.0" x2="166.66666666666669" y2="1650.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1657.0" x2="166.66666666666669" y2="1664.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1671.0" x2="166.66666666666669" y2="1678.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1685.0" x2="166.66666666666669" y2="1692.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1699.0" x2="166.66666666666669" y2="1706.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1713.0" x2="166.66666666666669" y2="1720.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1727.0" x2="166.66666666666669" y2="1734.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1741.0" x2="166.66666666666669" y2="1748.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1755.0" x2="166.66666666666669" y2="1762.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1769.0" x2="166.66666666666669" y2="1776.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1783.0" x2="166.66666666666669" y2="1790.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1797.0" x2="166.66666666666669" y2="1804.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1811.0" x2="166.66666666666669" y2="1818.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1825.0" x2="166.66666666666669" y2="1832.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1839.0" x2="166.66666666666669" y2="1846.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1853.0" x2="166.66666666666669" y2="1860.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1867.0" x2="166.66666666666669" y2="1874.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1881.0" x2="166.66666666666669" y2="1888.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1895.0" x2="166.66666666666669" y2="1902.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1909.0" x2="166.66666666666669" y2="1916.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1923.0" x2="166.66666666666669" y2="1930.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1937.0" x2="166.66666666666669" y2="1944.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="166.66666666666669" y1="1951.0" x2="166.66666666666669" y2="1953.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="775.0" x2="388.00000000000006" y2="782.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="789.0" x2="388.00000000000006" y2="796.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="803.0" x2="388.00000000000006" y2="810.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="817.0" x2="388.00000000000006" y2="824.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="831.0" x2="388.00000000000006" y2="838.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="845.0" x2="388.00000000000006" y2="852.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="859.0" x2="388.00000000000006" y2="866.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="873.0" x2="388.00000000000006" y2="880.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="887.0" x2="388.00000000000006" y2="894.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="901.0" x2="388.00000000000006" y2="908.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="915.0" x2="388.00000000000006" y2="922.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="929.0" x2="388.00000000000006" y2="936.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="943.0" x2="388.00000000000006" y2="950.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="957.0" x2="388.00000000000006" y2="964.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="971.0" x2="388.00000000000006" y2="978.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="985.0" x2="388.00000000000006" y2="992.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="999.0" x2="388.00000000000006" y2="1006.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1013.0" x2="388.00000000000006" y2="1020.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1027.0" x2="388.00000000000006" y2="1034.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1041.0" x2="388.00000000000006" y2="1048.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1055.0" x2="388.00000000000006" y2="1062.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1069.0" x2="388.00000000000006" y2="1076.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1083.0" x2="388.00000000000006" y2="1090.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1097.0" x2="388.00000000000006" y2="1104.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1111.0" x2="388.00000000000006" y2="1118.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1125.0" x2="388.00000000000006" y2="1132.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1139.0" x2="388.00000000000006" y2="1146.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1153.0" x2="388.00000000000006" y2="1160.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1167.0" x2="388.00000000000006" y2="1174.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1181.0" x2="388.00000000000006" y2="1188.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1195.0" x2="388.00000000000006" y2="1202.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1209.0" x2="388.00000000000006" y2="1216.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1223.0" x2="388.00000000000006" y2="1230.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1237.0" x2="388.00000000000006" y2="1244.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1251.0" x2="388.00000000000006" y2="1258.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1265.0" x2="388.00000000000006" y2="1272.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1279.0" x2="388.00000000000006" y2="1286.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1293.0" x2="388.00000000000006" y2="1300.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1307.0" x2="388.00000000000006" y2="1314.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1321.0" x2="388.00000000000006" y2="1328.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1335.0" x2="388.00000000000006" y2="1342.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1349.0" x2="388.00000000000006" y2="1356.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1363.0" x2="388.00000000000006" y2="1370.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1377.0" x2="388.00000000000006" y2="1384.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1391.0" x2="388.00000000000006" y2="1398.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1405.0" x2="388.00000000000006" y2="1412.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1419.0" x2="388.00000000000006" y2="1426.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1433.0" x2="388.00000000000006" y2="1440.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1447.0" x2="388.00000000000006" y2="1454.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1461.0" x2="388.00000000000006" y2="1468.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1475.0" x2="388.00000000000006" y2="1482.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1489.0" x2="388.00000000000006" y2="1496.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1503.0" x2="388.00000000000006" y2="1510.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1517.0" x2="388.00000000000006" y2="1524.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1531.0" x2="388.00000000000006" y2="1538.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1545.0" x2="388.00000000000006" y2="1552.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1559.0" x2="388.00000000000006" y2="1566.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1573.0" x2="388.00000000000006" y2="1580.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1587.0" x2="388.00000000000006" y2="1594.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1601.0" x2="388.00000000000006" y2="1608.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1615.0" x2="388.00000000000006" y2="1622.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1629.0" x2="388.00000000000006" y2="1636.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1643.0" x2="388.00000000000006" y2="1650.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1657.0" x2="388.00000000000006" y2="1664.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1671.0" x2="388.00000000000006" y2="1678.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1685.0" x2="388.00000000000006" y2="1692.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1699.0" x2="388.00000000000006" y2="1706.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1713.0" x2="388.00000000000006" y2="1720.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1727.0" x2="388.00000000000006" y2="1734.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1741.0" x2="388.00000000000006" y2="1748.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1755.0" x2="388.00000000000006" y2="1762.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1769.0" x2="388.00000000000006" y2="1776.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1783.0" x2="388.00000000000006" y2="1790.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1797.0" x2="388.00000000000006" y2="1804.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1811.0" x2="388.00000000000006" y2="1818.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1825.0" x2="388.00000000000006" y2="1832.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1839.0" x2="388.00000000000006" y2="1846.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1853.0" x2="388.00000000000006" y2="1860.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1867.0" x2="388.00000000000006" y2="1874.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1881.0" x2="388.00000000000006" y2="1888.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1895.0" x2="388.00000000000006" y2="1902.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1909.0" x2="388.00000000000006" y2="1916.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1923.0" x2="388.00000000000006" y2="1930.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1937.0" x2="388.00000000000006" y2="1944.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="388.00000000000006" y1="1951.0" x2="388.00000000000006" y2="1953.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="775.0" x2="609.3333333333334" y2="782.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="789.0" x2="609.3333333333334" y2="796.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="803.0" x2="609.3333333333334" y2="810.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="817.0" x2="609.3333333333334" y2="824.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="831.0" x2="609.3333333333334" y2="838.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="845.0" x2="609.3333333333334" y2="852.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="859.0" x2="609.3333333333334" y2="866.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="873.0" x2="609.3333333333334" y2="880.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="887.0" x2="609.3333333333334" y2="894.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="901.0" x2="609.3333333333334" y2="908.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="915.0" x2="609.3333333333334" y2="922.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="929.0" x2="609.3333333333334" y2="936.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="943.0" x2="609.3333333333334" y2="950.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="957.0" x2="609.3333333333334" y2="964.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="971.0" x2="609.3333333333334" y2="978.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="985.0" x2="609.3333333333334" y2="992.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="999.0" x2="609.3333333333334" y2="1006.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1013.0" x2="609.3333333333334" y2="1020.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1027.0" x2="609.3333333333334" y2="1034.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1041.0" x2="609.3333333333334" y2="1048.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1055.0" x2="609.3333333333334" y2="1062.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1069.0" x2="609.3333333333334" y2="1076.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1083.0" x2="609.3333333333334" y2="1090.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1097.0" x2="609.3333333333334" y2="1104.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1111.0" x2="609.3333333333334" y2="1118.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1125.0" x2="609.3333333333334" y2="1132.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1139.0" x2="609.3333333333334" y2="1146.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1153.0" x2="609.3333333333334" y2="1160.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1167.0" x2="609.3333333333334" y2="1174.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1181.0" x2="609.3333333333334" y2="1188.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1195.0" x2="609.3333333333334" y2="1202.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1209.0" x2="609.3333333333334" y2="1216.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1223.0" x2="609.3333333333334" y2="1230.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1237.0" x2="609.3333333333334" y2="1244.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1251.0" x2="609.3333333333334" y2="1258.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1265.0" x2="609.3333333333334" y2="1272.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1279.0" x2="609.3333333333334" y2="1286.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1293.0" x2="609.3333333333334" y2="1300.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1307.0" x2="609.3333333333334" y2="1314.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1321.0" x2="609.3333333333334" y2="1328.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1335.0" x2="609.3333333333334" y2="1342.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1349.0" x2="609.3333333333334" y2="1356.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1363.0" x2="609.3333333333334" y2="1370.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1377.0" x2="609.3333333333334" y2="1384.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1391.0" x2="609.3333333333334" y2="1398.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1405.0" x2="609.3333333333334" y2="1412.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1419.0" x2="609.3333333333334" y2="1426.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1433.0" x2="609.3333333333334" y2="1440.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1447.0" x2="609.3333333333334" y2="1454.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1461.0" x2="609.3333333333334" y2="1468.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1475.0" x2="609.3333333333334" y2="1482.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1489.0" x2="609.3333333333334" y2="1496.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1503.0" x2="609.3333333333334" y2="1510.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1517.0" x2="609.3333333333334" y2="1524.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1531.0" x2="609.3333333333334" y2="1538.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1545.0" x2="609.3333333333334" y2="1552.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1559.0" x2="609.3333333333334" y2="1566.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1573.0" x2="609.3333333333334" y2="1580.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1587.0" x2="609.3333333333334" y2="1594.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1601.0" x2="609.3333333333334" y2="1608.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1615.0" x2="609.3333333333334" y2="1622.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1629.0" x2="609.3333333333334" y2="1636.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1643.0" x2="609.3333333333334" y2="1650.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1657.0" x2="609.3333333333334" y2="1664.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1671.0" x2="609.3333333333334" y2="1678.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1685.0" x2="609.3333333333334" y2="1692.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1699.0" x2="609.3333333333334" y2="1706.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1713.0" x2="609.3333333333334" y2="1720.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1727.0" x2="609.3333333333334" y2="1734.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1741.0" x2="609.3333333333334" y2="1748.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1755.0" x2="609.3333333333334" y2="1762.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1769.0" x2="609.3333333333334" y2="1776.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1783.0" x2="609.3333333333334" y2="1790.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1797.0" x2="609.3333333333334" y2="1804.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1811.0" x2="609.3333333333334" y2="1818.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1825.0" x2="609.3333333333334" y2="1832.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1839.0" x2="609.3333333333334" y2="1846.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1853.0" x2="609.3333333333334" y2="1860.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1867.0" x2="609.3333333333334" y2="1874.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1881.0" x2="609.3333333333334" y2="1888.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1895.0" x2="609.3333333333334" y2="1902.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1909.0" x2="609.3333333333334" y2="1916.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1923.0" x2="609.3333333333334" y2="1930.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1937.0" x2="609.3333333333334" y2="1944.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="609.3333333333334" y1="1951.0" x2="609.3333333333334" y2="1953.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="775.0" x2="830.6666666666666" y2="782.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="789.0" x2="830.6666666666666" y2="796.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="803.0" x2="830.6666666666666" y2="810.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="817.0" x2="830.6666666666666" y2="824.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="831.0" x2="830.6666666666666" y2="838.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="845.0" x2="830.6666666666666" y2="852.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="859.0" x2="830.6666666666666" y2="866.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="873.0" x2="830.6666666666666" y2="880.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="887.0" x2="830.6666666666666" y2="894.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="901.0" x2="830.6666666666666" y2="908.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="915.0" x2="830.6666666666666" y2="922.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="929.0" x2="830.6666666666666" y2="936.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="943.0" x2="830.6666666666666" y2="950.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="957.0" x2="830.6666666666666" y2="964.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="971.0" x2="830.6666666666666" y2="978.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="985.0" x2="830.6666666666666" y2="992.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="999.0" x2="830.6666666666666" y2="1006.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1013.0" x2="830.6666666666666" y2="1020.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1027.0" x2="830.6666666666666" y2="1034.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1041.0" x2="830.6666666666666" y2="1048.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1055.0" x2="830.6666666666666" y2="1062.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1069.0" x2="830.6666666666666" y2="1076.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1083.0" x2="830.6666666666666" y2="1090.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1097.0" x2="830.6666666666666" y2="1104.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1111.0" x2="830.6666666666666" y2="1118.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1125.0" x2="830.6666666666666" y2="1132.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1139.0" x2="830.6666666666666" y2="1146.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1153.0" x2="830.6666666666666" y2="1160.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1167.0" x2="830.6666666666666" y2="1174.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1181.0" x2="830.6666666666666" y2="1188.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1195.0" x2="830.6666666666666" y2="1202.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1209.0" x2="830.6666666666666" y2="1216.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1223.0" x2="830.6666666666666" y2="1230.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1237.0" x2="830.6666666666666" y2="1244.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1251.0" x2="830.6666666666666" y2="1258.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1265.0" x2="830.6666666666666" y2="1272.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1279.0" x2="830.6666666666666" y2="1286.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1293.0" x2="830.6666666666666" y2="1300.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1307.0" x2="830.6666666666666" y2="1314.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1321.0" x2="830.6666666666666" y2="1328.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1335.0" x2="830.6666666666666" y2="1342.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1349.0" x2="830.6666666666666" y2="1356.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1363.0" x2="830.6666666666666" y2="1370.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1377.0" x2="830.6666666666666" y2="1384.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1391.0" x2="830.6666666666666" y2="1398.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1405.0" x2="830.6666666666666" y2="1412.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1419.0" x2="830.6666666666666" y2="1426.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1433.0" x2="830.6666666666666" y2="1440.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1447.0" x2="830.6666666666666" y2="1454.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1461.0" x2="830.6666666666666" y2="1468.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1475.0" x2="830.6666666666666" y2="1482.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1489.0" x2="830.6666666666666" y2="1496.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1503.0" x2="830.6666666666666" y2="1510.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1517.0" x2="830.6666666666666" y2="1524.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1531.0" x2="830.6666666666666" y2="1538.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1545.0" x2="830.6666666666666" y2="1552.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1559.0" x2="830.6666666666666" y2="1566.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1573.0" x2="830.6666666666666" y2="1580.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1587.0" x2="830.6666666666666" y2="1594.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1601.0" x2="830.6666666666666" y2="1608.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1615.0" x2="830.6666666666666" y2="1622.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1629.0" x2="830.6666666666666" y2="1636.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1643.0" x2="830.6666666666666" y2="1650.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1657.0" x2="830.6666666666666" y2="1664.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1671.0" x2="830.6666666666666" y2="1678.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1685.0" x2="830.6666666666666" y2="1692.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1699.0" x2="830.6666666666666" y2="1706.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1713.0" x2="830.6666666666666" y2="1720.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1727.0" x2="830.6666666666666" y2="1734.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1741.0" x2="830.6666666666666" y2="1748.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1755.0" x2="830.6666666666666" y2="1762.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1769.0" x2="830.6666666666666" y2="1776.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1783.0" x2="830.6666666666666" y2="1790.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1797.0" x2="830.6666666666666" y2="1804.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1811.0" x2="830.6666666666666" y2="1818.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1825.0" x2="830.6666666666666" y2="1832.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1839.0" x2="830.6666666666666" y2="1846.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1853.0" x2="830.6666666666666" y2="1860.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1867.0" x2="830.6666666666666" y2="1874.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1881.0" x2="830.6666666666666" y2="1888.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1895.0" x2="830.6666666666666" y2="1902.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1909.0" x2="830.6666666666666" y2="1916.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1923.0" x2="830.6666666666666" y2="1930.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1937.0" x2="830.6666666666666" y2="1944.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="830.6666666666666" y1="1951.0" x2="830.6666666666666" y2="1953.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="775.0" x2="1052.0" y2="782.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="789.0" x2="1052.0" y2="796.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="803.0" x2="1052.0" y2="810.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="817.0" x2="1052.0" y2="824.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="831.0" x2="1052.0" y2="838.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="845.0" x2="1052.0" y2="852.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="859.0" x2="1052.0" y2="866.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="873.0" x2="1052.0" y2="880.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="887.0" x2="1052.0" y2="894.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="901.0" x2="1052.0" y2="908.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="915.0" x2="1052.0" y2="922.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="929.0" x2="1052.0" y2="936.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="943.0" x2="1052.0" y2="950.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="957.0" x2="1052.0" y2="964.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="971.0" x2="1052.0" y2="978.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="985.0" x2="1052.0" y2="992.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="999.0" x2="1052.0" y2="1006.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1013.0" x2="1052.0" y2="1020.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1027.0" x2="1052.0" y2="1034.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1041.0" x2="1052.0" y2="1048.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1055.0" x2="1052.0" y2="1062.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1069.0" x2="1052.0" y2="1076.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1083.0" x2="1052.0" y2="1090.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1097.0" x2="1052.0" y2="1104.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1111.0" x2="1052.0" y2="1118.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1125.0" x2="1052.0" y2="1132.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1139.0" x2="1052.0" y2="1146.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1153.0" x2="1052.0" y2="1160.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1167.0" x2="1052.0" y2="1174.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1181.0" x2="1052.0" y2="1188.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1195.0" x2="1052.0" y2="1202.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1209.0" x2="1052.0" y2="1216.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1223.0" x2="1052.0" y2="1230.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1237.0" x2="1052.0" y2="1244.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1251.0" x2="1052.0" y2="1258.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1265.0" x2="1052.0" y2="1272.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1279.0" x2="1052.0" y2="1286.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1293.0" x2="1052.0" y2="1300.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1307.0" x2="1052.0" y2="1314.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1321.0" x2="1052.0" y2="1328.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1335.0" x2="1052.0" y2="1342.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1349.0" x2="1052.0" y2="1356.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1363.0" x2="1052.0" y2="1370.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1377.0" x2="1052.0" y2="1384.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1391.0" x2="1052.0" y2="1398.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1405.0" x2="1052.0" y2="1412.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1419.0" x2="1052.0" y2="1426.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1433.0" x2="1052.0" y2="1440.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1447.0" x2="1052.0" y2="1454.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1461.0" x2="1052.0" y2="1468.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1475.0" x2="1052.0" y2="1482.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1489.0" x2="1052.0" y2="1496.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1503.0" x2="1052.0" y2="1510.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1517.0" x2="1052.0" y2="1524.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1531.0" x2="1052.0" y2="1538.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1545.0" x2="1052.0" y2="1552.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1559.0" x2="1052.0" y2="1566.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1573.0" x2="1052.0" y2="1580.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1587.0" x2="1052.0" y2="1594.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1601.0" x2="1052.0" y2="1608.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1615.0" x2="1052.0" y2="1622.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1629.0" x2="1052.0" y2="1636.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1643.0" x2="1052.0" y2="1650.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1657.0" x2="1052.0" y2="1664.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1671.0" x2="1052.0" y2="1678.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1685.0" x2="1052.0" y2="1692.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1699.0" x2="1052.0" y2="1706.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1713.0" x2="1052.0" y2="1720.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1727.0" x2="1052.0" y2="1734.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1741.0" x2="1052.0" y2="1748.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1755.0" x2="1052.0" y2="1762.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1769.0" x2="1052.0" y2="1776.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1783.0" x2="1052.0" y2="1790.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1797.0" x2="1052.0" y2="1804.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1811.0" x2="1052.0" y2="1818.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1825.0" x2="1052.0" y2="1832.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1839.0" x2="1052.0" y2="1846.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1853.0" x2="1052.0" y2="1860.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1867.0" x2="1052.0" y2="1874.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1881.0" x2="1052.0" y2="1888.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1895.0" x2="1052.0" y2="1902.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1909.0" x2="1052.0" y2="1916.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1923.0" x2="1052.0" y2="1930.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1937.0" x2="1052.0" y2="1944.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1052.0" y1="1951.0" x2="1052.0" y2="1953.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="775.0" x2="1273.3333333333335" y2="782.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="789.0" x2="1273.3333333333335" y2="796.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="803.0" x2="1273.3333333333335" y2="810.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="817.0" x2="1273.3333333333335" y2="824.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="831.0" x2="1273.3333333333335" y2="838.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="845.0" x2="1273.3333333333335" y2="852.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="859.0" x2="1273.3333333333335" y2="866.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="873.0" x2="1273.3333333333335" y2="880.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="887.0" x2="1273.3333333333335" y2="894.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="901.0" x2="1273.3333333333335" y2="908.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="915.0" x2="1273.3333333333335" y2="922.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="929.0" x2="1273.3333333333335" y2="936.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="943.0" x2="1273.3333333333335" y2="950.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="957.0" x2="1273.3333333333335" y2="964.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="971.0" x2="1273.3333333333335" y2="978.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="985.0" x2="1273.3333333333335" y2="992.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="999.0" x2="1273.3333333333335" y2="1006.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1013.0" x2="1273.3333333333335" y2="1020.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1027.0" x2="1273.3333333333335" y2="1034.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1041.0" x2="1273.3333333333335" y2="1048.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1055.0" x2="1273.3333333333335" y2="1062.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1069.0" x2="1273.3333333333335" y2="1076.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1083.0" x2="1273.3333333333335" y2="1090.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1097.0" x2="1273.3333333333335" y2="1104.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1111.0" x2="1273.3333333333335" y2="1118.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1125.0" x2="1273.3333333333335" y2="1132.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1139.0" x2="1273.3333333333335" y2="1146.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1153.0" x2="1273.3333333333335" y2="1160.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1167.0" x2="1273.3333333333335" y2="1174.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1181.0" x2="1273.3333333333335" y2="1188.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1195.0" x2="1273.3333333333335" y2="1202.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1209.0" x2="1273.3333333333335" y2="1216.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1223.0" x2="1273.3333333333335" y2="1230.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1237.0" x2="1273.3333333333335" y2="1244.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1251.0" x2="1273.3333333333335" y2="1258.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1265.0" x2="1273.3333333333335" y2="1272.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1279.0" x2="1273.3333333333335" y2="1286.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1293.0" x2="1273.3333333333335" y2="1300.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1307.0" x2="1273.3333333333335" y2="1314.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1321.0" x2="1273.3333333333335" y2="1328.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1335.0" x2="1273.3333333333335" y2="1342.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1349.0" x2="1273.3333333333335" y2="1356.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1363.0" x2="1273.3333333333335" y2="1370.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1377.0" x2="1273.3333333333335" y2="1384.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1391.0" x2="1273.3333333333335" y2="1398.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1405.0" x2="1273.3333333333335" y2="1412.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1419.0" x2="1273.3333333333335" y2="1426.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1433.0" x2="1273.3333333333335" y2="1440.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1447.0" x2="1273.3333333333335" y2="1454.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1461.0" x2="1273.3333333333335" y2="1468.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1475.0" x2="1273.3333333333335" y2="1482.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1489.0" x2="1273.3333333333335" y2="1496.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1503.0" x2="1273.3333333333335" y2="1510.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1517.0" x2="1273.3333333333335" y2="1524.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1531.0" x2="1273.3333333333335" y2="1538.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1545.0" x2="1273.3333333333335" y2="1552.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1559.0" x2="1273.3333333333335" y2="1566.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1573.0" x2="1273.3333333333335" y2="1580.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1587.0" x2="1273.3333333333335" y2="1594.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1601.0" x2="1273.3333333333335" y2="1608.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1615.0" x2="1273.3333333333335" y2="1622.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1629.0" x2="1273.3333333333335" y2="1636.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1643.0" x2="1273.3333333333335" y2="1650.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1657.0" x2="1273.3333333333335" y2="1664.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1671.0" x2="1273.3333333333335" y2="1678.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1685.0" x2="1273.3333333333335" y2="1692.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1699.0" x2="1273.3333333333335" y2="1706.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1713.0" x2="1273.3333333333335" y2="1720.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1727.0" x2="1273.3333333333335" y2="1734.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1741.0" x2="1273.3333333333335" y2="1748.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1755.0" x2="1273.3333333333335" y2="1762.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1769.0" x2="1273.3333333333335" y2="1776.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1783.0" x2="1273.3333333333335" y2="1790.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1797.0" x2="1273.3333333333335" y2="1804.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1811.0" x2="1273.3333333333335" y2="1818.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1825.0" x2="1273.3333333333335" y2="1832.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1839.0" x2="1273.3333333333335" y2="1846.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1853.0" x2="1273.3333333333335" y2="1860.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1867.0" x2="1273.3333333333335" y2="1874.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1881.0" x2="1273.3333333333335" y2="1888.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1895.0" x2="1273.3333333333335" y2="1902.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1909.0" x2="1273.3333333333335" y2="1916.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1923.0" x2="1273.3333333333335" y2="1930.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1937.0" x2="1273.3333333333335" y2="1944.0" stroke="#CEDAE8" stroke-width="2" />
+      <line x1="1273.3333333333335" y1="1951.0" x2="1273.3333333333335" y2="1953.0" stroke="#CEDAE8" stroke-width="2" />
+    </g>
+    <g id="edge-1">
+      <text x="166.66666666666669" y="795" font-size="17" fill="#183048"><tspan x="166.66666666666669" y="795">01 call | 經 Gateway POST /api/v1/chat/rooms/{id}/messages</tspan></text>
+      <line x1="166.66666666666669" y1="822" x2="388.00000000000006" y2="822" stroke="#2863D8" stroke-width="2" />
+      <polyline points="376.00000000000006,815 388.00000000000006,822 376.00000000000006,829" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-2">
+      <text x="388.00000000000006" y="892" font-size="17" fill="#183048"><tspan x="388.00000000000006" y="892">02 call | 鎖 Room；查成員、冪等鍵及附件；分配單調 Sequence</tspan></text>
+      <polyline points="388.00000000000006,919 458.00000000000006,919 458.00000000000006,942 388.00000000000006,942" fill="none" stroke="#2863D8" stroke-width="2" />
+      <polyline points="400.00000000000006,935 388.00000000000006,942 400.00000000000006,949" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-3">
+      <text x="388.00000000000006" y="989" font-size="17" fill="#183048"><tspan x="388.00000000000006" y="989">03 call | 同交易提交訊息、Room.LastSequence、附件綁定與 Outbox</tspan></text>
+      <polyline points="388.00000000000006,1016 458.00000000000006,1016 458.00000000000006,1039 388.00000000000006,1039" fill="none" stroke="#2863D8" stroke-width="2" />
+      <polyline points="400.00000000000006,1032 388.00000000000006,1039 400.00000000000006,1046" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-4">
+      <text x="166.66666666666669" y="1086" font-size="17" fill="#183048"><tspan x="166.66666666666669" y="1086">04 return | 回傳 MessageView；同 ID 相同內容重送回傳原訊息</tspan></text>
+      <line x1="388.00000000000006" y1="1113.0" x2="381.00000000000006" y2="1113.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="374.00000000000006" y1="1113.0" x2="367.00000000000006" y2="1113.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="360.00000000000006" y1="1113.0" x2="353.00000000000006" y2="1113.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="346.00000000000006" y1="1113.0" x2="339.00000000000006" y2="1113.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="332.00000000000006" y1="1113.0" x2="325.00000000000006" y2="1113.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="318.00000000000006" y1="1113.0" x2="311.00000000000006" y2="1113.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="304.00000000000006" y1="1113.0" x2="297.00000000000006" y2="1113.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="290.00000000000006" y1="1113.0" x2="283.00000000000006" y2="1113.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="276.00000000000006" y1="1113.0" x2="269.00000000000006" y2="1113.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="262.00000000000006" y1="1113.0" x2="255.00000000000006" y2="1113.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="248.00000000000006" y1="1113.0" x2="241.00000000000006" y2="1113.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="234.00000000000009" y1="1113.0" x2="227.00000000000006" y2="1113.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="220.00000000000006" y1="1113.0" x2="213.00000000000006" y2="1113.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="206.00000000000006" y1="1113.0" x2="199.00000000000006" y2="1113.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="192.00000000000006" y1="1113.0" x2="185.00000000000006" y2="1113.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="178.00000000000006" y1="1113.0" x2="171.00000000000006" y2="1113.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="178.66666666666669,1106 166.66666666666669,1113 178.66666666666669,1120" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-5">
+      <text x="388.00000000000006" y="1183" font-size="17" fill="#183048"><tspan x="388.00000000000006" y="1183">05 event | Outbox Publisher Confirm 後發布 message.chat.changed.v1</tspan></text>
+      <line x1="388.00000000000006" y1="1210" x2="609.3333333333334" y2="1210" stroke="#087E7C" stroke-width="2" />
+      <polyline points="597.3333333333334,1203 609.3333333333334,1210 597.3333333333334,1217" fill="none" stroke="#087E7C" stroke-width="2" />
+    </g>
+    <g id="edge-6">
+      <text x="609.3333333333334" y="1280" font-size="17" fill="#183048"><tspan x="609.3333333333334" y="1280">06 event | Message Consumer 呼叫 Changed；後續 Inbox 提交／ACK</tspan></text>
+      <line x1="609.3333333333334" y1="1307" x2="830.6666666666666" y2="1307" stroke="#087E7C" stroke-width="2" />
+      <polyline points="818.6666666666666,1300 830.6666666666666,1307 818.6666666666666,1314" fill="none" stroke="#087E7C" stroke-width="2" />
+    </g>
+    <g id="edge-7">
+      <text x="830.6666666666666" y="1377" font-size="17" fill="#183048"><tspan x="830.6666666666666" y="1377">07 call | 查 Room 成員與 Redis 連線索引；每批最多 500 個 </tspan><tspan x="830.6666666666666" y="1403">Session</tspan></text>
+      <polyline points="830.6666666666666,1430 900.6666666666666,1430 900.6666666666666,1453 830.6666666666666,1453" fill="none" stroke="#2863D8" stroke-width="2" />
+      <polyline points="842.6666666666666,1446 830.6666666666666,1453 842.6666666666666,1460" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-8">
+      <text x="830.6666666666666" y="1500" font-size="17" fill="#183048"><tspan x="830.6666666666666" y="1500">08 call | 即時批次驗證收件 Session；無法驗證則停止推送</tspan></text>
+      <line x1="830.6666666666666" y1="1527" x2="1052.0" y2="1527" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1040.0,1520 1052.0,1527 1040.0,1534" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-9">
+      <text x="830.6666666666666" y="1597" font-size="17" fill="#183048"><tspan x="830.6666666666666" y="1597">09 event | 透過 SignalR Redis backplane，對有效連線送 changed</tspan></text>
+      <line x1="830.6666666666666" y1="1624" x2="1273.3333333333335" y2="1624" stroke="#087E7C" stroke-width="2" />
+      <polyline points="1261.3333333333335,1617 1273.3333333333335,1624 1261.3333333333335,1631" fill="none" stroke="#087E7C" stroke-width="2" />
+    </g>
+    <g id="edge-10">
+      <text x="388.00000000000006" y="1694" font-size="17" fill="#183048"><tspan x="388.00000000000006" y="1694">10 call | REST 拉取／補齊訊息；以前後游標與訊息 ID 去重</tspan></text>
+      <line x1="1273.3333333333335" y1="1721" x2="388.00000000000006" y2="1721" stroke="#2863D8" stroke-width="2" />
+      <polyline points="400.00000000000006,1714 388.00000000000006,1721 400.00000000000006,1728" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-11">
+      <text x="388.00000000000006" y="1791" font-size="17" fill="#183048"><tspan x="388.00000000000006" y="1791">11 call | PUT /rooms/{id}/read；LastReadSequence 單調更新</tspan></text>
+      <line x1="1273.3333333333335" y1="1818" x2="388.00000000000006" y2="1818" stroke="#2863D8" stroke-width="2" />
+      <polyline points="400.00000000000006,1811 388.00000000000006,1818 400.00000000000006,1825" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-12">
+      <text x="388.00000000000006" y="1888" font-size="17" fill="#183048"><tspan x="388.00000000000006" y="1888">12 call | 重連或定期同步：after=最後 Sequence；歷史 before 游標分頁</tspan></text>
+      <line x1="1273.3333333333335" y1="1915" x2="388.00000000000006" y2="1915" stroke="#2863D8" stroke-width="2" />
+      <polyline points="400.00000000000006,1908 388.00000000000006,1915 400.00000000000006,1922" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="section-57">
+      <text x="56" y="1999" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="1999">準則</tspan></text>
+    </g>
+    <g id="line-59">
+      <text x="70" y="2041" font-size="18" fill="#52677C"><tspan x="70" y="2041">每則訊息使用 (RoomId, SenderId, ClientMessageId) 唯一鍵，RequestHash 防止同鍵不同內容。</tspan></text>
+    </g>
+    <g id="line-60">
+      <text x="70" y="2083" font-size="18" fill="#52677C"><tspan x="70" y="2083">歷史 limit 1–100，預設 50；before 與 after 不可同時使用。</tspan></text>
+    </g>
+    <g id="line-61">
+      <text x="70" y="2125" font-size="18" fill="#52677C"><tspan x="70" y="2125">每 30 秒 Heartbeat 維持索引；presence 到期分數為 120 秒、Key TTL 為 150 秒；節點每 2 秒查驗 Auth。</tspan></text>
+    </g>
+    <g id="line-62">
+      <text x="70" y="2167" font-size="18" fill="#52677C"><tspan x="70" y="2167">React 使用 WebSocket、重新連線與 15 秒同步；推送可能重複或漏接，持久化歷史才是依據。</tspan></text>
+    </g>
+    <g id="line-63">
+      <text x="70" y="2209" font-size="18" fill="#52677C"><tspan x="70" y="2209">管理員查閱所有房間／訊息須提供原因並寫入稽核；一般會員必須為房間成員。</tspan></text>
+    </g>
+    <g id="section-65">
+      <text x="56" y="2274" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="2274">來源</tspan></text>
+    </g>
+    <g id="line-67">
+      <text x="70" y="2316" font-size="15" fill="#52677C"><tspan x="70" y="2316">src/Services/Message/Message.Infrastructure/ChatService.cs</tspan></text>
+    </g>
+    <g id="line-68">
+      <text x="70" y="2355" font-size="15" fill="#52677C"><tspan x="70" y="2355">src/Services/Message/Message.Api/Realtime.cs</tspan></text>
+    </g>
+    <g id="line-69">
+      <text x="70" y="2394" font-size="15" fill="#52677C"><tspan x="70" y="2394">src/Services/Message/Message.Infrastructure/MessageIntegrationHandler.cs</tspan></text>
+    </g>
+    <g id="line-70">
+      <text x="70" y="2433" font-size="15" fill="#52677C"><tspan x="70" y="2433">src/Services/Message/Message.Application/Contracts.cs</tspan></text>
+    </g>
+    <g id="line-71">
+      <text x="70" y="2472" font-size="15" fill="#52677C"><tspan x="70" y="2472">src/Web/src/ChatPage.tsx</tspan></text>
+    </g>
+    <g id="line-72">
+      <text x="70" y="2511" font-size="15" fill="#52677C"><tspan x="70" y="2511">src/Gateway/appsettings.json</tspan></text>
+    </g>
+    <line x1="56" y1="2580" x2="1384" y2="2580" stroke="#CEDAE8" stroke-width="2" />
+    <text x="56" y="2606" font-size="12" fill="#52677C"><tspan x="56" y="2606">RELAY / STATIC SVG / MARKDOWN IS THE CONTENT AUTHORITY</tspan></text>
+  </g>
+</svg>

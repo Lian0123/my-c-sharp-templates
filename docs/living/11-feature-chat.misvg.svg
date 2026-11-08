@@ -1,0 +1,1057 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:a="https://github.com/Lian0123/my-c-sharp-templates/ns/living-docs/1" xmlns:m="https://example.org/ns/markdown-in-svg/0.1" version="1.1" width="1440" height="6695" viewBox="0 0 1440 6695">
+  <title>Message 功能拆分與工作契約</title>
+  <desc>繁體中文 Agent living document。Markdown 是內容權威；UML 關係、資料來源與更新規則以原生靜態 SVG 呈現。</desc>
+  <metadata>
+    <m:document version="0.1" profile="static" doc-id="urn:uuid:f408457d-cb57-4d2d-8eea-d9f8b6d0290f" revision="3">
+      <m:source media-type="text/markdown" dialect="commonmark-0.31.2" xml:space="preserve"># Message 功能拆分與工作契約
+
+視圖：cards
+文件編號：DOC-11
+文件狀態：current
+核准狀態：not-recorded
+維護角色：技術／測試維護角色（待具名確認）
+具名負責人：unassigned
+適用基準：referenced-source-sha256；驗證以紀錄快照為準
+最後審查：2026-11-08
+關聯需求：REQ-AUTH-001,REQ-CHAT-001,REQ-CMS-001,REQ-FILE-001
+關聯決策：ADR-DATA-001,ADR-SYNC-001,ADR-AUTH-001,ADR-DOC-001
+範圍：功能契約依責任拆分；AuthService／ChatService 仍為共用實作類別，並非宣稱每功能已有獨立 class。變更按單一 FEAT 劃定範圍。
+
+## 節點
+
+### FEAT-CHAT-ROOM | 群組與一對一聊天室
+
+- 需求：REQ-CHAT-001
+- 責任服務：Message
+- 角色：會員；有原因的 Admin 查閱
+- 目標：群組與一對一聊天室
+- 輸入：RoomRequest 或目標 UserId
+- 輸出：RoomView；正規化一對一房間
+- 權限：有效 Session；一般列表僅本人房間；成員需已知且有效投影
+- 資料與交易：Room／Membership 本庫保存；Direct advisory lock＋唯一 key
+- 同步與副作用：不直接建立其他服務會員；依投影版本使用公開資料
+- 失敗與重試：資料未同步回可重試；自己對話、超量成員與不存在對象拒絕
+- 邊界：群組最多 200 人；Direct 兩端排序；並行建立
+- 不做範圍：不跨服務資料庫；不在本項擴充 公開廣場或跨庫會員查詢
+- 修改範圍：src/Services/Message/Message.Infrastructure/ChatService.cs 與同服務契約、API、對應測試
+- 契約：src/Services/Message/Message.Application/Contracts.cs#IChatService.Rooms,src/Services/Message/Message.Application/Contracts.cs#IChatService.Create,src/Services/Message/Message.Application/Contracts.cs#IChatService.Direct
+- 實作：src/Services/Message/Message.Infrastructure/ChatService.cs#Create,src/Services/Message/Message.Infrastructure/ChatService.cs#Direct
+- 測試：tests/MicroserviceStarter.Tests/ServiceIntegrationTests.cs#DirectRoomCreationIsCanonicalAndMembershipChangesPreserveAnOwner
+- 完成條件：Given 同一對會員 When 並行建立 Direct Then 得到同一房間。
+- 回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。
+- 實作狀態：implemented
+- 驗證狀態：historical-pass
+
+### FEAT-CHAT-MEMBERS | 成員權限、移除與擁有權轉移
+
+- 需求：REQ-CHAT-001,REQ-CMS-001
+- 責任服務：Message
+- 角色：Owner／Moderator／本人離群／Admin
+- 目標：成員權限、移除與擁有權轉移
+- 輸入：UserId、角色、remove、管理原因
+- 輸出：成員／角色變更與通知
+- 權限：Moderator 不得提升或管理同級；Owner 不可直接移除；Admin 需稽核
+- 資料與交易：Room FOR UPDATE；成員操作同交易；轉移先驗證目標
+- 同步與副作用：提交後 members 通知；不以通知成功取代資料提交
+- 失敗與重試：非成員、非群組、無效角色、最後 Owner、容量與缺原因拒絕
+- 邊界：0／200／201 人、自我轉移、未知目標與併發
+- 不做範圍：不跨服務資料庫；不在本項擴充 多人 Owner 或房間刪除
+- 修改範圍：src/Services/Message/Message.Infrastructure/ChatService.cs 與同服務契約、API、對應測試
+- 契約：src/Services/Message/Message.Application/Contracts.cs#IChatService.Members,src/Services/Message/Message.Application/Contracts.cs#IChatService.Transfer
+- 實作：src/Services/Message/Message.Infrastructure/ChatService.cs#Members,src/Services/Message/Message.Infrastructure/ChatService.cs#Transfer
+- 測試：tests/MicroserviceStarter.Tests/ChatEdgeIntegrationTests.cs#GroupMemberPermissionsCoverSelfLeaveOwnerProtectionUnknownTargetsAndCapacity
+- 完成條件：Given 群組 Owner When 轉移給有效成員 Then 新 Owner 唯一且原 Owner 成 Moderator。
+- 回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。
+- 實作狀態：implemented
+- 驗證狀態：historical-pass
+
+### FEAT-CHAT-HISTORY | 歷史游標與斷線補齊
+
+- 需求：REQ-CHAT-001
+- 責任服務：Message
+- 角色：成員；有原因的 Admin
+- 目標：歷史游標與斷線補齊
+- 輸入：roomId、before 或 after、limit、reason
+- 輸出：依 Sequence 排序的 Page 與 next cursor
+- 權限：成員；Admin 例外查閱需原因與稽核
+- 資料與交易：AsNoTracking 查 Message DB；不從 WebSocket 保存歷史
+- 同步與副作用：after 補齊與通知解耦；前端按 ID／Sequence 合併
+- 失敗與重試：無權隱藏房間；雙游標、負值與超限拒絕；斷線可重試
+- 邊界：before&gt;=1、after&gt;=0、不可同時給；空頁、limit+1
+- 不做範圍：不跨服務資料庫；不在本項擴充 全文搜尋或無上限歷史
+- 修改範圍：src/Services/Message/Message.Infrastructure/ChatService.cs 與同服務契約、API、對應測試
+- 契約：src/Services/Message/Message.Application/Contracts.cs#IChatService.History
+- 實作：src/Services/Message/Message.Infrastructure/ChatService.cs#History
+- 測試：tests/MicroserviceStarter.Tests/ServiceIntegrationTests.cs#MessagesAreIdempotentOrderedAndReadPositionsCannotRegress
+- 完成條件：Given 有離線訊息 When 以 after 游標查詢 Then 按房內序號補齊且不重複。
+- 回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。
+- 實作狀態：implemented
+- 驗證狀態：historical-pass
+
+### FEAT-CHAT-SEND | 冪等訊息寫入與附件綁定
+
+- 需求：REQ-CHAT-001,REQ-FILE-001
+- 責任服務：Message
+- 角色：房間成員
+- 目標：冪等訊息寫入與附件綁定
+- 輸入：clientMessageId、文字、附件 IDs
+- 輸出：持久化 MessageView 與房內遞增 Sequence
+- 權限：房間成員；附件必須本人、同房、Ready、未綁定且未過期
+- 資料與交易：Room FOR UPDATE；訊息、LastSequence、附件綁定、ChatChanged Outbox 同交易
+- 同步與副作用：REST 是寫入口；MQ 後續通知 SignalR；提交後不等待通知完成
+- 失敗與重試：相同 ID 同內容回原訊息；不同內容 409；依附狀態失敗拒絕
+- 邊界：文字 code point、空內容、五／六附件、重複附件、並行序號
+- 不做範圍：不跨服務資料庫；不在本項擴充 WebSocket 直接訊息寫入
+- 修改範圍：src/Services/Message/Message.Infrastructure/ChatService.cs 與同服務契約、API、對應測試
+- 契約：src/Services/Message/Message.Application/Contracts.cs#IChatService.Send
+- 實作：src/Services/Message/Message.Infrastructure/ChatService.cs#Send
+- 測試：tests/MicroserviceStarter.Tests/ServiceIntegrationTests.cs#MessagesAreIdempotentOrderedAndReadPositionsCannotRegress
+- 完成條件：Given 同一 clientMessageId When 重送 Then 不新增；內容不同時 409。
+- 回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。
+- 實作狀態：implemented
+- 驗證狀態：historical-pass
+
+### FEAT-CHAT-READ | 單調已讀游標與未讀數
+
+- 需求：REQ-CHAT-001
+- 責任服務：Message
+- 角色：房間成員
+- 目標：單調已讀游標與未讀數
+- 輸入：roomId、sequence
+- 輸出：更新 LastReadSequence；read 通知
+- 權限：有效 Session 與房間 Membership
+- 資料與交易：Room 鎖定；ReadPosition 不倒退且不得超過 LastSequence
+- 同步與副作用：提交後 read 通知；未讀依非本人且未刪訊息計算
+- 失敗與重試：非法／超前游標拒絕；舊值重送保持不倒退
+- 邊界：0、現值、較舊值、LastSequence、超前與並行已讀
+- 不做範圍：不跨服務資料庫；不在本項擴充 逐則讀者永久紀錄
+- 修改範圍：src/Services/Message/Message.Infrastructure/ChatService.cs 與同服務契約、API、對應測試
+- 契約：src/Services/Message/Message.Application/Contracts.cs#IChatService.Read
+- 實作：src/Services/Message/Message.Infrastructure/ChatService.cs#Read
+- 測試：tests/MicroserviceStarter.Tests/ServiceIntegrationTests.cs#MessagesAreIdempotentOrderedAndReadPositionsCannotRegress
+- 完成條件：Given 已讀 N When 提交 N-1 Then 已讀仍為 N；超前訊息拒絕。
+- 回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。
+- 實作狀態：implemented
+- 驗證狀態：historical-pass
+
+### FEAT-CHAT-UPLOAD | 附件驗證與 Pending／Ready 上傳
+
+- 需求：REQ-FILE-001
+- 責任服務：Message
+- 角色：房間成員
+- 目標：附件驗證與 Pending／Ready 上傳
+- 輸入：fileName、宣告 MIME、Stream
+- 輸出：私有 AttachmentView
+- 權限：有效成員；路徑／標頭注入、MIME 與內容特徵檢查
+- 資料與交易：先保存 Pending，再 S3 Put，再 Ready；不是跨 PG／S3 原子交易
+- 同步與副作用：失敗由未綁定清理工作恢復；物件 key 由 ID 產生
+- 失敗與重試：超限 413、格式偽造拒絕、S3 故障 503；可重新上傳新暫存
+- 邊界：空檔、20 MiB 臨界、圖片解碼尺寸、PDF 與 UTF-8
+- 不做範圍：不跨服務資料庫；不在本項擴充 公開 S3 URL 或防毒服務保證
+- 修改範圍：src/Services/Message/Message.Infrastructure/ChatService.cs 與同服務契約、API、對應測試
+- 契約：src/Services/Message/Message.Application/Contracts.cs#IChatService.Upload
+- 實作：src/Services/Message/Message.Infrastructure/ChatService.cs#Upload
+- 測試：tests/MicroserviceStarter.Tests/ChatEdgeIntegrationTests.cs#ExactFileSizeAndFiveAttachmentLimitAreEnforcedAtTheHttpBoundary
+- 完成條件：Given 合法成員 When 上傳有效 20 MiB 檔 Then 可用；超限及偽造內容拒絕。
+- 回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。
+- 實作狀態：implemented
+- 驗證狀態：historical-pass
+
+### FEAT-CHAT-FILE-ADMIN | 附件下載、管理清單與訊息審核
+
+- 需求：REQ-FILE-001,REQ-CMS-001
+- 責任服務：Message
+- 角色：成員／Admin
+- 目標：附件下載、管理清單與訊息審核
+- 輸入：attachmentId、roomId、messageId、管理原因
+- 輸出：授權串流；附件列表；軟刪訊息
+- 權限：房間存取；未綁定非本人不可讀；Admin 敏感操作記原因
+- 資料與交易：Audit 與軟刪／Outbox 保存；物件存於 Garage
+- 同步與副作用：軟刪後一般會員不能讀其附件；Admin 可稽核查閱
+- 失敗與重試：未 Ready／無權／未知／已刪訊息依規則拒絕；儲存故障回統一錯誤
+- 邊界：跨房間、跨帳號、管理原因、頁數、已刪內容
+- 不做範圍：不跨服務資料庫；不在本項擴充 永久抹除或公開分享連結
+- 修改範圍：src/Services/Message/Message.Infrastructure/ChatService.cs 與同服務契約、API、對應測試
+- 契約：src/Services/Message/Message.Application/Contracts.cs#IChatService.Download,src/Services/Message/Message.Application/Contracts.cs#IChatService.Attachments,src/Services/Message/Message.Application/Contracts.cs#IChatService.Moderate
+- 實作：src/Services/Message/Message.Infrastructure/ChatService.cs#Download,src/Services/Message/Message.Infrastructure/ChatService.cs#Moderate
+- 測試：tests/MicroserviceStarter.Tests/ServiceIntegrationTests.cs#AttachmentsUseRealS3AndRequireOwnerRoomAndCurrentSessionPermissions
+- 完成條件：Given 無房間權限者 When 下載附件 Then 拒絕；Admin 合法查閱有稽核。
+- 回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。
+- 實作狀態：implemented
+- 驗證狀態：historical-pass
+
+### FEAT-CHAT-REALTIME | 房間存取、在線與安全推送
+
+- 需求：REQ-AUTH-001,REQ-CHAT-001
+- 責任服務：Message
+- 角色：連線會員／通知工作
+- 目標：房間存取、在線與安全推送
+- 輸入：JWT、roomId、SignalR Join／Heartbeat
+- 輸出：presence／changed／read／members；斷線與撤銷
+- 權限：Join 成員查驗；推送前批次 Auth Session 查驗
+- 資料與交易：Message Redis 連線索引與 backplane；PG 保存業務資料
+- 同步與副作用：ChatHub、ConnectionRegistry、ChatNotifier 各自職責；Auth 直接 revoke
+- 失敗與重試：Auth 故障停止授權／推送；Redis 故障不把在線狀態當權威
+- 邊界：多分頁、多 Session、斷線TTL、過期、撤銷與 Broker 中斷
+- 不做範圍：不跨服務資料庫；不在本項擴充 端到端加密或訊息寫 Hub
+- 修改範圍：src/Services/Message/Message.Infrastructure/ChatService.cs 與同服務契約、API、對應測試
+- 契約：src/Services/Message/Message.Application/Contracts.cs#IChatService.EnsureMember
+- 實作：src/Services/Message/Message.Infrastructure/ChatService.cs#EnsureMember,src/Services/Message/Message.Api/Realtime.cs#ChatNotifier
+- 測試：tests/MicroserviceStarter.Tests/RealtimeIntegrationTests.cs#WebsocketPushPresenceHeartbeatAndImmediateSessionRevocationAreEnforced
+- 完成條件：Given Session 撤銷 When 新操作或通知 Then 拒絕並中止連線；重連以游標補齊。
+- 回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及 schema，先驗證遷移與還原，不能只回退映像。
+- 實作狀態：implemented
+- 驗證狀態：historical-pass
+
+## 關係
+
+- dependency | FEAT-CHAT-ROOM | FEAT-CHAT-MEMBERS | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。
+
+- dependency | FEAT-CHAT-MEMBERS | FEAT-CHAT-HISTORY | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。
+
+- dependency | FEAT-CHAT-HISTORY | FEAT-CHAT-SEND | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。
+
+- dependency | FEAT-CHAT-SEND | FEAT-CHAT-READ | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。
+
+- dependency | FEAT-CHAT-READ | FEAT-CHAT-UPLOAD | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。
+
+- dependency | FEAT-CHAT-UPLOAD | FEAT-CHAT-FILE-ADMIN | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。
+
+- dependency | FEAT-CHAT-FILE-ADMIN | FEAT-CHAT-REALTIME | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。
+
+## 準則
+
+- 實作與預期語意有差異時，先記錄缺口再修改；不只刷新來源指紋。
+- 程式與測試參照存在不等於本次已執行；核對限定版本與原始證據。
+
+## 來源
+
+- scripts/development_rules.py
+- src/Services/Message/Message.Api/Realtime.cs
+- src/Services/Message/Message.Application/Contracts.cs
+- src/Services/Message/Message.Infrastructure/ChatService.cs
+- tests/MicroserviceStarter.Tests/ChatEdgeIntegrationTests.cs
+- tests/MicroserviceStarter.Tests/RealtimeIntegrationTests.cs
+- tests/MicroserviceStarter.Tests/ServiceIntegrationTests.cs
+- tests/Tooling/test_development_rules.py
+</m:source>
+      <m:presentation root-ref="view" source-digest="sha256:ea94d8671391307716a8414dafe825b2f274f9a5869759c848471271971bb3c4" renderer="relay-living-docs" renderer-version="1.2.0" />
+      <m:bindings>
+        <m:bind target="document-title" start-line="1" end-line="1" />
+        <m:bind target="intro-3" start-line="3" end-line="3" />
+        <m:bind target="intro-4" start-line="4" end-line="4" />
+        <m:bind target="intro-5" start-line="5" end-line="5" />
+        <m:bind target="intro-6" start-line="6" end-line="6" />
+        <m:bind target="intro-7" start-line="7" end-line="7" />
+        <m:bind target="intro-8" start-line="8" end-line="8" />
+        <m:bind target="intro-9" start-line="9" end-line="9" />
+        <m:bind target="intro-10" start-line="10" end-line="10" />
+        <m:bind target="intro-11" start-line="11" end-line="11" />
+        <m:bind target="intro-12" start-line="12" end-line="12" />
+        <m:bind target="intro-13" start-line="13" end-line="13" />
+        <m:bind target="nodes-heading" start-line="15" end-line="15" />
+        <m:bind target="node-FEAT-CHAT-ROOM" start-line="17" end-line="38" />
+        <m:bind target="node-FEAT-CHAT-MEMBERS" start-line="40" end-line="61" />
+        <m:bind target="node-FEAT-CHAT-HISTORY" start-line="63" end-line="84" />
+        <m:bind target="node-FEAT-CHAT-SEND" start-line="86" end-line="107" />
+        <m:bind target="node-FEAT-CHAT-READ" start-line="109" end-line="130" />
+        <m:bind target="node-FEAT-CHAT-UPLOAD" start-line="132" end-line="153" />
+        <m:bind target="node-FEAT-CHAT-FILE-ADMIN" start-line="155" end-line="176" />
+        <m:bind target="node-FEAT-CHAT-REALTIME" start-line="178" end-line="199" />
+        <m:bind target="edges-heading" start-line="201" end-line="201" />
+        <m:bind target="edge-1" start-line="203" end-line="203" />
+        <m:bind target="edge-2" start-line="205" end-line="205" />
+        <m:bind target="edge-3" start-line="207" end-line="207" />
+        <m:bind target="edge-4" start-line="209" end-line="209" />
+        <m:bind target="edge-5" start-line="211" end-line="211" />
+        <m:bind target="edge-6" start-line="213" end-line="213" />
+        <m:bind target="edge-7" start-line="215" end-line="215" />
+        <m:bind target="section-217" start-line="217" end-line="217" />
+        <m:bind target="line-219" start-line="219" end-line="219" />
+        <m:bind target="line-220" start-line="220" end-line="220" />
+        <m:bind target="section-222" start-line="222" end-line="222" />
+        <m:bind target="line-224" start-line="224" end-line="224" />
+        <m:bind target="line-225" start-line="225" end-line="225" />
+        <m:bind target="line-226" start-line="226" end-line="226" />
+        <m:bind target="line-227" start-line="227" end-line="227" />
+        <m:bind target="line-228" start-line="228" end-line="228" />
+        <m:bind target="line-229" start-line="229" end-line="229" />
+        <m:bind target="line-230" start-line="230" end-line="230" />
+        <m:bind target="line-231" start-line="231" end-line="231" />
+      </m:bindings>
+      <m:extensions>
+        <a:provenance version="1" spec-commit="c7c0d96aa398d650c6bea5588e5d060bc6d60da5">
+          <a:file path="scripts/development_rules.py" sha256="33653cc9c01335ed8937eeaacae6c89e5809cfdc1d77c5ebf7de09f95a58f8bc" />
+          <a:file path="src/Services/Message/Message.Api/Realtime.cs" sha256="dbc70d5baa076960343b4f400c3ebb340bd5f0f73a79536aff722b96c8c2ddaf" />
+          <a:file path="src/Services/Message/Message.Application/Contracts.cs" sha256="0f630734e2c57f13b399b437a5b309f5bb734f7183f442ab8555dce7324ed71c" />
+          <a:file path="src/Services/Message/Message.Infrastructure/ChatService.cs" sha256="4d75f819d654b076e0e3d68af28839996c4ab9a8d598610eca81ad2d793fd633" />
+          <a:file path="tests/MicroserviceStarter.Tests/ChatEdgeIntegrationTests.cs" sha256="3a3de6d652e4e731d0a6a9a790bfec13a12da6f779f52ad96277a01e64a881af" />
+          <a:file path="tests/MicroserviceStarter.Tests/RealtimeIntegrationTests.cs" sha256="a2185a5c61ea779627871dbe9d0e3e5350606c7033845578e67daab57cd4fcc5" />
+          <a:file path="tests/MicroserviceStarter.Tests/ServiceIntegrationTests.cs" sha256="4ff8d930a8eddc810b2ed59e81e0590aa857a84185ba0c3389ffb7f5f4d875d4" />
+          <a:file path="tests/Tooling/test_development_rules.py" sha256="4aa932f97faf97ddb7d3d48e5578ac726434904b5d4fde8bbd8114f7760dc550" />
+        </a:provenance>
+      </m:extensions>
+    </m:document>
+  </metadata>
+  <g id="view" font-family="PingFang TC, Noto Sans CJK TC, Microsoft JhengHei, sans-serif" fill="#183048">
+    <rect x="0" y="0" width="1440" height="6695" fill="#FFFFFF" />
+    <rect x="0" y="0" width="1440" height="180" fill="#183048" />
+    <text x="56" y="45" font-size="16" fill="#9EBFE8"><tspan x="56" y="45">RELAY / AGENT LIVING DOCUMENT</tspan></text>
+    <text x="56" y="105" font-size="34" fill="#FFFFFF" font-weight="bold" id="document-title"><tspan x="56" y="105">Message 功能拆分與工作契約</tspan></text>
+    <g id="intro-3">
+      <text x="56" y="215" font-size="19" fill="#52677C"><tspan x="56" y="215">視圖：cards</tspan></text>
+    </g>
+    <g id="intro-4">
+      <text x="56" y="250" font-size="16" fill="#52677C"><tspan x="56" y="250">文件編號：DOC-11</tspan></text>
+    </g>
+    <g id="intro-5">
+      <text x="734" y="250" font-size="16" fill="#087E7C"><tspan x="734" y="250">文件狀態：current</tspan></text>
+    </g>
+    <g id="intro-6">
+      <text x="56" y="287" font-size="16" fill="#52677C"><tspan x="56" y="287">核准狀態：not-recorded</tspan></text>
+    </g>
+    <g id="intro-7">
+      <text x="734" y="287" font-size="16" fill="#52677C"><tspan x="734" y="287">維護角色：技術／測試維護角色（待具名確認）</tspan></text>
+    </g>
+    <g id="intro-8">
+      <text x="56" y="324" font-size="16" fill="#52677C"><tspan x="56" y="324">具名負責人：unassigned</tspan></text>
+    </g>
+    <g id="intro-9">
+      <text x="734" y="324" font-size="16" fill="#52677C"><tspan x="734" y="324">適用基準：referenced-source-sha256；驗證以紀錄快照為準</tspan></text>
+    </g>
+    <g id="intro-10">
+      <text x="56" y="361" font-size="16" fill="#52677C"><tspan x="56" y="361">最後審查：2026-11-08</tspan></text>
+    </g>
+    <g id="intro-11">
+      <text x="734" y="361" font-size="16" fill="#52677C"><tspan x="734" y="361">關聯需求：REQ-AUTH-001,REQ-CHAT-001,REQ-CMS-001,REQ-FILE-001</tspan></text>
+    </g>
+    <g id="intro-12">
+      <text x="56" y="398" font-size="16" fill="#52677C"><tspan x="56" y="398">關聯決策：ADR-DATA-001,ADR-SYNC-001,ADR-AUTH-001,ADR-DOC-001</tspan></text>
+    </g>
+    <g id="intro-13">
+      <text x="56" y="447" font-size="19" fill="#52677C"><tspan x="56" y="447">範圍：功能契約依責任拆分；AuthService／ChatService 仍為共用實作類別，並非宣稱每功能已有獨立 class。變更按單一 FEAT </tspan><tspan x="56" y="475">劃定範圍。</tspan></text>
+    </g>
+    <g id="nodes-heading">
+      <text x="56" y="528" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="528">節點</tspan></text>
+    </g>
+    <g id="node-FEAT-CHAT-ROOM">
+      <rect x="56" y="562" width="646" height="1208" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="588" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="588">FEAT-CHAT-ROOM</tspan></text>
+      <text x="78" y="619" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="619">群組與一對一聊天室</tspan></text>
+      <line x1="74" y1="641" x2="684" y2="641" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="665" font-size="18" fill="#52677C"><tspan x="78" y="665">需求：REQ-CHAT-001</tspan></text>
+      <text x="78" y="697" font-size="18" fill="#52677C"><tspan x="78" y="697">責任服務：Message</tspan></text>
+      <text x="78" y="729" font-size="18" fill="#52677C"><tspan x="78" y="729">角色：會員；有原因的 Admin 查閱</tspan></text>
+      <text x="78" y="761" font-size="18" fill="#52677C"><tspan x="78" y="761">目標：群組與一對一聊天室</tspan></text>
+      <text x="78" y="793" font-size="18" fill="#52677C"><tspan x="78" y="793">輸入：RoomRequest 或目標 UserId</tspan></text>
+      <text x="78" y="825" font-size="18" fill="#52677C"><tspan x="78" y="825">輸出：RoomView；正規化一對一房間</tspan></text>
+      <text x="78" y="857" font-size="18" fill="#52677C"><tspan x="78" y="857">權限：有效 Session；一般列表僅本人房間；成員需已知且有效</tspan><tspan x="78" y="884">投影</tspan></text>
+      <text x="78" y="916" font-size="18" fill="#52677C"><tspan x="78" y="916">資料與交易：Room／Membership 本庫保存；Direct advisory </tspan><tspan x="78" y="943">lock＋唯一 key</tspan></text>
+      <text x="78" y="975" font-size="18" fill="#52677C"><tspan x="78" y="975">同步與副作用：不直接建立其他服務會員；依投影版本使用公開</tspan><tspan x="78" y="1002">資料</tspan></text>
+      <text x="78" y="1034" font-size="18" fill="#52677C"><tspan x="78" y="1034">失敗與重試：資料未同步回可重試；自己對話、超量成員與不存</tspan><tspan x="78" y="1061">在對象拒絕</tspan></text>
+      <text x="78" y="1093" font-size="18" fill="#52677C"><tspan x="78" y="1093">邊界：群組最多 200 人；Direct 兩端排序；並行建立</tspan></text>
+      <text x="78" y="1125" font-size="18" fill="#52677C"><tspan x="78" y="1125">不做範圍：不跨服務資料庫；不在本項擴充 公開廣場或跨庫會</tspan><tspan x="78" y="1152">員查詢</tspan></text>
+      <text x="78" y="1184" font-size="18" fill="#52677C"><tspan x="78" y="1184">修改範圍：src/Services/Message/Message.Infrastructure/Ch</tspan><tspan x="78" y="1211">atService.cs 與同服務契約、API、對應測試</tspan></text>
+      <text x="78" y="1243" font-size="18" fill="#52677C"><tspan x="78" y="1243">契約：src/Services/Message/Message.Application/Contracts</tspan><tspan x="78" y="1270">.cs#IChatService.Rooms,src/Services/Message/Message.Appl</tspan><tspan x="78" y="1297">ication/Contracts.cs#IChatService.Create,src/Services/Me</tspan><tspan x="78" y="1324">ssage/Message.Application/Contracts.cs#IChatService.Dire</tspan><tspan x="78" y="1351">ct</tspan></text>
+      <text x="78" y="1383" font-size="18" fill="#52677C"><tspan x="78" y="1383">實作：src/Services/Message/Message.Infrastructure/ChatSe</tspan><tspan x="78" y="1410">rvice.cs#Create,src/Services/Message/Message.Infrastruct</tspan><tspan x="78" y="1437">ure/ChatService.cs#Direct</tspan></text>
+      <text x="78" y="1469" font-size="18" fill="#52677C"><tspan x="78" y="1469">測試：tests/MicroserviceStarter.Tests/ServiceIntegration</tspan><tspan x="78" y="1496">Tests.cs#DirectRoomCreationIsCanonicalAndMembershipChang</tspan><tspan x="78" y="1523">esPreserveAnOwner</tspan></text>
+      <text x="78" y="1555" font-size="18" fill="#52677C"><tspan x="78" y="1555">完成條件：Given 同一對會員 When 並行建立 Direct Then 得</tspan><tspan x="78" y="1582">到同一房間。</tspan></text>
+      <text x="78" y="1614" font-size="18" fill="#52677C"><tspan x="78" y="1614">回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及</tspan><tspan x="78" y="1641"> schema，先驗證遷移與還原，不能只回退映像。</tspan></text>
+      <text x="78" y="1673" font-size="18" fill="#52677C"><tspan x="78" y="1673">實作狀態：implemented</tspan></text>
+      <text x="78" y="1705" font-size="18" fill="#52677C"><tspan x="78" y="1705">驗證狀態：historical-pass</tspan></text>
+    </g>
+    <g id="node-FEAT-CHAT-MEMBERS">
+      <rect x="734" y="562" width="646" height="1208" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="588" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="588">FEAT-CHAT-MEMBERS</tspan></text>
+      <text x="756" y="619" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="619">成員權限、移除與擁有權轉移</tspan></text>
+      <line x1="752" y1="641" x2="1362" y2="641" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="665" font-size="18" fill="#52677C"><tspan x="756" y="665">需求：REQ-CHAT-001,REQ-CMS-001</tspan></text>
+      <text x="756" y="697" font-size="18" fill="#52677C"><tspan x="756" y="697">責任服務：Message</tspan></text>
+      <text x="756" y="729" font-size="18" fill="#52677C"><tspan x="756" y="729">角色：Owner／Moderator／本人離群／Admin</tspan></text>
+      <text x="756" y="761" font-size="18" fill="#52677C"><tspan x="756" y="761">目標：成員權限、移除與擁有權轉移</tspan></text>
+      <text x="756" y="793" font-size="18" fill="#52677C"><tspan x="756" y="793">輸入：UserId、角色、remove、管理原因</tspan></text>
+      <text x="756" y="825" font-size="18" fill="#52677C"><tspan x="756" y="825">輸出：成員／角色變更與通知</tspan></text>
+      <text x="756" y="857" font-size="18" fill="#52677C"><tspan x="756" y="857">權限：Moderator 不得提升或管理同級；Owner </tspan><tspan x="756" y="884">不可直接移除；Admin 需稽核</tspan></text>
+      <text x="756" y="916" font-size="18" fill="#52677C"><tspan x="756" y="916">資料與交易：Room FOR UPDATE；成員操作同交易；轉移先驗證</tspan><tspan x="756" y="943">目標</tspan></text>
+      <text x="756" y="975" font-size="18" fill="#52677C"><tspan x="756" y="975">同步與副作用：提交後 members 通知；不以通知成功取代資料</tspan><tspan x="756" y="1002">提交</tspan></text>
+      <text x="756" y="1034" font-size="18" fill="#52677C"><tspan x="756" y="1034">失敗與重試：非成員、非群組、無效角色、最後 Owner、容量與</tspan><tspan x="756" y="1061">缺原因拒絕</tspan></text>
+      <text x="756" y="1093" font-size="18" fill="#52677C"><tspan x="756" y="1093">邊界：0／200／201 人、自我轉移、未知目標與併發</tspan></text>
+      <text x="756" y="1125" font-size="18" fill="#52677C"><tspan x="756" y="1125">不做範圍：不跨服務資料庫；不在本項擴充 多人 Owner 或房間</tspan><tspan x="756" y="1152">刪除</tspan></text>
+      <text x="756" y="1184" font-size="18" fill="#52677C"><tspan x="756" y="1184">修改範圍：src/Services/Message/Message.Infrastructure/Ch</tspan><tspan x="756" y="1211">atService.cs 與同服務契約、API、對應測試</tspan></text>
+      <text x="756" y="1243" font-size="18" fill="#52677C"><tspan x="756" y="1243">契約：src/Services/Message/Message.Application/Contracts</tspan><tspan x="756" y="1270">.cs#IChatService.Members,src/Services/Message/Message.Ap</tspan><tspan x="756" y="1297">plication/Contracts.cs#IChatService.Transfer</tspan></text>
+      <text x="756" y="1329" font-size="18" fill="#52677C"><tspan x="756" y="1329">實作：src/Services/Message/Message.Infrastructure/ChatSe</tspan><tspan x="756" y="1356">rvice.cs#Members,src/Services/Message/Message.Infrastruc</tspan><tspan x="756" y="1383">ture/ChatService.cs#Transfer</tspan></text>
+      <text x="756" y="1415" font-size="18" fill="#52677C"><tspan x="756" y="1415">測試：tests/MicroserviceStarter.Tests/ChatEdgeIntegratio</tspan><tspan x="756" y="1442">nTests.cs#GroupMemberPermissionsCoverSelfLeaveOwnerProte</tspan><tspan x="756" y="1469">ctionUnknownTargetsAndCapacity</tspan></text>
+      <text x="756" y="1501" font-size="18" fill="#52677C"><tspan x="756" y="1501">完成條件：Given 群組 Owner When 轉移給有效成員 Then 新 </tspan><tspan x="756" y="1528">Owner 唯一且原 Owner 成 Moderator。</tspan></text>
+      <text x="756" y="1560" font-size="18" fill="#52677C"><tspan x="756" y="1560">回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及</tspan><tspan x="756" y="1587"> schema，先驗證遷移與還原，不能只回退映像。</tspan></text>
+      <text x="756" y="1619" font-size="18" fill="#52677C"><tspan x="756" y="1619">實作狀態：implemented</tspan></text>
+      <text x="756" y="1651" font-size="18" fill="#52677C"><tspan x="756" y="1651">驗證狀態：historical-pass</tspan></text>
+    </g>
+    <g id="node-FEAT-CHAT-HISTORY">
+      <rect x="56" y="1796" width="646" height="1124" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="1822" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="1822">FEAT-CHAT-HISTORY</tspan></text>
+      <text x="78" y="1853" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="1853">歷史游標與斷線補齊</tspan></text>
+      <line x1="74" y1="1875" x2="684" y2="1875" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="1899" font-size="18" fill="#52677C"><tspan x="78" y="1899">需求：REQ-CHAT-001</tspan></text>
+      <text x="78" y="1931" font-size="18" fill="#52677C"><tspan x="78" y="1931">責任服務：Message</tspan></text>
+      <text x="78" y="1963" font-size="18" fill="#52677C"><tspan x="78" y="1963">角色：成員；有原因的 Admin</tspan></text>
+      <text x="78" y="1995" font-size="18" fill="#52677C"><tspan x="78" y="1995">目標：歷史游標與斷線補齊</tspan></text>
+      <text x="78" y="2027" font-size="18" fill="#52677C"><tspan x="78" y="2027">輸入：roomId、before 或 after、limit、reason</tspan></text>
+      <text x="78" y="2059" font-size="18" fill="#52677C"><tspan x="78" y="2059">輸出：依 Sequence 排序的 Page 與 next cursor</tspan></text>
+      <text x="78" y="2091" font-size="18" fill="#52677C"><tspan x="78" y="2091">權限：成員；Admin 例外查閱需原因與稽核</tspan></text>
+      <text x="78" y="2123" font-size="18" fill="#52677C"><tspan x="78" y="2123">資料與交易：AsNoTracking 查 Message DB；不從 WebSocket </tspan><tspan x="78" y="2150">保存歷史</tspan></text>
+      <text x="78" y="2182" font-size="18" fill="#52677C"><tspan x="78" y="2182">同步與副作用：after 補齊與通知解耦；前端按 ID／Sequence </tspan><tspan x="78" y="2209">合併</tspan></text>
+      <text x="78" y="2241" font-size="18" fill="#52677C"><tspan x="78" y="2241">失敗與重試：無權隱藏房間；雙游標、負值與超限拒絕；斷線可</tspan><tspan x="78" y="2268">重試</tspan></text>
+      <text x="78" y="2300" font-size="18" fill="#52677C"><tspan x="78" y="2300">邊界：before&gt;=1、after&gt;=0、不可同時給；空頁、limit+1</tspan></text>
+      <text x="78" y="2332" font-size="18" fill="#52677C"><tspan x="78" y="2332">不做範圍：不跨服務資料庫；不在本項擴充 全文搜尋或無上限</tspan><tspan x="78" y="2359">歷史</tspan></text>
+      <text x="78" y="2391" font-size="18" fill="#52677C"><tspan x="78" y="2391">修改範圍：src/Services/Message/Message.Infrastructure/Ch</tspan><tspan x="78" y="2418">atService.cs 與同服務契約、API、對應測試</tspan></text>
+      <text x="78" y="2450" font-size="18" fill="#52677C"><tspan x="78" y="2450">契約：src/Services/Message/Message.Application/Contracts</tspan><tspan x="78" y="2477">.cs#IChatService.History</tspan></text>
+      <text x="78" y="2509" font-size="18" fill="#52677C"><tspan x="78" y="2509">實作：src/Services/Message/Message.Infrastructure/ChatSe</tspan><tspan x="78" y="2536">rvice.cs#History</tspan></text>
+      <text x="78" y="2568" font-size="18" fill="#52677C"><tspan x="78" y="2568">測試：tests/MicroserviceStarter.Tests/ServiceIntegration</tspan><tspan x="78" y="2595">Tests.cs#MessagesAreIdempotentOrderedAndReadPositionsCan</tspan><tspan x="78" y="2622">notRegress</tspan></text>
+      <text x="78" y="2654" font-size="18" fill="#52677C"><tspan x="78" y="2654">完成條件：Given 有離線訊息 When 以 after 游標查詢 Then </tspan><tspan x="78" y="2681">按房內序號補齊且不重複。</tspan></text>
+      <text x="78" y="2713" font-size="18" fill="#52677C"><tspan x="78" y="2713">回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及</tspan><tspan x="78" y="2740"> schema，先驗證遷移與還原，不能只回退映像。</tspan></text>
+      <text x="78" y="2772" font-size="18" fill="#52677C"><tspan x="78" y="2772">實作狀態：implemented</tspan></text>
+      <text x="78" y="2804" font-size="18" fill="#52677C"><tspan x="78" y="2804">驗證狀態：historical-pass</tspan></text>
+    </g>
+    <g id="node-FEAT-CHAT-SEND">
+      <rect x="734" y="1796" width="646" height="1124" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="1822" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="1822">FEAT-CHAT-SEND</tspan></text>
+      <text x="756" y="1853" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="1853">冪等訊息寫入與附件綁定</tspan></text>
+      <line x1="752" y1="1875" x2="1362" y2="1875" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="1899" font-size="18" fill="#52677C"><tspan x="756" y="1899">需求：REQ-CHAT-001,REQ-FILE-001</tspan></text>
+      <text x="756" y="1931" font-size="18" fill="#52677C"><tspan x="756" y="1931">責任服務：Message</tspan></text>
+      <text x="756" y="1963" font-size="18" fill="#52677C"><tspan x="756" y="1963">角色：房間成員</tspan></text>
+      <text x="756" y="1995" font-size="18" fill="#52677C"><tspan x="756" y="1995">目標：冪等訊息寫入與附件綁定</tspan></text>
+      <text x="756" y="2027" font-size="18" fill="#52677C"><tspan x="756" y="2027">輸入：clientMessageId、文字、附件 IDs</tspan></text>
+      <text x="756" y="2059" font-size="18" fill="#52677C"><tspan x="756" y="2059">輸出：持久化 MessageView 與房內遞增 Sequence</tspan></text>
+      <text x="756" y="2091" font-size="18" fill="#52677C"><tspan x="756" y="2091">權限：房間成員；附件必須本人、同房、Ready、未綁定且未過</tspan><tspan x="756" y="2118">期</tspan></text>
+      <text x="756" y="2150" font-size="18" fill="#52677C"><tspan x="756" y="2150">資料與交易：Room FOR UPDATE；訊息、LastSequence、附件綁</tspan><tspan x="756" y="2177">定、ChatChanged Outbox 同交易</tspan></text>
+      <text x="756" y="2209" font-size="18" fill="#52677C"><tspan x="756" y="2209">同步與副作用：REST 是寫入口；MQ 後續通知 SignalR；提交後</tspan><tspan x="756" y="2236">不等待通知完成</tspan></text>
+      <text x="756" y="2268" font-size="18" fill="#52677C"><tspan x="756" y="2268">失敗與重試：相同 ID 同內容回原訊息；不同內容 409；依附狀</tspan><tspan x="756" y="2295">態失敗拒絕</tspan></text>
+      <text x="756" y="2327" font-size="18" fill="#52677C"><tspan x="756" y="2327">邊界：文字 code point、空內容、五／六附件、重複附件、並</tspan><tspan x="756" y="2354">行序號</tspan></text>
+      <text x="756" y="2386" font-size="18" fill="#52677C"><tspan x="756" y="2386">不做範圍：不跨服務資料庫；不在本項擴充 WebSocket 直接訊</tspan><tspan x="756" y="2413">息寫入</tspan></text>
+      <text x="756" y="2445" font-size="18" fill="#52677C"><tspan x="756" y="2445">修改範圍：src/Services/Message/Message.Infrastructure/Ch</tspan><tspan x="756" y="2472">atService.cs 與同服務契約、API、對應測試</tspan></text>
+      <text x="756" y="2504" font-size="18" fill="#52677C"><tspan x="756" y="2504">契約：src/Services/Message/Message.Application/Contracts</tspan><tspan x="756" y="2531">.cs#IChatService.Send</tspan></text>
+      <text x="756" y="2563" font-size="18" fill="#52677C"><tspan x="756" y="2563">實作：src/Services/Message/Message.Infrastructure/ChatSe</tspan><tspan x="756" y="2590">rvice.cs#Send</tspan></text>
+      <text x="756" y="2622" font-size="18" fill="#52677C"><tspan x="756" y="2622">測試：tests/MicroserviceStarter.Tests/ServiceIntegration</tspan><tspan x="756" y="2649">Tests.cs#MessagesAreIdempotentOrderedAndReadPositionsCan</tspan><tspan x="756" y="2676">notRegress</tspan></text>
+      <text x="756" y="2708" font-size="18" fill="#52677C"><tspan x="756" y="2708">完成條件：Given 同一 clientMessageId When 重送 Then 不新</tspan><tspan x="756" y="2735">增；內容不同時 409。</tspan></text>
+      <text x="756" y="2767" font-size="18" fill="#52677C"><tspan x="756" y="2767">回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及</tspan><tspan x="756" y="2794"> schema，先驗證遷移與還原，不能只回退映像。</tspan></text>
+      <text x="756" y="2826" font-size="18" fill="#52677C"><tspan x="756" y="2826">實作狀態：implemented</tspan></text>
+      <text x="756" y="2858" font-size="18" fill="#52677C"><tspan x="756" y="2858">驗證狀態：historical-pass</tspan></text>
+    </g>
+    <g id="node-FEAT-CHAT-READ">
+      <rect x="56" y="2946" width="646" height="1068" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="2972" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="2972">FEAT-CHAT-READ</tspan></text>
+      <text x="78" y="3003" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="3003">單調已讀游標與未讀數</tspan></text>
+      <line x1="74" y1="3025" x2="684" y2="3025" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="3049" font-size="18" fill="#52677C"><tspan x="78" y="3049">需求：REQ-CHAT-001</tspan></text>
+      <text x="78" y="3081" font-size="18" fill="#52677C"><tspan x="78" y="3081">責任服務：Message</tspan></text>
+      <text x="78" y="3113" font-size="18" fill="#52677C"><tspan x="78" y="3113">角色：房間成員</tspan></text>
+      <text x="78" y="3145" font-size="18" fill="#52677C"><tspan x="78" y="3145">目標：單調已讀游標與未讀數</tspan></text>
+      <text x="78" y="3177" font-size="18" fill="#52677C"><tspan x="78" y="3177">輸入：roomId、sequence</tspan></text>
+      <text x="78" y="3209" font-size="18" fill="#52677C"><tspan x="78" y="3209">輸出：更新 LastReadSequence；read 通知</tspan></text>
+      <text x="78" y="3241" font-size="18" fill="#52677C"><tspan x="78" y="3241">權限：有效 Session 與房間 Membership</tspan></text>
+      <text x="78" y="3273" font-size="18" fill="#52677C"><tspan x="78" y="3273">資料與交易：Room 鎖定；ReadPosition 不倒退且不得超過 </tspan><tspan x="78" y="3300">LastSequence</tspan></text>
+      <text x="78" y="3332" font-size="18" fill="#52677C"><tspan x="78" y="3332">同步與副作用：提交後 read 通知；未讀依非本人且未刪訊息計</tspan><tspan x="78" y="3359">算</tspan></text>
+      <text x="78" y="3391" font-size="18" fill="#52677C"><tspan x="78" y="3391">失敗與重試：非法／超前游標拒絕；舊值重送保持不倒退</tspan></text>
+      <text x="78" y="3423" font-size="18" fill="#52677C"><tspan x="78" y="3423">邊界：0、現值、較舊值、LastSequence、超前與並行已讀</tspan></text>
+      <text x="78" y="3455" font-size="18" fill="#52677C"><tspan x="78" y="3455">不做範圍：不跨服務資料庫；不在本項擴充 逐則讀者永久紀錄</tspan></text>
+      <text x="78" y="3487" font-size="18" fill="#52677C"><tspan x="78" y="3487">修改範圍：src/Services/Message/Message.Infrastructure/Ch</tspan><tspan x="78" y="3514">atService.cs 與同服務契約、API、對應測試</tspan></text>
+      <text x="78" y="3546" font-size="18" fill="#52677C"><tspan x="78" y="3546">契約：src/Services/Message/Message.Application/Contracts</tspan><tspan x="78" y="3573">.cs#IChatService.Read</tspan></text>
+      <text x="78" y="3605" font-size="18" fill="#52677C"><tspan x="78" y="3605">實作：src/Services/Message/Message.Infrastructure/ChatSe</tspan><tspan x="78" y="3632">rvice.cs#Read</tspan></text>
+      <text x="78" y="3664" font-size="18" fill="#52677C"><tspan x="78" y="3664">測試：tests/MicroserviceStarter.Tests/ServiceIntegration</tspan><tspan x="78" y="3691">Tests.cs#MessagesAreIdempotentOrderedAndReadPositionsCan</tspan><tspan x="78" y="3718">notRegress</tspan></text>
+      <text x="78" y="3750" font-size="18" fill="#52677C"><tspan x="78" y="3750">完成條件：Given 已讀 N When 提交 N-1 Then 已讀仍為 N；超</tspan><tspan x="78" y="3777">前訊息拒絕。</tspan></text>
+      <text x="78" y="3809" font-size="18" fill="#52677C"><tspan x="78" y="3809">回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及</tspan><tspan x="78" y="3836"> schema，先驗證遷移與還原，不能只回退映像。</tspan></text>
+      <text x="78" y="3868" font-size="18" fill="#52677C"><tspan x="78" y="3868">實作狀態：implemented</tspan></text>
+      <text x="78" y="3900" font-size="18" fill="#52677C"><tspan x="78" y="3900">驗證狀態：historical-pass</tspan></text>
+    </g>
+    <g id="node-FEAT-CHAT-UPLOAD">
+      <rect x="734" y="2946" width="646" height="1068" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="2972" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="2972">FEAT-CHAT-UPLOAD</tspan></text>
+      <text x="756" y="3003" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="3003">附件驗證與 Pending／Ready 上傳</tspan></text>
+      <line x1="752" y1="3025" x2="1362" y2="3025" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="3049" font-size="18" fill="#52677C"><tspan x="756" y="3049">需求：REQ-FILE-001</tspan></text>
+      <text x="756" y="3081" font-size="18" fill="#52677C"><tspan x="756" y="3081">責任服務：Message</tspan></text>
+      <text x="756" y="3113" font-size="18" fill="#52677C"><tspan x="756" y="3113">角色：房間成員</tspan></text>
+      <text x="756" y="3145" font-size="18" fill="#52677C"><tspan x="756" y="3145">目標：附件驗證與 Pending／Ready 上傳</tspan></text>
+      <text x="756" y="3177" font-size="18" fill="#52677C"><tspan x="756" y="3177">輸入：fileName、宣告 MIME、Stream</tspan></text>
+      <text x="756" y="3209" font-size="18" fill="#52677C"><tspan x="756" y="3209">輸出：私有 AttachmentView</tspan></text>
+      <text x="756" y="3241" font-size="18" fill="#52677C"><tspan x="756" y="3241">權限：有效成員；路徑／標頭注入、MIME 與內容特徵檢查</tspan></text>
+      <text x="756" y="3273" font-size="18" fill="#52677C"><tspan x="756" y="3273">資料與交易：先保存 Pending，再 S3 Put，再 Ready；不是跨 </tspan><tspan x="756" y="3300">PG／S3 原子交易</tspan></text>
+      <text x="756" y="3332" font-size="18" fill="#52677C"><tspan x="756" y="3332">同步與副作用：失敗由未綁定清理工作恢復；物件 key 由 ID </tspan><tspan x="756" y="3359">產生</tspan></text>
+      <text x="756" y="3391" font-size="18" fill="#52677C"><tspan x="756" y="3391">失敗與重試：超限 413、格式偽造拒絕、S3 故障 503；可重新</tspan><tspan x="756" y="3418">上傳新暫存</tspan></text>
+      <text x="756" y="3450" font-size="18" fill="#52677C"><tspan x="756" y="3450">邊界：空檔、20 MiB 臨界、圖片解碼尺寸、PDF 與 UTF-8</tspan></text>
+      <text x="756" y="3482" font-size="18" fill="#52677C"><tspan x="756" y="3482">不做範圍：不跨服務資料庫；不在本項擴充 公開 S3 URL 或防</tspan><tspan x="756" y="3509">毒服務保證</tspan></text>
+      <text x="756" y="3541" font-size="18" fill="#52677C"><tspan x="756" y="3541">修改範圍：src/Services/Message/Message.Infrastructure/Ch</tspan><tspan x="756" y="3568">atService.cs 與同服務契約、API、對應測試</tspan></text>
+      <text x="756" y="3600" font-size="18" fill="#52677C"><tspan x="756" y="3600">契約：src/Services/Message/Message.Application/Contracts</tspan><tspan x="756" y="3627">.cs#IChatService.Upload</tspan></text>
+      <text x="756" y="3659" font-size="18" fill="#52677C"><tspan x="756" y="3659">實作：src/Services/Message/Message.Infrastructure/ChatSe</tspan><tspan x="756" y="3686">rvice.cs#Upload</tspan></text>
+      <text x="756" y="3718" font-size="18" fill="#52677C"><tspan x="756" y="3718">測試：tests/MicroserviceStarter.Tests/ChatEdgeIntegratio</tspan><tspan x="756" y="3745">nTests.cs#ExactFileSizeAndFiveAttachmentLimitAreEnforced</tspan><tspan x="756" y="3772">AtTheHttpBoundary</tspan></text>
+      <text x="756" y="3804" font-size="18" fill="#52677C"><tspan x="756" y="3804">完成條件：Given 合法成員 When 上傳有效 20 MiB 檔 Then 可</tspan><tspan x="756" y="3831">用；超限及偽造內容拒絕。</tspan></text>
+      <text x="756" y="3863" font-size="18" fill="#52677C"><tspan x="756" y="3863">回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及</tspan><tspan x="756" y="3890"> schema，先驗證遷移與還原，不能只回退映像。</tspan></text>
+      <text x="756" y="3922" font-size="18" fill="#52677C"><tspan x="756" y="3922">實作狀態：implemented</tspan></text>
+      <text x="756" y="3954" font-size="18" fill="#52677C"><tspan x="756" y="3954">驗證狀態：historical-pass</tspan></text>
+    </g>
+    <g id="node-FEAT-CHAT-FILE-ADMIN">
+      <rect x="56" y="4040" width="646" height="1152" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="4066" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="78" y="4066">FEAT-CHAT-FILE-ADMIN</tspan></text>
+      <text x="78" y="4097" font-size="22" fill="#183048" font-weight="bold"><tspan x="78" y="4097">附件下載、管理清單與訊息審核</tspan></text>
+      <line x1="74" y1="4119" x2="684" y2="4119" stroke="#CEDAE8" stroke-width="2" />
+      <text x="78" y="4143" font-size="18" fill="#52677C"><tspan x="78" y="4143">需求：REQ-FILE-001,REQ-CMS-001</tspan></text>
+      <text x="78" y="4175" font-size="18" fill="#52677C"><tspan x="78" y="4175">責任服務：Message</tspan></text>
+      <text x="78" y="4207" font-size="18" fill="#52677C"><tspan x="78" y="4207">角色：成員／Admin</tspan></text>
+      <text x="78" y="4239" font-size="18" fill="#52677C"><tspan x="78" y="4239">目標：附件下載、管理清單與訊息審核</tspan></text>
+      <text x="78" y="4271" font-size="18" fill="#52677C"><tspan x="78" y="4271">輸入：attachmentId、roomId、messageId、管理原因</tspan></text>
+      <text x="78" y="4303" font-size="18" fill="#52677C"><tspan x="78" y="4303">輸出：授權串流；附件列表；軟刪訊息</tspan></text>
+      <text x="78" y="4335" font-size="18" fill="#52677C"><tspan x="78" y="4335">權限：房間存取；未綁定非本人不可讀；Admin 敏感操作記原因</tspan></text>
+      <text x="78" y="4367" font-size="18" fill="#52677C"><tspan x="78" y="4367">資料與交易：Audit 與軟刪／Outbox 保存；物件存於 Garage</tspan></text>
+      <text x="78" y="4399" font-size="18" fill="#52677C"><tspan x="78" y="4399">同步與副作用：軟刪後一般會員不能讀其附件；Admin 可稽核查</tspan><tspan x="78" y="4426">閱</tspan></text>
+      <text x="78" y="4458" font-size="18" fill="#52677C"><tspan x="78" y="4458">失敗與重試：未 Ready／無權／未知／已刪訊息依規則拒絕；儲</tspan><tspan x="78" y="4485">存故障回統一錯誤</tspan></text>
+      <text x="78" y="4517" font-size="18" fill="#52677C"><tspan x="78" y="4517">邊界：跨房間、跨帳號、管理原因、頁數、已刪內容</tspan></text>
+      <text x="78" y="4549" font-size="18" fill="#52677C"><tspan x="78" y="4549">不做範圍：不跨服務資料庫；不在本項擴充 永久抹除或公開分</tspan><tspan x="78" y="4576">享連結</tspan></text>
+      <text x="78" y="4608" font-size="18" fill="#52677C"><tspan x="78" y="4608">修改範圍：src/Services/Message/Message.Infrastructure/Ch</tspan><tspan x="78" y="4635">atService.cs 與同服務契約、API、對應測試</tspan></text>
+      <text x="78" y="4667" font-size="18" fill="#52677C"><tspan x="78" y="4667">契約：src/Services/Message/Message.Application/Contracts</tspan><tspan x="78" y="4694">.cs#IChatService.Download,src/Services/Message/Message.A</tspan><tspan x="78" y="4721">pplication/Contracts.cs#IChatService.Attachments,src/Ser</tspan><tspan x="78" y="4748">vices/Message/Message.Application/Contracts.cs#IChatServ</tspan><tspan x="78" y="4775">ice.Moderate</tspan></text>
+      <text x="78" y="4807" font-size="18" fill="#52677C"><tspan x="78" y="4807">實作：src/Services/Message/Message.Infrastructure/ChatSe</tspan><tspan x="78" y="4834">rvice.cs#Download,src/Services/Message/Message.Infrastru</tspan><tspan x="78" y="4861">cture/ChatService.cs#Moderate</tspan></text>
+      <text x="78" y="4893" font-size="18" fill="#52677C"><tspan x="78" y="4893">測試：tests/MicroserviceStarter.Tests/ServiceIntegration</tspan><tspan x="78" y="4920">Tests.cs#AttachmentsUseRealS3AndRequireOwnerRoomAndCurre</tspan><tspan x="78" y="4947">ntSessionPermissions</tspan></text>
+      <text x="78" y="4979" font-size="18" fill="#52677C"><tspan x="78" y="4979">完成條件：Given 無房間權限者 When 下載附件 Then </tspan><tspan x="78" y="5006">拒絕；Admin 合法查閱有稽核。</tspan></text>
+      <text x="78" y="5038" font-size="18" fill="#52677C"><tspan x="78" y="5038">回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及</tspan><tspan x="78" y="5065"> schema，先驗證遷移與還原，不能只回退映像。</tspan></text>
+      <text x="78" y="5097" font-size="18" fill="#52677C"><tspan x="78" y="5097">實作狀態：implemented</tspan></text>
+      <text x="78" y="5129" font-size="18" fill="#52677C"><tspan x="78" y="5129">驗證狀態：historical-pass</tspan></text>
+    </g>
+    <g id="node-FEAT-CHAT-REALTIME">
+      <rect x="734" y="4040" width="646" height="1152" rx="10" fill="#FFFFFF" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="4066" font-size="14" fill="#2863D8" font-weight="bold"><tspan x="756" y="4066">FEAT-CHAT-REALTIME</tspan></text>
+      <text x="756" y="4097" font-size="22" fill="#183048" font-weight="bold"><tspan x="756" y="4097">房間存取、在線與安全推送</tspan></text>
+      <line x1="752" y1="4119" x2="1362" y2="4119" stroke="#CEDAE8" stroke-width="2" />
+      <text x="756" y="4143" font-size="18" fill="#52677C"><tspan x="756" y="4143">需求：REQ-AUTH-001,REQ-CHAT-001</tspan></text>
+      <text x="756" y="4175" font-size="18" fill="#52677C"><tspan x="756" y="4175">責任服務：Message</tspan></text>
+      <text x="756" y="4207" font-size="18" fill="#52677C"><tspan x="756" y="4207">角色：連線會員／通知工作</tspan></text>
+      <text x="756" y="4239" font-size="18" fill="#52677C"><tspan x="756" y="4239">目標：房間存取、在線與安全推送</tspan></text>
+      <text x="756" y="4271" font-size="18" fill="#52677C"><tspan x="756" y="4271">輸入：JWT、roomId、SignalR Join／Heartbeat</tspan></text>
+      <text x="756" y="4303" font-size="18" fill="#52677C"><tspan x="756" y="4303">輸出：presence／changed／read／members；斷線與撤銷</tspan></text>
+      <text x="756" y="4335" font-size="18" fill="#52677C"><tspan x="756" y="4335">權限：Join 成員查驗；推送前批次 Auth Session 查驗</tspan></text>
+      <text x="756" y="4367" font-size="18" fill="#52677C"><tspan x="756" y="4367">資料與交易：Message Redis 連線索引與 backplane；PG 保存</tspan><tspan x="756" y="4394">業務資料</tspan></text>
+      <text x="756" y="4426" font-size="18" fill="#52677C"><tspan x="756" y="4426">同步與副作用：ChatHub、ConnectionRegistry、ChatNotifier </tspan><tspan x="756" y="4453">各自職責；Auth 直接 revoke</tspan></text>
+      <text x="756" y="4485" font-size="18" fill="#52677C"><tspan x="756" y="4485">失敗與重試：Auth 故障停止授權／推送；Redis 故障不把在線</tspan><tspan x="756" y="4512">狀態當權威</tspan></text>
+      <text x="756" y="4544" font-size="18" fill="#52677C"><tspan x="756" y="4544">邊界：多分頁、多 Session、斷線TTL、過期、撤銷與 Broker </tspan><tspan x="756" y="4571">中斷</tspan></text>
+      <text x="756" y="4603" font-size="18" fill="#52677C"><tspan x="756" y="4603">不做範圍：不跨服務資料庫；不在本項擴充 端到端加密或訊息</tspan><tspan x="756" y="4630">寫 Hub</tspan></text>
+      <text x="756" y="4662" font-size="18" fill="#52677C"><tspan x="756" y="4662">修改範圍：src/Services/Message/Message.Infrastructure/Ch</tspan><tspan x="756" y="4689">atService.cs 與同服務契約、API、對應測試</tspan></text>
+      <text x="756" y="4721" font-size="18" fill="#52677C"><tspan x="756" y="4721">契約：src/Services/Message/Message.Application/Contracts</tspan><tspan x="756" y="4748">.cs#IChatService.EnsureMember</tspan></text>
+      <text x="756" y="4780" font-size="18" fill="#52677C"><tspan x="756" y="4780">實作：src/Services/Message/Message.Infrastructure/ChatSe</tspan><tspan x="756" y="4807">rvice.cs#EnsureMember,src/Services/Message/Message.Api/R</tspan><tspan x="756" y="4834">ealtime.cs#ChatNotifier</tspan></text>
+      <text x="756" y="4866" font-size="18" fill="#52677C"><tspan x="756" y="4866">測試：tests/MicroserviceStarter.Tests/RealtimeIntegratio</tspan><tspan x="756" y="4893">nTests.cs#WebsocketPushPresenceHeartbeatAndImmediateSess</tspan><tspan x="756" y="4920">ionRevocationAreEnforced</tspan></text>
+      <text x="756" y="4952" font-size="18" fill="#52677C"><tspan x="756" y="4952">完成條件：Given Session 撤銷 When 新操作或通知 Then 拒絕</tspan><tspan x="756" y="4979">並中止連線；重連以游標補齊。</tspan></text>
+      <text x="756" y="5011" font-size="18" fill="#52677C"><tspan x="756" y="5011">回復方式：保持外部契約與資料相容，以獨立變更回退；若涉及</tspan><tspan x="756" y="5038"> schema，先驗證遷移與還原，不能只回退映像。</tspan></text>
+      <text x="756" y="5070" font-size="18" fill="#52677C"><tspan x="756" y="5070">實作狀態：implemented</tspan></text>
+      <text x="756" y="5102" font-size="18" fill="#52677C"><tspan x="756" y="5102">驗證狀態：historical-pass</tspan></text>
+    </g>
+    <g id="edges-heading">
+      <text x="56" y="5233" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="5233">關係</tspan></text>
+    </g>
+    <g id="edge-1">
+      <rect x="56" y="5268" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="5295" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="5295">FEAT-CHAT-ROOM</tspan></text>
+      <text x="76" y="5325" font-size="17" fill="#183048"><tspan x="76" y="5325">群組與一對一聊天室</tspan></text>
+      <text x="1155" y="5295" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="5295">FEAT-CHAT-MEMBERS</tspan></text>
+      <text x="1155" y="5325" font-size="17" fill="#183048"><tspan x="1155" y="5325">成員權限、移除與擁有權轉移</tspan></text>
+      <text x="325" y="5295" font-size="17" fill="#183048"><tspan x="325" y="5295">01 dependency | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。</tspan></text>
+      <line x1="325.0" y1="5352.0" x2="332.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="5352.0" x2="346.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="5352.0" x2="360.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="5352.0" x2="374.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="5352.0" x2="388.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="5352.0" x2="402.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="5352.0" x2="416.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="5352.0" x2="430.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="5352.0" x2="444.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="5352.0" x2="458.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="5352.0" x2="472.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="5352.0" x2="486.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="5352.0" x2="500.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="5352.0" x2="514.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="5352.0" x2="528.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="5352.0" x2="542.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="5352.0" x2="556.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="5352.0" x2="570.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="5352.0" x2="584.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="5352.0" x2="598.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="5352.0" x2="612.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="5352.0" x2="626.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="5352.0" x2="640.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="5352.0" x2="654.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="5352.0" x2="668.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="5352.0" x2="682.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="5352.0" x2="696.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="5352.0" x2="710.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="5352.0" x2="724.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="5352.0" x2="738.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="5352.0" x2="752.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="5352.0" x2="766.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="5352.0" x2="780.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="5352.0" x2="794.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="5352.0" x2="808.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="5352.0" x2="822.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="5352.0" x2="836.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="5352.0" x2="850.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="5352.0" x2="864.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="5352.0" x2="878.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="5352.0" x2="892.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="5352.0" x2="906.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="5352.0" x2="920.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="5352.0" x2="934.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="5352.0" x2="948.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="5352.0" x2="962.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="5352.0" x2="976.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="5352.0" x2="990.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="5352.0" x2="1004.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="5352.0" x2="1018.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="5352.0" x2="1032.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="5352.0" x2="1046.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="5352.0" x2="1060.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="5352.0" x2="1074.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="5352.0" x2="1088.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="5352.0" x2="1102.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="5352.0" x2="1116.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="5352.0" x2="1125.0" y2="5352.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,5345 1125,5352 1113,5359" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-2">
+      <rect x="56" y="5384" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="5411" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="5411">FEAT-CHAT-MEMBERS</tspan></text>
+      <text x="76" y="5441" font-size="17" fill="#183048"><tspan x="76" y="5441">成員權限、移除與擁有權轉移</tspan></text>
+      <text x="1155" y="5411" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="5411">FEAT-CHAT-HISTORY</tspan></text>
+      <text x="1155" y="5441" font-size="17" fill="#183048"><tspan x="1155" y="5441">歷史游標與斷線補齊</tspan></text>
+      <text x="325" y="5411" font-size="17" fill="#183048"><tspan x="325" y="5411">02 dependency | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。</tspan></text>
+      <line x1="325.0" y1="5468.0" x2="332.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="5468.0" x2="346.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="5468.0" x2="360.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="5468.0" x2="374.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="5468.0" x2="388.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="5468.0" x2="402.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="5468.0" x2="416.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="5468.0" x2="430.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="5468.0" x2="444.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="5468.0" x2="458.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="5468.0" x2="472.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="5468.0" x2="486.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="5468.0" x2="500.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="5468.0" x2="514.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="5468.0" x2="528.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="5468.0" x2="542.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="5468.0" x2="556.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="5468.0" x2="570.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="5468.0" x2="584.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="5468.0" x2="598.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="5468.0" x2="612.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="5468.0" x2="626.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="5468.0" x2="640.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="5468.0" x2="654.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="5468.0" x2="668.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="5468.0" x2="682.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="5468.0" x2="696.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="5468.0" x2="710.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="5468.0" x2="724.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="5468.0" x2="738.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="5468.0" x2="752.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="5468.0" x2="766.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="5468.0" x2="780.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="5468.0" x2="794.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="5468.0" x2="808.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="5468.0" x2="822.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="5468.0" x2="836.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="5468.0" x2="850.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="5468.0" x2="864.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="5468.0" x2="878.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="5468.0" x2="892.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="5468.0" x2="906.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="5468.0" x2="920.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="5468.0" x2="934.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="5468.0" x2="948.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="5468.0" x2="962.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="5468.0" x2="976.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="5468.0" x2="990.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="5468.0" x2="1004.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="5468.0" x2="1018.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="5468.0" x2="1032.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="5468.0" x2="1046.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="5468.0" x2="1060.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="5468.0" x2="1074.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="5468.0" x2="1088.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="5468.0" x2="1102.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="5468.0" x2="1116.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="5468.0" x2="1125.0" y2="5468.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,5461 1125,5468 1113,5475" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-3">
+      <rect x="56" y="5500" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="5527" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="5527">FEAT-CHAT-HISTORY</tspan></text>
+      <text x="76" y="5557" font-size="17" fill="#183048"><tspan x="76" y="5557">歷史游標與斷線補齊</tspan></text>
+      <text x="1155" y="5527" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="5527">FEAT-CHAT-SEND</tspan></text>
+      <text x="1155" y="5557" font-size="17" fill="#183048"><tspan x="1155" y="5557">冪等訊息寫入與附件綁定</tspan></text>
+      <text x="325" y="5527" font-size="17" fill="#183048"><tspan x="325" y="5527">03 dependency | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。</tspan></text>
+      <line x1="325.0" y1="5584.0" x2="332.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="5584.0" x2="346.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="5584.0" x2="360.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="5584.0" x2="374.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="5584.0" x2="388.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="5584.0" x2="402.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="5584.0" x2="416.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="5584.0" x2="430.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="5584.0" x2="444.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="5584.0" x2="458.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="5584.0" x2="472.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="5584.0" x2="486.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="5584.0" x2="500.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="5584.0" x2="514.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="5584.0" x2="528.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="5584.0" x2="542.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="5584.0" x2="556.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="5584.0" x2="570.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="5584.0" x2="584.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="5584.0" x2="598.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="5584.0" x2="612.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="5584.0" x2="626.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="5584.0" x2="640.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="5584.0" x2="654.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="5584.0" x2="668.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="5584.0" x2="682.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="5584.0" x2="696.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="5584.0" x2="710.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="5584.0" x2="724.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="5584.0" x2="738.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="5584.0" x2="752.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="5584.0" x2="766.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="5584.0" x2="780.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="5584.0" x2="794.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="5584.0" x2="808.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="5584.0" x2="822.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="5584.0" x2="836.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="5584.0" x2="850.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="5584.0" x2="864.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="5584.0" x2="878.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="5584.0" x2="892.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="5584.0" x2="906.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="5584.0" x2="920.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="5584.0" x2="934.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="5584.0" x2="948.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="5584.0" x2="962.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="5584.0" x2="976.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="5584.0" x2="990.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="5584.0" x2="1004.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="5584.0" x2="1018.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="5584.0" x2="1032.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="5584.0" x2="1046.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="5584.0" x2="1060.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="5584.0" x2="1074.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="5584.0" x2="1088.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="5584.0" x2="1102.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="5584.0" x2="1116.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="5584.0" x2="1125.0" y2="5584.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,5577 1125,5584 1113,5591" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-4">
+      <rect x="56" y="5616" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="5643" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="5643">FEAT-CHAT-SEND</tspan></text>
+      <text x="76" y="5673" font-size="17" fill="#183048"><tspan x="76" y="5673">冪等訊息寫入與附件綁定</tspan></text>
+      <text x="1155" y="5643" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="5643">FEAT-CHAT-READ</tspan></text>
+      <text x="1155" y="5673" font-size="17" fill="#183048"><tspan x="1155" y="5673">單調已讀游標與未讀數</tspan></text>
+      <text x="325" y="5643" font-size="17" fill="#183048"><tspan x="325" y="5643">04 dependency | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。</tspan></text>
+      <line x1="325.0" y1="5700.0" x2="332.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="5700.0" x2="346.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="5700.0" x2="360.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="5700.0" x2="374.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="5700.0" x2="388.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="5700.0" x2="402.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="5700.0" x2="416.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="5700.0" x2="430.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="5700.0" x2="444.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="5700.0" x2="458.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="5700.0" x2="472.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="5700.0" x2="486.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="5700.0" x2="500.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="5700.0" x2="514.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="5700.0" x2="528.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="5700.0" x2="542.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="5700.0" x2="556.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="5700.0" x2="570.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="5700.0" x2="584.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="5700.0" x2="598.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="5700.0" x2="612.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="5700.0" x2="626.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="5700.0" x2="640.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="5700.0" x2="654.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="5700.0" x2="668.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="5700.0" x2="682.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="5700.0" x2="696.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="5700.0" x2="710.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="5700.0" x2="724.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="5700.0" x2="738.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="5700.0" x2="752.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="5700.0" x2="766.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="5700.0" x2="780.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="5700.0" x2="794.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="5700.0" x2="808.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="5700.0" x2="822.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="5700.0" x2="836.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="5700.0" x2="850.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="5700.0" x2="864.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="5700.0" x2="878.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="5700.0" x2="892.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="5700.0" x2="906.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="5700.0" x2="920.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="5700.0" x2="934.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="5700.0" x2="948.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="5700.0" x2="962.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="5700.0" x2="976.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="5700.0" x2="990.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="5700.0" x2="1004.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="5700.0" x2="1018.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="5700.0" x2="1032.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="5700.0" x2="1046.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="5700.0" x2="1060.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="5700.0" x2="1074.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="5700.0" x2="1088.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="5700.0" x2="1102.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="5700.0" x2="1116.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="5700.0" x2="1125.0" y2="5700.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,5693 1125,5700 1113,5707" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-5">
+      <rect x="56" y="5732" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="5759" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="5759">FEAT-CHAT-READ</tspan></text>
+      <text x="76" y="5789" font-size="17" fill="#183048"><tspan x="76" y="5789">單調已讀游標與未讀數</tspan></text>
+      <text x="1155" y="5759" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="5759">FEAT-CHAT-UPLOAD</tspan></text>
+      <text x="1155" y="5789" font-size="17" fill="#183048"><tspan x="1155" y="5789">附件驗證與 Pending／Ready </tspan><tspan x="1155" y="5815">上傳</tspan></text>
+      <text x="325" y="5759" font-size="17" fill="#183048"><tspan x="325" y="5759">05 dependency | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。</tspan></text>
+      <line x1="325.0" y1="5816.0" x2="332.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="5816.0" x2="346.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="5816.0" x2="360.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="5816.0" x2="374.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="5816.0" x2="388.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="5816.0" x2="402.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="5816.0" x2="416.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="5816.0" x2="430.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="5816.0" x2="444.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="5816.0" x2="458.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="5816.0" x2="472.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="5816.0" x2="486.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="5816.0" x2="500.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="5816.0" x2="514.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="5816.0" x2="528.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="5816.0" x2="542.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="5816.0" x2="556.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="5816.0" x2="570.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="5816.0" x2="584.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="5816.0" x2="598.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="5816.0" x2="612.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="5816.0" x2="626.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="5816.0" x2="640.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="5816.0" x2="654.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="5816.0" x2="668.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="5816.0" x2="682.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="5816.0" x2="696.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="5816.0" x2="710.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="5816.0" x2="724.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="5816.0" x2="738.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="5816.0" x2="752.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="5816.0" x2="766.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="5816.0" x2="780.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="5816.0" x2="794.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="5816.0" x2="808.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="5816.0" x2="822.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="5816.0" x2="836.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="5816.0" x2="850.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="5816.0" x2="864.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="5816.0" x2="878.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="5816.0" x2="892.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="5816.0" x2="906.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="5816.0" x2="920.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="5816.0" x2="934.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="5816.0" x2="948.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="5816.0" x2="962.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="5816.0" x2="976.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="5816.0" x2="990.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="5816.0" x2="1004.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="5816.0" x2="1018.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="5816.0" x2="1032.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="5816.0" x2="1046.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="5816.0" x2="1060.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="5816.0" x2="1074.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="5816.0" x2="1088.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="5816.0" x2="1102.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="5816.0" x2="1116.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="5816.0" x2="1125.0" y2="5816.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,5809 1125,5816 1113,5823" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-6">
+      <rect x="56" y="5848" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="5875" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="5875">FEAT-CHAT-UPLOAD</tspan></text>
+      <text x="76" y="5905" font-size="17" fill="#183048"><tspan x="76" y="5905">附件驗證與 Pending／Ready </tspan><tspan x="76" y="5931">上傳</tspan></text>
+      <text x="1155" y="5875" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="5875">FEAT-CHAT-FILE-ADMIN</tspan></text>
+      <text x="1155" y="5905" font-size="17" fill="#183048"><tspan x="1155" y="5905">附件下載、管理清單與訊息審</tspan><tspan x="1155" y="5931">核</tspan></text>
+      <text x="325" y="5875" font-size="17" fill="#183048"><tspan x="325" y="5875">06 dependency | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。</tspan></text>
+      <line x1="325.0" y1="5932.0" x2="332.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="5932.0" x2="346.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="5932.0" x2="360.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="5932.0" x2="374.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="5932.0" x2="388.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="5932.0" x2="402.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="5932.0" x2="416.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="5932.0" x2="430.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="5932.0" x2="444.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="5932.0" x2="458.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="5932.0" x2="472.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="5932.0" x2="486.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="5932.0" x2="500.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="5932.0" x2="514.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="5932.0" x2="528.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="5932.0" x2="542.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="5932.0" x2="556.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="5932.0" x2="570.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="5932.0" x2="584.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="5932.0" x2="598.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="5932.0" x2="612.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="5932.0" x2="626.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="5932.0" x2="640.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="5932.0" x2="654.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="5932.0" x2="668.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="5932.0" x2="682.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="5932.0" x2="696.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="5932.0" x2="710.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="5932.0" x2="724.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="5932.0" x2="738.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="5932.0" x2="752.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="5932.0" x2="766.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="5932.0" x2="780.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="5932.0" x2="794.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="5932.0" x2="808.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="5932.0" x2="822.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="5932.0" x2="836.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="5932.0" x2="850.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="5932.0" x2="864.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="5932.0" x2="878.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="5932.0" x2="892.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="5932.0" x2="906.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="5932.0" x2="920.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="5932.0" x2="934.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="5932.0" x2="948.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="5932.0" x2="962.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="5932.0" x2="976.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="5932.0" x2="990.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="5932.0" x2="1004.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="5932.0" x2="1018.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="5932.0" x2="1032.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="5932.0" x2="1046.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="5932.0" x2="1060.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="5932.0" x2="1074.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="5932.0" x2="1088.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="5932.0" x2="1102.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="5932.0" x2="1116.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="5932.0" x2="1125.0" y2="5932.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,5925 1125,5932 1113,5939" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="edge-7">
+      <rect x="56" y="5964" width="1324" height="104" rx="8" fill="#F2F6FC" />
+      <text x="76" y="5991" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="76" y="5991">FEAT-CHAT-FILE-ADMIN</tspan></text>
+      <text x="76" y="6021" font-size="17" fill="#183048"><tspan x="76" y="6021">附件下載、管理清單與訊息審</tspan><tspan x="76" y="6047">核</tspan></text>
+      <text x="1155" y="5991" font-size="15" fill="#2863D8" font-weight="bold"><tspan x="1155" y="5991">FEAT-CHAT-REALTIME</tspan></text>
+      <text x="1155" y="6021" font-size="17" fill="#183048"><tspan x="1155" y="6021">房間存取、在線與安全推送</tspan></text>
+      <text x="325" y="5991" font-size="17" fill="#183048"><tspan x="325" y="5991">07 dependency | 同頁功能可各自審查與驗證；此關係不表示 runtime 呼叫。</tspan></text>
+      <line x1="325.0" y1="6048.0" x2="332.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="339.0" y1="6048.0" x2="346.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="353.0" y1="6048.0" x2="360.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="367.0" y1="6048.0" x2="374.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="381.0" y1="6048.0" x2="388.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="395.0" y1="6048.0" x2="402.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="409.0" y1="6048.0" x2="416.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="423.0" y1="6048.0" x2="430.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="437.0" y1="6048.0" x2="444.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="451.0" y1="6048.0" x2="458.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="465.0" y1="6048.0" x2="472.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="479.0" y1="6048.0" x2="486.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="493.0" y1="6048.0" x2="500.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="507.0" y1="6048.0" x2="514.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="521.0" y1="6048.0" x2="528.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="535.0" y1="6048.0" x2="542.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="549.0" y1="6048.0" x2="556.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="563.0" y1="6048.0" x2="570.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="577.0" y1="6048.0" x2="584.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="591.0" y1="6048.0" x2="598.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="605.0" y1="6048.0" x2="612.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="619.0" y1="6048.0" x2="626.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="633.0" y1="6048.0" x2="640.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="647.0" y1="6048.0" x2="654.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="661.0" y1="6048.0" x2="668.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="675.0" y1="6048.0" x2="682.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="689.0" y1="6048.0" x2="696.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="703.0" y1="6048.0" x2="710.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="717.0" y1="6048.0" x2="724.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="731.0" y1="6048.0" x2="738.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="745.0" y1="6048.0" x2="752.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="759.0" y1="6048.0" x2="766.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="773.0" y1="6048.0" x2="780.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="787.0" y1="6048.0" x2="794.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="801.0" y1="6048.0" x2="808.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="815.0" y1="6048.0" x2="822.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="829.0" y1="6048.0" x2="836.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="843.0" y1="6048.0" x2="850.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="857.0" y1="6048.0" x2="864.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="871.0" y1="6048.0" x2="878.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="885.0" y1="6048.0" x2="892.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="899.0" y1="6048.0" x2="906.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="913.0" y1="6048.0" x2="920.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="927.0" y1="6048.0" x2="934.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="941.0" y1="6048.0" x2="948.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="955.0" y1="6048.0" x2="962.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="969.0" y1="6048.0" x2="976.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="983.0" y1="6048.0" x2="990.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="997.0" y1="6048.0" x2="1004.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1011.0" y1="6048.0" x2="1018.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1025.0" y1="6048.0" x2="1032.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1039.0" y1="6048.0" x2="1046.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1053.0" y1="6048.0" x2="1060.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1067.0" y1="6048.0" x2="1074.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1081.0" y1="6048.0" x2="1088.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1095.0" y1="6048.0" x2="1102.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1109.0" y1="6048.0" x2="1116.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <line x1="1123.0" y1="6048.0" x2="1125.0" y2="6048.0" stroke="#2863D8" stroke-width="2" />
+      <polyline points="1113,6041 1125,6048 1113,6055" fill="none" stroke="#2863D8" stroke-width="2" />
+    </g>
+    <g id="section-217">
+      <text x="56" y="6114" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="6114">準則</tspan></text>
+    </g>
+    <g id="line-219">
+      <text x="70" y="6156" font-size="18" fill="#52677C"><tspan x="70" y="6156">實作與預期語意有差異時，先記錄缺口再修改；不只刷新來源指紋。</tspan></text>
+    </g>
+    <g id="line-220">
+      <text x="70" y="6198" font-size="18" fill="#52677C"><tspan x="70" y="6198">程式與測試參照存在不等於本次已執行；核對限定版本與原始證據。</tspan></text>
+    </g>
+    <g id="section-222">
+      <text x="56" y="6263" font-size="25" fill="#183048" font-weight="bold"><tspan x="56" y="6263">來源</tspan></text>
+    </g>
+    <g id="line-224">
+      <text x="70" y="6305" font-size="15" fill="#52677C"><tspan x="70" y="6305">scripts/development_rules.py</tspan></text>
+    </g>
+    <g id="line-225">
+      <text x="70" y="6344" font-size="15" fill="#52677C"><tspan x="70" y="6344">src/Services/Message/Message.Api/Realtime.cs</tspan></text>
+    </g>
+    <g id="line-226">
+      <text x="70" y="6383" font-size="15" fill="#52677C"><tspan x="70" y="6383">src/Services/Message/Message.Application/Contracts.cs</tspan></text>
+    </g>
+    <g id="line-227">
+      <text x="70" y="6422" font-size="15" fill="#52677C"><tspan x="70" y="6422">src/Services/Message/Message.Infrastructure/ChatService.cs</tspan></text>
+    </g>
+    <g id="line-228">
+      <text x="70" y="6461" font-size="15" fill="#52677C"><tspan x="70" y="6461">tests/MicroserviceStarter.Tests/ChatEdgeIntegrationTests.cs</tspan></text>
+    </g>
+    <g id="line-229">
+      <text x="70" y="6500" font-size="15" fill="#52677C"><tspan x="70" y="6500">tests/MicroserviceStarter.Tests/RealtimeIntegrationTests.cs</tspan></text>
+    </g>
+    <g id="line-230">
+      <text x="70" y="6539" font-size="15" fill="#52677C"><tspan x="70" y="6539">tests/MicroserviceStarter.Tests/ServiceIntegrationTests.cs</tspan></text>
+    </g>
+    <g id="line-231">
+      <text x="70" y="6578" font-size="15" fill="#52677C"><tspan x="70" y="6578">tests/Tooling/test_development_rules.py</tspan></text>
+    </g>
+    <line x1="56" y1="6647" x2="1384" y2="6647" stroke="#CEDAE8" stroke-width="2" />
+    <text x="56" y="6673" font-size="12" fill="#52677C"><tspan x="56" y="6673">RELAY / STATIC SVG / MARKDOWN IS THE CONTENT AUTHORITY</tspan></text>
+  </g>
+</svg>

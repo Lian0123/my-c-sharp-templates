@@ -1,0 +1,463 @@
+{
+  "schemaVersion": 1,
+  "recordId": "REC-DOCS-20261108-001",
+  "kind": "verification",
+  "scope": "工程交付 Living Document、追溯／唯增紀錄工具及十份 MISVG 靜態圖頁；不涵蓋本次應用重新驗收。",
+  "createdAtUtc": "2026-11-08T14:04:14.778857+00:00",
+  "outcome": "Final documentation checks passed; an initial rendering failure was corrected. Application/recovery/independent handover checks remain not-run.",
+  "applicability": {
+    "baseCommit": "17ea35a378bb42763fc17fd7acdd45e2dd0cbccc",
+    "branch": "docs/svg-document",
+    "workingTree": "uncommitted documented/tooling changes; use exact file fingerprints below, not baseCommit alone",
+    "filesSha256": {
+      ".github/workflows/ci.yml": "21e6a1d38d8f4aa5079a79b40c0edaad66c5f39a4b3bd0739de24570d9a6296e",
+      "AGENTS.md": "f5e5d203764e41137efa25ba0eb6ef0d216939ebb38d67c5422e024be313f82a",
+      "README.md": "4f2f47b063878512757925b93d15ac169bdc21f95db75fb367fdfa7a9ae08893",
+      "docker-compose.yml": "7953269800e8c1a4032a11a374208e6c92c8ef0299724710d61420238564c5f3",
+      "docs/living/00-system-overview.misvg.svg": "024f26b7148ed2c6cf22c3cdfffb98cf4f9ff05e63f576c3c36045b58cb720a1",
+      "docs/living/01-layer-and-class.misvg.svg": "4f92964b8a038576f1aa4996988c3a6de94d4ff1328932f18d96d9d04fad905d",
+      "docs/living/02-auth-data.misvg.svg": "6e6da94f55e2129f6d33209ae7600fef96f3f07d257c1238192bfbaef479ac8b",
+      "docs/living/03-account-projections.misvg.svg": "f6101705b0fc1d7b6bf297abb9dbd3fde6c3b382ca2688b97f0686cfb95863d5",
+      "docs/living/04-message-data.misvg.svg": "d0401fe7627e173f5f216502eff3fa00d21bd9be9c2dc1c42c978e1967ce05f5",
+      "docs/living/05-event-synchronization.misvg.svg": "f8c54f366f6f35e18d77fcfb748725d13ed61c51c2b42b528aabe8a1de3541dd",
+      "docs/living/06-auth-revocation.misvg.svg": "65af22a1936526f4194a3a67f84d636154da26e1dbbfcf1cb61ceae331e921b4",
+      "docs/living/07-chat-sequence.misvg.svg": "dd68ac5447cf1efe3828d629bd235698769d8529f184a96074339f31f182bd51",
+      "docs/living/08-attachment-lifecycle.misvg.svg": "9b46592ac07e9a3b9ad2de3c89207f25ad18aa15b931c8c005219495c73da66b",
+      "docs/living/09-agent-maintenance.misvg.svg": "a0a2307f9992d491106453c30f868eb2775f80e1e2994e7fcdb2765a80024e64",
+      "docs/living/README.md": "13effb6a7952b7582cf5f9d3182e6d4ff1a08fbcf004a06b372f98f4b51a8def",
+      "docs/living/catalog.json": "5d46288a141f9a510aba4217b84603b5c40b3ff0d1b6d496cbfe0fc96c82b9d9",
+      "docs/operations.md": "6406b8b05dc29e1b3db832f41d6d300f9102b4842d5b432a6406e6ae6794cc1a",
+      "docs/records/README.md": "28720c9326ed5ea84dc4299f1df739d9076d81f106da7d46aaedb55468c56835",
+      "scripts/check-coverage.py": "d5a0019b2fdb4d4c0846fc9685e1f63fed45fed1c2a40cc04dfc9ded259e9ddc",
+      "scripts/init.sh": "f6880e2e55b37b25c25903a44d6a45f19baf83438257cf0002bfc8b76cc03723",
+      "scripts/living_docs.py": "a0bf5c0e0c9768c3b8ba0238806e2867680209ad5a0629e3d41cfbd0920278fc",
+      "scripts/test-e2e.sh": "bf1152def8b81f62528d5ec50247ecb118159bedce27903d0d95a2387879bfbd",
+      "scripts/test.sh": "b77431a6bfbc17c648b5770f3d6ecae928c178f1ebbbec9b8775cee9670dd05f",
+      "scripts/wait-containers.py": "e627d6f6e556418044e329ad6f2982b19bf6a35f544178e2b97d51951028ee1d",
+      "src/Gateway/Program.cs": "e1bafd6851d53c7e5e2e488c883d56d527862ddcee314e70ea2d025eac91f1e2",
+      "src/Gateway/appsettings.json": "9563f5d327ef56d4359729153db3127fde260b3ba2a55645cb1abcad8b7db412",
+      "src/Services/Account/Account.Api/Program.cs": "e359461925b2ab6fabb368505e554e16ff23920be124ffdaf1de379fb9f836cc",
+      "src/Services/Account/Account.Application/Contracts.cs": "097ddf13cc1623eff6bc17b4d42ff7173aa355ceba653430d588eca00a2731e1",
+      "src/Services/Account/Account.Domain/Profile.cs": "6c2166af3f61c4a9ced69b358c8728e282c8400305c0b79a788cfbf840b76d45",
+      "src/Services/Account/Account.Infrastructure/AccountDbContext.cs": "18a2c3f14c464a631359578d0a7eead933fc43aa5c924923fa6467df9ff3686c",
+      "src/Services/Account/Account.Infrastructure/AccountService.cs": "70f0901f1497d1d97d749640daaec7e4a0635e97a154030b68be203dc12ec28a",
+      "src/Services/Auth/Auth.Api/Auth.Api.csproj": "34377fdde16dbb4e08f8287ed66779368238c6b6184c319c96173d49c83bf88f",
+      "src/Services/Auth/Auth.Api/Program.cs": "426599b4543d862fe6245fa4691575cba98a6e9e50a1afb6410028119798f351",
+      "src/Services/Auth/Auth.Application/Auth.Application.csproj": "5d90bf6b9dcbe897a88fac158b30066010de4bf5a1a794033e43090d83f2e842",
+      "src/Services/Auth/Auth.Application/Contracts.cs": "a6f2a7db1b330dbed7f0f3b324b65e4c7670818756e103ed85b3f283deda8499",
+      "src/Services/Auth/Auth.Domain/Auth.Domain.csproj": "67472b2d08b7a9fed27b2c0fb53db42367fb919154136295eedd8928f9625ab6",
+      "src/Services/Auth/Auth.Domain/Identity.cs": "899a8dd006bc8e6b647f1a0b14798418ab727ceff9c3a702bab40dc0500217d9",
+      "src/Services/Auth/Auth.Infrastructure/Auth.Infrastructure.csproj": "f422be0d866fb71551a39ccc658cd627181774f7a10115366484433b5def6038",
+      "src/Services/Auth/Auth.Infrastructure/AuthDbContext.cs": "d5530cde8611862e376cb55b2339acd3ce48a4cbb5ace84205921eef907a320d",
+      "src/Services/Auth/Auth.Infrastructure/AuthService.cs": "f16a1fa42782d5166363d6d8e5126e3d8a7c24fc8ffcb91919798a2b206bbb3d",
+      "src/Services/Auth/Auth.Infrastructure/MailWorker.cs": "f334afc1c7982da02514651d4d513d64692677de6dab416988caa3ce4d2285c2",
+      "src/Services/Message/Message.Api/Realtime.cs": "dbc70d5baa076960343b4f400c3ebb340bd5f0f73a79536aff722b96c8c2ddaf",
+      "src/Services/Message/Message.Application/Contracts.cs": "0f630734e2c57f13b399b437a5b309f5bb734f7183f442ab8555dce7324ed71c",
+      "src/Services/Message/Message.Domain/Chat.cs": "f98dc830ad3b415711ad4f6a93938bec9150db4edf180abd028375252a4545ed",
+      "src/Services/Message/Message.Infrastructure/AttachmentCleanup.cs": "6fef65b0b264d6e227f41a893c3accf360f78aa0a4f1232b4b4004da8ad6fa0a",
+      "src/Services/Message/Message.Infrastructure/ChatService.cs": "4d75f819d654b076e0e3d68af28839996c4ab9a8d598610eca81ad2d793fd633",
+      "src/Services/Message/Message.Infrastructure/MessageDbContext.cs": "cb0170df781cea95cdfb827a11dda7d093046eb19f75068d35d2e888100456a3",
+      "src/Services/Message/Message.Infrastructure/MessageIntegrationHandler.cs": "da2224f113f6756b6cc877cb5f41d87357e1fbd10986f4fec2384c46b873683c",
+      "src/Services/Message/Message.Infrastructure/ObjectStorage.cs": "76e1d8cbabcfe971a89068c850b3cb81be179d111d7d83d2f57e4ad3de92f91c",
+      "src/Shared/BuildingBlocks/Persistence.cs": "7c9ce71824ac063b130e2644a0a0cc53747a854bd4506a2bae91bd39acb7ff49",
+      "src/Shared/BuildingBlocks/Platform.cs": "ca543f13c01f69881544f94d233ec22181e98c11397903fc0a439ad36a41c5f1",
+      "src/Shared/BuildingBlocks/RabbitWorkers.cs": "7f613b9afeb2a50d6ca8faa1d71e79f6b69174b20b738531f12dcb3129de91d2",
+      "src/Shared/Contracts/IntegrationEvents.cs": "cce8c726f046d844bbcfdd1392298ff03532cb829d2c6e6b3eeaa68b42792a62",
+      "src/Web/scripts/check-living-docs.mjs": "9678b6ef3c44a9ef90c9d0304336bcf7f8f753de5f196c63b62a03e6ed3064c5",
+      "src/Web/src/AdminPage.tsx": "9848f011658265e936ceffc7473017fc771f30f3b24b0c041c1105f7d7fa8988",
+      "src/Web/src/App.tsx": "5dfedeb03e42c16af4867bb7af788bd9b74ca80a1e9deab42eaa46e3b5088776",
+      "src/Web/src/ChatPage.tsx": "4d0650a4ac48438e5d01c484fc5a44799ed5592ddf1f7695a336e83373d16758",
+      "src/Web/src/api/client.ts": "307b7f2c30a54de42f1be21c8094a354e792b61cdb1d529da346aa481f74c946",
+      "tests/MicroserviceStarter.Tests/ArchitectureTests.cs": "3fcd0ef7091b181d3f56436a7c5a60900f3bd89dbe624f2586b3a7a76f4422ec",
+      "tests/Tooling/test_engineering_docs.py": "6c58a2099f1ffb18e84b5bac1d55d354d6e9ff5eae9eb77488100f7604eb0864",
+      "tests/Tooling/test_living_docs.py": "6d5bf24a793f039d9eff890fdc46aba60d79e069f28db7bf0647fdad3cfa3aca",
+      "tools/Operations/deadletter.mjs": "9c05d095ac041f786e7d026f31fa8815b13f2c86ee0f8fdba068ed4a4fc2739c"
+    },
+    "selfSnapshotExclusion": "This archive was created after validation and is sealed separately by its manifest."
+  },
+  "environment": {
+    "os": "macOS-26.5.1-x86_64-i386-64bit",
+    "python": "3.8.2",
+    "node": "v26.5.0",
+    "npm": "11.17.0",
+    "chromium": "156.0.8078.4",
+    "renderer": "relay-living-docs 1.1.0",
+    "misvgSpecCommit": "c7c0d96aa398d650c6bea5588e5d060bc6d60da5"
+  },
+  "inputs": [
+    {
+      "id": "USER-ARTICLE-001",
+      "title": "從 Vibe Coding 到工程交付：如何管理 AI 的開發流程",
+      "origin": "User-supplied text attachment; six iterative engineering stages",
+      "sha256": "bda8941f717b3ac8076ece718f6e3858cfc96c22c05264e60138d4516b110e48"
+    },
+    {
+      "id": "USER-PLAN-001",
+      "origin": "User-confirmed MicroserviceStarter implementation plan in the task conversation"
+    }
+  ],
+  "manualVisualReview": {
+    "reviewer": "Implementing agent; not an independent reviewer or human approver",
+    "scope": "All ten page-header/contact-sheet samples; detailed page 09 requirement, decision, open-item and transition regions. Automated bounds checks cover every text element.",
+    "result": "Traditional Chinese glyphs, reading order and card boundaries inspected in Chromium screenshots; no independent engine certification."
+  },
+  "traceability": {
+    "requirements": 8,
+    "acceptanceDefinitions": 8,
+    "decisions": 4,
+    "openItems": 2,
+    "meaning": "Reference completeness for the eight baseline requirement groups only; not exhaustive product acceptance."
+  },
+  "checks": [
+    {
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests/Tooling",
+        "-p",
+        "test_*.py",
+        "-v"
+      ],
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/verification-summary.md",
+      "rawEvidencePrefix": "artifacts/living-docs/engineering-run/tooling",
+      "execution": {
+        "startedAtUtc": "2026-11-08T14:00:58.709407+00:00",
+        "completedAtUtc": "2026-11-08T14:01:02.436548+00:00",
+        "argv": [
+          "python3",
+          "-m",
+          "unittest",
+          "discover",
+          "-s",
+          "tests/Tooling",
+          "-p",
+          "test_*.py",
+          "-v"
+        ],
+        "exitCode": 0
+      },
+      "reason": "63 Tooling tests, including 22 lifecycle/traceability/archive tests; no application coverage claim."
+    },
+    {
+      "command": [
+        "npm",
+        "--prefix",
+        "src/Web",
+        "run",
+        "lint"
+      ],
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/verification-summary.md",
+      "rawEvidencePrefix": "artifacts/living-docs/engineering-run/lint",
+      "execution": {
+        "startedAtUtc": "2026-11-08T14:00:58.718741+00:00",
+        "completedAtUtc": "2026-11-08T14:01:03.734969+00:00",
+        "argv": [
+          "npm",
+          "--prefix",
+          "src/Web",
+          "run",
+          "lint"
+        ],
+        "exitCode": 0
+      },
+      "reason": "ESLint includes the modified SVG browser checker."
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/living_docs.py",
+        "check",
+        "--report",
+        "artifacts/living-docs/source-report.json"
+      ],
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/verification-summary.md",
+      "rawEvidencePrefix": "artifacts/living-docs/engineering-run/source",
+      "execution": {
+        "startedAtUtc": "2026-11-08T14:02:38.169660+00:00",
+        "completedAtUtc": "2026-11-08T14:02:39.267134+00:00",
+        "argv": [
+          "python3",
+          "scripts/living_docs.py",
+          "check",
+          "--report",
+          "artifacts/living-docs/source-report.json"
+        ],
+        "exitCode": 0
+      },
+      "reason": "All 10 final SVG files: MISVG subset, provenance, generated-view fidelity and bidirectional traceability. Pre-seal collection check."
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/living_docs.py",
+        "catalog",
+        "--requirement",
+        "REQ-DOC-001"
+      ],
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/verification-summary.md",
+      "rawEvidencePrefix": "artifacts/living-docs/engineering-run/trace",
+      "execution": {
+        "startedAtUtc": "2026-11-08T14:02:39.268187+00:00",
+        "completedAtUtc": "2026-11-08T14:02:39.584596+00:00",
+        "argv": [
+          "python3",
+          "scripts/living_docs.py",
+          "catalog",
+          "--requirement",
+          "REQ-DOC-001"
+        ],
+        "exitCode": 0
+      },
+      "reason": "REQ-DOC-001 resolves diagrams, acceptance, decisions, implementation and declared tests."
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/verification-summary.md",
+      "rawEvidencePrefix": "artifacts/living-docs/engineering-run/diff",
+      "execution": {
+        "startedAtUtc": "2026-11-08T14:02:39.584881+00:00",
+        "completedAtUtc": "2026-11-08T14:02:39.615530+00:00",
+        "argv": [
+          "git",
+          "diff",
+          "--check"
+        ],
+        "exitCode": 0
+      },
+      "reason": "Whitespace checks for tracked changes."
+    },
+    {
+      "command": "node src/Web/scripts/check-living-docs.mjs",
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/verification-summary.md",
+      "rawEvidence": "artifacts/living-docs/engineering-run/visual-report.json",
+      "execution": {
+        "startedAtUtc": "2026-11-08T14:02:43.192Z",
+        "completedAtUtc": "2026-11-08T14:02:49.920Z",
+        "command": "node src/Web/scripts/check-living-docs.mjs",
+        "node": "v26.5.0",
+        "platform": "darwin"
+      },
+      "reason": "Chromium renders all 10 final files; zero canvas overflow, card overflow and text overlaps. File hashes match source checks."
+    },
+    {
+      "command": "Initial Chromium review before wrap-width fixes",
+      "status": "fail",
+      "exitCode": 1,
+      "evidence": "evidence/verification-summary.md",
+      "rawEvidence": "artifacts/living-docs/engineering-run/visual-initial-fail.json",
+      "reason": "Three pages had long requirement IDs outside the canvas. Fixed by conservative control/card wrapping; final recheck passed."
+    },
+    {
+      "command": "Full backend/frontend application tests and coverage",
+      "status": "not-run",
+      "exitCode": null,
+      "reason": "Documentation/tooling-only change; not rerun. Existing 95%/90% gates unchanged."
+    },
+    {
+      "command": "./scripts/test-e2e.sh",
+      "status": "not-run",
+      "exitCode": null,
+      "reason": "Docker/browser application acceptance was not rerun for this document change."
+    },
+    {
+      "command": "Backup restore and rollback drill",
+      "status": "not-run",
+      "exitCode": null,
+      "reason": "OPEN-OPS-001; isolated exercise and RPO/RTO remain undefined."
+    },
+    {
+      "command": "Independent reader or second-model handover",
+      "status": "not-run",
+      "exitCode": null,
+      "reason": "No independent person/model was delegated; author inspection is not independent review."
+    },
+    {
+      "command": "Load/capacity acceptance",
+      "status": "not-run",
+      "exitCode": null,
+      "reason": "OPEN-PERF-001; concurrency, latency and resource targets not supplied."
+    },
+    {
+      "command": "GitHub Actions for this working snapshot",
+      "status": "not-run",
+      "exitCode": null,
+      "reason": "Local uncommitted changes; no new remote CI result is claimed."
+    }
+  ],
+  "rawArtifacts": [
+    {
+      "path": "artifacts/living-docs/00-system-overview.png",
+      "sha256": "f0315a9fd9678ba6c245ec811f203103155439789e8b192bd47ee2295e6636ec",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/01-layer-and-class.png",
+      "sha256": "90639162b5c1b86e6b1bdf316539e1af9cec2fe57ccfea54ecc8eaa2d9f5a9ce",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/02-auth-data.png",
+      "sha256": "186a2138b31ed4b6928812c49f58fbf84a532c2038495fb3a2bc619434df3118",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/03-account-projections.png",
+      "sha256": "bb4d563ecc746daa51622c7fac6d5dae351ff0147f4323d675cc218493918ada",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/04-message-data.png",
+      "sha256": "099f0aeebbea9b1428a1eadfc37592d74eed94b695d0614a787c058521e6f956",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/05-event-synchronization.png",
+      "sha256": "001cc07d8c454bfc54f90671739007029a6976aecf65b1ce530115a4724d92fc",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/06-auth-revocation.png",
+      "sha256": "a281df3103f36e506a7fe20363baf70e612141919cfaadb9d77e91d2a4bac6b3",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/07-chat-sequence.png",
+      "sha256": "f8277e5f119362bf5659e9f99188667fa73b5758e05ace7e92cc6d5e7a0d82a5",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/08-attachment-lifecycle.png",
+      "sha256": "5522385f50ac1224c7f096919346e94f9f687170dc089ae9b20f28b7465a905d",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/09-agent-maintenance.png",
+      "sha256": "9e04cf2c26159e85066ee80f4d0f3d4cfdb83beeb48a2133b35c884cf14e0a25",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/contact-sheet.png",
+      "sha256": "2fc0dcf7a1be85c56e7e00c47960c51124d37f80d48347a65ee31872546e0c8d",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/engineering-run/diff-execution.json",
+      "sha256": "f4a3630632ea2df2383e4a62d1f94c6e312c616a78cb5a31b7fc11b3748a3620",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/engineering-run/diff.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/engineering-run/lint-execution.json",
+      "sha256": "4fb93aeb687029aea21ade9d93c11149288d9f42496b192adfb9b8d8dd2aec60",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/engineering-run/lint.txt",
+      "sha256": "d7b3d6601c60e7ddf000a88e972360fd40fe32f014821a528ed00d288e56f43d",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/engineering-run/source-execution.json",
+      "sha256": "482a6e9484c93f2bfd961a008851086ad2a38a72f8343f34741ee3b74278d1a5",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/engineering-run/source-report.json",
+      "sha256": "ff442291d43124aca448d61f34788cac5c74cca61c9ff8be49167cb8f51ed681",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/engineering-run/source.txt",
+      "sha256": "ff442291d43124aca448d61f34788cac5c74cca61c9ff8be49167cb8f51ed681",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/engineering-run/tooling-execution.json",
+      "sha256": "48cdef55f1cf0402e9eda0651aaced097ec97708996a1209db3f99047a669c9d",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/engineering-run/tooling.txt",
+      "sha256": "7f243afbb7b9f86b26d123e88f4e4f65a1978f2a073753e9680188acfe7453c8",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/engineering-run/trace-execution.json",
+      "sha256": "72d956a07b31bf584dd53d6507fb7d9de29f3879bd62fad828369407cdb9f23d",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/engineering-run/trace.txt",
+      "sha256": "72e7440be0c901c53ecf2b1ad35a963b1f4d8290bc23f32e34df3c6d814f0f32",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/engineering-run/visual-initial-fail.json",
+      "sha256": "c11588fc225e463d6ebba65d8501af817deea35f7a768e0e28d0a517f9731b2f",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/engineering-run/visual-report.json",
+      "sha256": "bc89b1c53bfca930a26b5304f7eb56869ed81b195ffeec21fc05aacdf50dbb0a",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/review-contact.png",
+      "sha256": "79862a9ba64ff3fe56d6d6fd5797221bbeb60850e6151e306eee4f82570353ca",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/review-control-detail.png",
+      "sha256": "09d373b374050877c5c0db1a923ad53fb3675bfe48a777ba988a76eabb012742",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/review-decisions.png",
+      "sha256": "1a6f7fed28df3598f2d9c2e2541c60e53794c81bd8c4791152efd931259890cb",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/review-overview.png",
+      "sha256": "11116082ae7979892adf13f03dbdd5253a26ed96dbc65939a779f3bef9edc19d",
+      "retention": "local ignored artifact; provide separately during handover"
+    },
+    {
+      "path": "artifacts/living-docs/review-support.png",
+      "sha256": "c4fe16d3e36119bb0d125692a21e393a1c548166421153575309ceb777963506",
+      "retention": "local ignored artifact; provide separately during handover"
+    }
+  ],
+  "retention": "Only curated record/summary is in docs/records. Raw test outputs/screenshots remain in ignored artifacts per AGENTS. Fingerprints do not recreate raw outputs; hand over artifacts separately.",
+  "historicalApplicationEvidence": {
+    "id": "HIST-CI-46FB1E2",
+    "commit": "46fb1e21eae8d40d59309cc405b3d77ae5d0b190",
+    "url": "https://github.com/Lian0123/my-c-sharp-templates/actions/runs/42389347629",
+    "attempt": 1,
+    "applicability": "Historical application CI for that exact commit; not rerun or upgraded to current acceptance."
+  },
+  "approvals": [],
+  "corrects": []
+}

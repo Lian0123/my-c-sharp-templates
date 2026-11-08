@@ -51,6 +51,10 @@ flowchart LR
 
 詳見 [架構決策](docs/architecture.md)、[API 與錯誤規範](docs/api.md) 及 [維運與故障處理](docs/operations.md)。
 
+可持續更新的 [Agent Living Document](docs/living/README.md) 提供十八份 Markdown-in-SVG 圖頁，包含功能拆分、使用案例、分層／類別、資料模型、實體外鍵與邏輯參照、活動、狀態、時序及部署。每份 SVG 內嵌權威 Markdown 與程式來源雜湊，CI 檢查文件是否隨實作更新。26 個功能契約對應三個業務介面的全部 25 個操作；[開發規則](docs/living/17-development-rules.misvg.svg) 配合實際檢查阻擋邊界與追溯違規。
+
+[工程交付控制頁](docs/living/09-agent-maintenance.misvg.svg) 將需求、設計、驗收、小步開發、可靠度驗證及交接串成六階段流程，以 REQ／AC／ADR 連結圖頁、實作與測試。[派生索引](docs/living/catalog.json) 可查詢影響範圍；[封存紀錄](docs/records/README.md) 保存限定版本的實際證據。測試參照與覆蓋率不等於需求已驗收，未執行的恢復／交接演練另列待辦。
+
 ## 驗收與覆蓋率
 
 測試使用獨立 `microservice-starter-tests` Compose 專案，Gateway／Mailpit 分別為 `18080`／`18025`。後端與前端各自要求 **行覆蓋率 ≥95%、分支覆蓋率 ≥90%**；不達標即失敗。後端包含 Gateway、共用程式及三個服務的全部自寫程式，僅排除 Migration／編譯器產生程式；前端僅排除測試與產生的 API 型別。
